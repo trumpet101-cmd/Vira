@@ -46,6 +46,26 @@
         
         /* Stop focus outline on internal links */
         [contenteditable="true"] a { user-select: none; }
+
+        /* Outline List Styling for Session Notes & Campaign Sections */
+        .seamless-input ul {
+            list-style-type: disc !important;
+            margin-left: 1.5rem !important;
+            margin-top: 0.25rem !important;
+            margin-bottom: 0.25rem !important;
+        }
+        .seamless-input ul ul {
+            list-style-type: circle !important;
+            margin-left: 1.5rem !important;
+        }
+        .seamless-input ul ul ul {
+            list-style-type: square !important;
+            margin-left: 1.5rem !important;
+        }
+        .seamless-input li {
+            margin-bottom: 0.25rem !important;
+            padding-left: 0.25rem !important;
+        }
     </style>
 </head>
 <body class="bg-stone-100 text-stone-800 font-sans h-screen flex overflow-hidden">
@@ -151,7 +171,9 @@
             </div>
             
             <div class="flex items-center space-x-2 text-stone-400 bg-stone-50 px-3 py-1.5 rounded-full border border-stone-200 transition-all duration-300" id="save-indicator">
-                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500" id="save-icon"></i>
+                <span id="save-icon-wrapper" class="flex items-center justify-center">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                </span>
                 <span class="text-sm font-medium" id="save-text">Saved automatically</span>
             </div>
         </header>
@@ -548,12 +570,11 @@
 
                             // Temporarily flash progress indicator with customized success state
                             const ind = document.getElementById('save-indicator');
-                            const icon = document.getElementById('save-icon');
+                            const iconWrapper = document.getElementById('save-icon-wrapper');
                             const text = document.getElementById('save-text');
                             
                             ind.classList.remove('opacity-50');
-                            icon.setAttribute('data-lucide', 'check-circle-2');
-                            icon.className = 'w-4 h-4 text-emerald-500';
+                            iconWrapper.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>`;
                             text.innerText = "Data imported successfully!";
                             lucide.createIcons();
                             
@@ -651,18 +672,18 @@
 
         function triggerSaveIndicator() {
             const ind = document.getElementById('save-indicator');
-            const icon = document.getElementById('save-icon');
+            const iconWrapper = document.getElementById('save-icon-wrapper');
             const text = document.getElementById('save-text');
             
             ind.classList.remove('opacity-50');
-            icon.setAttribute('data-lucide', 'loader-2');
-            icon.classList.add('animate-spin');
+            // Display clean, active spinner while writing changes
+            iconWrapper.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 text-emerald-500 animate-spin"></i>`;
             text.innerText = "Saving...";
             lucide.createIcons();
 
             setTimeout(() => {
-                icon.classList.remove('animate-spin');
-                icon.setAttribute('data-lucide', isCloudReady ? 'cloud-check' : 'check-circle-2');
+                // When saved, fully clear spinner class and inject static feedback checkmark
+                iconWrapper.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>`;
                 text.innerText = isCloudReady ? "Saved to Cloud" : "Saved locally";
                 ind.classList.add('opacity-50');
                 lucide.createIcons();
@@ -918,34 +939,94 @@
             });
         }
 
+        // --- SPECIFIC KEYBOARD OUTLINE HANDLERS ---
+        window.handleOutlineKeyDown = function(event) {
+            const div = event.currentTarget;
+            
+            // Intercept keys if the mention autocomplete dropdown is currently open and active
+            const dropdown = document.getElementById('mention-dropdown');
+            if (dropdown && !dropdown.classList.contains('hidden') && mentionContext) {
+                if (event.key === 'Tab' || event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
+                    window.handleKeyDown(event);
+                    return;
+                }
+            }
+            
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                if (event.shiftKey) {
+                    document.execCommand('outdent', false, null);
+                } else {
+                    document.execCommand('indent', false, null);
+                }
+                div.dispatchEvent(new Event('input', { bubbles: true }));
+                return;
+            }
+            
+            // Leverage universal mention autocomplete triggers on generic keys
+            window.handleKeyDown(event);
+        };
+
+        window.handleOutlineFocus = function(event) {
+            const div = event.currentTarget;
+            const html = div.innerHTML.trim();
+            // Automatically initialize a styled outline bullet point if empty or non-existent
+            if (html === "" || html === "<br>" || html === "<div><br></div>" || !div.querySelector('ul')) {
+                div.innerHTML = "<ul><li><br></li></ul>";
+                // Standard browser selection microtask wrapper to override cursor placement
+                setTimeout(() => {
+                    const range = document.createRange();
+                    const sel = window.getSelection();
+                    const li = div.querySelector('li');
+                    if (li) {
+                        range.setStart(li, 0);
+                        range.collapse(true);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    }
+                }, 0);
+                div.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        };
+
+        window.handleOutlineBlur = function(event) {
+            const div = event.currentTarget;
+            const text = div.innerText.trim();
+            // Reset to blank to restore placeholding layout when unfocused
+            if (text === "") {
+                div.innerHTML = "";
+                div.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        };
+
         // --- THE MENTION SYSTEM ---
         let mentionContext = null;
 
-        // Suggestions based on state
+        // Suggestions based on state (Corrected backstory and personality lookup array paths)
         function getMentionSuggestions(query) {
             const q = query.toLowerCase();
             let results = [];
             
             characterData.campaignNotes.sessionNotes.forEach(s => {
-                if (s.title.toLowerCase().includes(q)) results.push({ type: 'Session', id: 'campaign_sessionNotes', label: s.title });
+                if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Session', id: 'campaign_sessionNotes', label: s.title });
             });
             characterData.campaignNotes.quests.forEach(qItem => {
-                if (qItem.title.toLowerCase().includes(q)) results.push({ type: 'Quest', id: 'campaign_quests', label: qItem.title });
+                if (qItem.title && qItem.title.toLowerCase().includes(q)) results.push({ type: 'Quest', id: 'campaign_quests', label: qItem.title });
             });
             characterData.campaignNotes.npcs.forEach(fac => {
-                if (fac.name.toLowerCase().includes(q)) results.push({ type: 'Faction', id: 'campaign_npcs', label: fac.name });
+                if (fac.name && fac.name.toLowerCase().includes(q)) results.push({ type: 'Faction', id: 'campaign_npcs', label: fac.name });
                 fac.members.forEach(npc => {
-                    if (npc.name.toLowerCase().includes(q)) results.push({ type: 'NPC', id: 'campaign_npcs', label: npc.name });
+                    if (npc.name && npc.name.toLowerCase().includes(q)) results.push({ type: 'NPC', id: 'campaign_npcs', label: npc.name });
                 });
             });
             characterData.campaignNotes.locations.forEach(loc => {
-                if (loc.title.toLowerCase().includes(q)) results.push({ type: 'Location', id: 'campaign_locations', label: loc.title });
+                if (loc.title && loc.title.toLowerCase().includes(q)) results.push({ type: 'Location', id: 'campaign_locations', label: loc.title });
             });
             characterData.backstory.forEach(b => {
-                if (b.title.toLowerCase().includes(q)) results.push({ type: 'Backstory', id: 'backstory', label: b.title });
+                if (b.title && b.title.toLowerCase().includes(q)) results.push({ type: 'Backstory', id: 'backstory', label: b.title });
             });
             characterData.personality.forEach(p => {
-                if (p.title.toLowerCase().includes(q)) results.push({ type: 'Personality', id: 'personality', label: p.title });
+                if (p.title && p.title.toLowerCase().includes(q)) results.push({ type: 'Personality', id: 'personality', label: p.title });
             });
             
             return results;
@@ -1133,6 +1214,18 @@
                 data-placeholder="Click to type... Type @ to link notes.">${renderHTML(value)}</div>`;
         }
 
+        function getOutlineNotesEditor(section, field, value, extraClasses = "min-h-[150px]", placeholder = "Start typing... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.") {
+            const sectionArg = section ? `'${section}'` : 'null';
+            return `<div contenteditable="true" 
+                oninput="window.handleInput(event, ${sectionArg}, '${field}')"
+                onkeydown="window.handleOutlineKeyDown(event)"
+                onfocus="window.handleOutlineFocus(event)"
+                onblur="window.handleOutlineBlur(event)"
+                onpaste="window.handlePaste(event)"
+                class="w-full seamless-input rounded-lg p-3 -mx-3 cursor-text focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none whitespace-pre-wrap font-sans leading-relaxed text-stone-700 bg-transparent ${extraClasses}"
+                data-placeholder="${escapeHtml(placeholder)}">${renderHTML(value)}</div>`;
+        }
+
         // --- REORDERING LOGIC ---
         window.moveSession = function(sessId, direction) {
             const arr = characterData.campaignNotes.sessionNotes;
@@ -1204,7 +1297,19 @@
         };
 
         // --- CRUD LOGIC FOR LISTS ---
-        window.addSession = function() { currentSearchQueries.sessionNotes = ''; characterData.campaignNotes.sessionNotes.unshift({ id: 'sess_' + Date.now(), title: 'New Session', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); lucide.createIcons(); }
+        window.addSession = function() { 
+            currentSearchQueries.sessionNotes = ''; 
+            characterData.campaignNotes.sessionNotes.unshift({ 
+                id: 'sess_' + Date.now(), 
+                title: '', // Empty baseline title for new session logs
+                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), 
+                notes: '', 
+                isCollapsed: false 
+            }); 
+            window.saveData(); 
+            window.renderContent(); 
+            lucide.createIcons(); 
+        }
         window.updateSession = function(sessId, field, val) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) sess[field] = val; window.saveData(); }
         window.deleteSession = function(sessId) { 
             window.showCustomConfirm(
@@ -1322,6 +1427,64 @@
                 else faction.classList.add('hidden');
             });
         }
+
+        // --- AVATAR UPLOAD, CROP & COMPRESSION HANDLERS ---
+        window.handleNPCAvatarUpload = function(event, facId, npcId) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const TARGET_SIZE = 128; // Fits beautifully inside small circle avatars
+
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Calculate square crop boundaries (centered)
+                    let size = Math.min(width, height);
+                    let xOffset = (width - size) / 2;
+                    let yOffset = (height - size) / 2;
+
+                    canvas.width = TARGET_SIZE;
+                    canvas.height = TARGET_SIZE;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, TARGET_SIZE, TARGET_SIZE);
+
+                    // Highly compressed data URL (around ~3KB - ~5KB)
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+                    const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+                    if (fac) {
+                        const npc = fac.members.find(n => n.id === npcId);
+                        if (npc) {
+                            npc.avatar = compressedBase64;
+                            window.saveData();
+                            window.renderContent();
+                            lucide.createIcons();
+                        }
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.deleteNPCAvatar = function(event, facId, npcId) {
+            event.stopPropagation(); // Avoid triggering file select input on upload container
+            const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+            if (fac) {
+                const npc = fac.members.find(n => n.id === npcId);
+                if (npc) {
+                    delete npc.avatar;
+                    window.saveData();
+                    window.renderContent();
+                    lucide.createIcons();
+                }
+            }
+        };
 
         // --- NAVIGATION & UTILS ---
         window.setTab = function(tabId) {
@@ -1767,7 +1930,7 @@
                                         <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 rounded transition-colors focus:outline-none hidden sm:block">
                                             <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
                                         </button>
-                                        <input type="text" oninput="window.updateSession('${sess.id}', 'title', this.value)" value="${escapeHtml(sess.title)}" class="seamless-input font-bold text-lg text-stone-800 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Session Title">
+                                        <input type="text" oninput="window.updateSession('${sess.id}', 'title', this.value)" value="${escapeHtml(sess.title)}" class="seamless-input font-bold text-lg text-stone-800 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Session Title">
                                         <input type="text" oninput="window.updateSession('${sess.id}', 'date', this.value)" value="${escapeHtml(sess.date)}" class="seamless-input text-sm text-stone-500 bg-transparent px-2 py-1 w-full sm:w-auto rounded" placeholder="Date">
                                     </div>
                                     <div class="flex items-center space-x-1 ml-2">
@@ -1783,7 +1946,7 @@
                                     </div>
                                 </div>
                                 <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
-                                    <div class="p-5">${getMentionableDiv('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]')}</div>
+                                    <div class="p-5">${getOutlineNotesEditor('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]', 'Start typing your session notes... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.')}</div>
                                 </div>
                             </div>`;
                     });
@@ -1835,7 +1998,7 @@
                                             </div>
                                         </div>
                                         <div class="mt-2 text-stone-600 ${quest.isCompleted ? 'opacity-75' : ''}">
-                                            ${getMentionableDiv('campaignNotes_quest', quest.id, quest.notes, 'min-h-[60px]')}
+                                            ${getOutlineNotesEditor('campaignNotes_quest', quest.id, quest.notes, 'min-h-[60px]', 'Quest description or sub-objectives... Enter starts a bullet, Tab indents, @ to link.')}
                                         </div>
                                     </div>
                                 </div>`;
@@ -1875,7 +2038,7 @@
                                             <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
                                         </button>
                                         <input type="text" oninput="window.updateLocation('${loc.id}', 'title', this.value)" value="${escapeHtml(loc.title)}" class="seamless-input font-bold text-lg text-stone-800 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Location Name">
-                                        <input type="text" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm text-stone-500 bg-transparent px-2 py-1 w-full sm:w-auto rounded" placeholder="Region / Details">
+                                        <input type="text" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 bg-transparent px-2 py-1 w-full sm:w-auto rounded" placeholder="Region / Details">
                                     </div>
                                     <div class="flex items-center space-x-1 ml-2">
                                         <button onclick="window.moveLocation('${loc.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Location Up">
@@ -1890,7 +2053,7 @@
                                     </div>
                                 </div>
                                 <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
-                                    <div class="p-5">${getMentionableDiv('campaignNotes_location', loc.id, loc.notes, 'min-h-[100px]')}</div>
+                                    <div class="p-5">${getOutlineNotesEditor('campaignNotes_location', loc.id, loc.notes, 'min-h-[100px]', 'Location details, points of interest, or resident lists... Enter starts a bullet, Tab indents, @ to link.')}</div>
                                 </div>
                             </div>`;
                     });
@@ -1932,11 +2095,34 @@
                                         const isLastNPC = nIdx === faction.members.length - 1;
                                         return `
                                         <div class="npc-card bg-white p-4 rounded-lg border border-stone-200 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.notes)}">
-                                            <div class="flex-1">
-                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5">
-                                                ${getMentionableDiv('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm')}
+                                            
+                                            <!-- Circular Interactive Avatar Circle Slot -->
+                                            <div class="flex-shrink-0 flex items-start mt-1">
+                                                <div class="relative w-14 h-14 rounded-full border border-stone-200 hover:border-emerald-400 bg-stone-50 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
+                                                    ${npc.avatar ? 
+                                                        `<img src="${npc.avatar}" class="w-full h-full object-cover">` : 
+                                                        `<i data-lucide="user" class="w-6 h-6 text-stone-400"></i>`
+                                                    }
+                                                    <!-- Slick Camera Overlay on Hover -->
+                                                    <div class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                                        <i data-lucide="camera" class="w-4 h-4 text-white"></i>
+                                                    </div>
+                                                    <!-- Quick Delete Avatar Button overlay -->
+                                                    ${npc.avatar ? `
+                                                        <button onclick="window.deleteNPCAvatar(event, '${faction.id}', '${npc.id}')" class="absolute top-0 right-0 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-bl shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="Remove character avatar">
+                                                            <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
+                                                <!-- Hidden custom files collector input -->
+                                                <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
                                             </div>
-                                            <div class="flex flex-col justify-between items-end border-l border-stone-100 pl-3 self-stretch">
+
+                                            <div class="flex-1 min-w-0">
+                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5" placeholder="Character Name">
+                                                ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
+                                            </div>
+                                            <div class="flex flex-col justify-between items-end border-l border-stone-100 pl-3 self-stretch flex-shrink-0">
                                                 <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete NPC">
                                                     <i data-lucide="x" class="w-4 h-4"></i>
                                                 </button>
@@ -1957,7 +2143,7 @@
                     });
                 } 
                 else {
-                    contentHtml = getMentionableDiv('campaignNotes', subSection, characterData.campaignNotes[subSection]);
+                    contentHtml = getOutlineNotesEditor('campaignNotes', subSection, characterData.campaignNotes[subSection], 'min-h-[250px]', 'Party inventory, loot lists, campaign rules, or general scratchpad... Enter starts a bullet, Tab indents, @ to link.');
                 }
 
                 html = `
