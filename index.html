@@ -83,6 +83,19 @@
         </div>
     </div>
 
+    <!-- Reusable Custom Dialog/Alert Modal -->
+    <div id="custom-dialog" class="fixed inset-0 bg-stone-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-sm p-6 text-center animate-fade-in">
+            <div class="text-4xl mb-3" id="dialog-icon">⚠️</div>
+            <h3 class="text-xl font-bold text-stone-800 tracking-tight" id="dialog-title">Are you sure?</h3>
+            <p class="text-sm text-stone-500 mt-2 leading-relaxed" id="dialog-message">This action cannot be undone.</p>
+            <div class="flex space-x-3 mt-6">
+                <button id="dialog-cancel-btn" class="flex-1 py-2.5 border border-stone-200 hover:bg-stone-50 text-stone-600 font-semibold rounded-xl transition-all">Cancel</button>
+                <button id="dialog-confirm-btn" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Mobile Menu Overlay -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden" onclick="toggleMobileMenu()"></div>
 
@@ -100,11 +113,18 @@
 
         <nav class="flex-1 p-4 space-y-2 overflow-y-auto" id="nav-container"></nav>
 
-        <div class="p-4 border-t border-stone-800 space-y-2">
-            <button onclick="exportJSON()" class="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-stone-800 hover:bg-stone-700 rounded text-sm text-stone-300 transition-colors">
-                <i data-lucide="download" class="w-4 h-4"></i>
-                <span>Export Notes JSON</span>
-            </button>
+        <div class="p-4 border-t border-stone-800 space-y-3">
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="exportJSON()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export current sheet data as a physical backup">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Export</span>
+                </button>
+                <button onclick="document.getElementById('import-json-input').click()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Import an exported JSON backup sheet">
+                    <i data-lucide="upload" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Import</span>
+                </button>
+                <input type="file" id="import-json-input" accept=".json" class="hidden" onchange="window.importJSON(event)">
+            </div>
             <button onclick="window.handleSignOut()" class="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-950/40 hover:bg-red-900 rounded text-sm text-red-300 transition-colors">
                 <i data-lucide="log-out" class="w-4 h-4"></i>
                 <span>Sign Out</span>
@@ -323,6 +343,119 @@
             }
         }
 
+        // --- CUSTOM MODAL DIALOG CONTROLLERS ---
+        window.showCustomConfirm = function(title, message, icon, onConfirm) {
+            const dialog = document.getElementById('custom-dialog');
+            document.getElementById('dialog-title').innerText = title;
+            document.getElementById('dialog-message').innerText = message;
+            document.getElementById('dialog-icon').innerText = icon || '⚠️';
+            
+            const confirmBtn = document.getElementById('dialog-confirm-btn');
+            const cancelBtn = document.getElementById('dialog-cancel-btn');
+            
+            // Re-clone buttons to wipe legacy event listeners
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            
+            cancelBtn.classList.remove('hidden');
+            newConfirmBtn.innerText = "Confirm";
+            
+            newConfirmBtn.addEventListener('click', () => {
+                dialog.classList.add('hidden');
+                onConfirm();
+            });
+            
+            newCancelBtn.addEventListener('click', () => {
+                dialog.classList.add('hidden');
+            });
+            
+            dialog.classList.remove('hidden');
+        };
+
+        window.showCustomAlert = function(title, message, icon) {
+            const dialog = document.getElementById('custom-dialog');
+            document.getElementById('dialog-title').innerText = title;
+            document.getElementById('dialog-message').innerText = message;
+            document.getElementById('dialog-icon').innerText = icon || '⚠️';
+            
+            const confirmBtn = document.getElementById('dialog-confirm-btn');
+            const cancelBtn = document.getElementById('dialog-cancel-btn');
+            
+            // Re-clone confirm button
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            
+            cancelBtn.classList.add('hidden'); // Hide cancel button for basic alerts
+            newConfirmBtn.innerText = "OK";
+            
+            newConfirmBtn.addEventListener('click', () => {
+                dialog.classList.add('hidden');
+            });
+            
+            dialog.classList.remove('hidden');
+        };
+
+        // --- JSON BACKUP IMPORT FLOW ---
+        window.importJSON = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsedData = JSON.parse(e.target.result);
+                    
+                    // Simple validation to ensure it's a D&D Notes backup file
+                    if (!parsedData.name && !parsedData.basics && !parsedData.campaignNotes) {
+                        throw new Error("Missing structural fields. Selected file does not appear to be an eligible D&D notes backup.");
+                    }
+
+                    window.showCustomConfirm(
+                        'Import Notes?', 
+                        'Are you sure you want to proceed? This will completely overwrite your current live cloud notes with this backup file.', 
+                        '📥', 
+                        () => {
+                            // Merge imported data safely on top of structural defaults
+                            characterData = { ...initialCharacterData, ...parsedData };
+                            
+                            // Commit changes to LocalStorage and stream up to Firestore
+                            window.saveData();
+
+                            // Force complete UI Refresh
+                            document.getElementById('header-name-input').value = characterData.name;
+                            window.renderContent();
+                            lucide.createIcons();
+
+                            // Temporarily flash progress indicator with customized success state
+                            const ind = document.getElementById('save-indicator');
+                            const icon = document.getElementById('save-icon');
+                            const text = document.getElementById('save-text');
+                            
+                            ind.classList.remove('opacity-50');
+                            icon.setAttribute('data-lucide', 'check-circle-2');
+                            icon.className = 'w-4 h-4 text-emerald-500';
+                            text.innerText = "Data imported successfully!";
+                            lucide.createIcons();
+                            
+                            setTimeout(() => {
+                                ind.classList.add('opacity-50');
+                                text.innerText = "Saved automatically";
+                                lucide.createIcons();
+                            }, 4000);
+                        }
+                    );
+                } catch (err) {
+                    console.error("Backup Import Failed: ", err);
+                    window.showCustomAlert("Import Failed", "The selected file is corrupt or is not structured as an eligible notes backup: " + err.message, "❌");
+                } finally {
+                    event.target.value = ''; // Clean up selector
+                }
+            };
+            reader.readAsText(file);
+        };
+
         // Sign-In/Register Flow Controllers
         let isSignUpMode = false;
         const authForm = document.getElementById('auth-form');
@@ -368,13 +501,18 @@
         });
 
         window.handleSignOut = async function() {
-            if(confirm("Are you sure you want to sign out? Your session on this device will close.")) {
-                try {
-                    await signOut(auth);
-                } catch(e) {
-                    console.error("Sign out failed: ", e);
+            window.showCustomConfirm(
+                'Sign Out?',
+                'Are you sure you want to sign out? Your active cloud session on this device will close.',
+                '🚪',
+                async () => {
+                    try {
+                        await signOut(auth);
+                    } catch(e) {
+                        console.error("Sign out failed: ", e);
+                    }
                 }
-            }
+            );
         };
 
         function updateCloudUIStatus(text, icon, classes) {
@@ -457,6 +595,7 @@
         // --- THE MENTION SYSTEM ---
         let mentionContext = null;
 
+        // Suggestions based on state
         function getMentionSuggestions(query) {
             const q = query.toLowerCase();
             let results = [];
@@ -729,14 +868,38 @@
         // --- CRUD LOGIC FOR LISTS ---
         window.addSession = function() { currentSearchQueries.sessionNotes = ''; characterData.campaignNotes.sessionNotes.unshift({ id: 'sess_' + Date.now(), title: 'New Session', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.updateSession = function(sessId, field, val) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) sess[field] = val; window.saveData(); }
-        window.deleteSession = function(sessId) { if(confirm('Delete session?')) { characterData.campaignNotes.sessionNotes = characterData.campaignNotes.sessionNotes.filter(s => s.id !== sessId); window.saveData(); window.renderContent(); lucide.createIcons(); } }
+        window.deleteSession = function(sessId) { 
+            window.showCustomConfirm(
+                'Delete Session Log?', 
+                'Are you sure you want to permanently delete this session log entry?', 
+                '🗑️', 
+                () => { 
+                    characterData.campaignNotes.sessionNotes = characterData.campaignNotes.sessionNotes.filter(s => s.id !== sessId); 
+                    window.saveData(); 
+                    window.renderContent(); 
+                    lucide.createIcons(); 
+                }
+            ); 
+        }
         window.toggleSessionCollapse = function(sessId) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) { sess.isCollapsed = !sess.isCollapsed; window.saveData(); window.renderContent(); lucide.createIcons(); } }
         window.toggleAllSessions = function(collapse) { characterData.campaignNotes.sessionNotes.forEach(s => s.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.filterSessions = function(query) { currentSearchQueries.sessionNotes = query; const q = query.toLowerCase(); document.querySelectorAll('.session-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
         window.addQuest = function() { currentSearchQueries.quests = ''; characterData.campaignNotes.quests.unshift({ id: 'quest_' + Date.now(), title: 'New Quest', subtitle: '', notes: '', isCompleted: false }); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.updateQuest = function(questId, field, val) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) quest[field] = val; window.saveData(); }
-        window.deleteQuest = function(questId) { if(confirm('Delete quest?')) { characterData.campaignNotes.quests = characterData.campaignNotes.quests.filter(q => q.id !== questId); window.saveData(); window.renderContent(); lucide.createIcons(); } }
+        window.deleteQuest = function(questId) { 
+            window.showCustomConfirm(
+                'Delete Quest?', 
+                'Are you sure you want to permanently remove this quest objective?', 
+                '⚔️', 
+                () => { 
+                    characterData.campaignNotes.quests = characterData.campaignNotes.quests.filter(q => q.id !== questId); 
+                    window.saveData(); 
+                    window.renderContent(); 
+                    lucide.createIcons(); 
+                }
+            ); 
+        }
         window.toggleQuestCompletion = function(questId) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) { quest.isCompleted = !quest.isCompleted; window.saveData(); window.renderContent(); lucide.createIcons(); } }
         window.toggleQuestSectionCollapse = function(section) { questSectionsState[section] = !questSectionsState[section]; window.renderContent(); lucide.createIcons(); }
         window.filterQuests = function(query) {
@@ -759,17 +922,54 @@
 
         window.addLocation = function() { currentSearchQueries.locations = ''; characterData.campaignNotes.locations.unshift({ id: 'loc_' + Date.now(), title: 'New Location', subtitle: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.updateLocation = function(locId, field, val) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) loc[field] = val; window.saveData(); }
-        window.deleteLocation = function(locId) { if(confirm('Delete location?')) { characterData.campaignNotes.locations = characterData.campaignNotes.locations.filter(l => l.id !== locId); window.saveData(); window.renderContent(); lucide.createIcons(); } }
+        window.deleteLocation = function(locId) { 
+            window.showCustomConfirm(
+                'Delete Location?', 
+                'Are you sure you want to permanently remove this location?', 
+                '📍', 
+                () => { 
+                    characterData.campaignNotes.locations = characterData.campaignNotes.locations.filter(l => l.id !== locId); 
+                    window.saveData(); 
+                    window.renderContent(); 
+                    lucide.createIcons(); 
+                }
+            ); 
+        }
         window.toggleLocationCollapse = function(locId) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) { loc.isCollapsed = !loc.isCollapsed; window.saveData(); window.renderContent(); lucide.createIcons(); } }
         window.toggleAllLocations = function(collapse) { characterData.campaignNotes.locations.forEach(l => l.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.filterLocations = function(query) { currentSearchQueries.locations = query; const q = query.toLowerCase(); document.querySelectorAll('.location-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
         window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: 'New Faction', members: [] }); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.updateFaction = function(facId, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.name = val; window.saveData(); }
-        window.deleteFaction = function(facId) { if(confirm('Delete faction?')) { characterData.campaignNotes.npcs = characterData.campaignNotes.npcs.filter(f => f.id !== facId); window.saveData(); window.renderContent(); lucide.createIcons(); } }
+        window.deleteFaction = function(facId) { 
+            window.showCustomConfirm(
+                'Delete Faction?', 
+                'Are you sure you want to delete this faction, its members, and all related logs?', 
+                '🛡️', 
+                () => { 
+                    characterData.campaignNotes.npcs = characterData.campaignNotes.npcs.filter(f => f.id !== facId); 
+                    window.saveData(); 
+                    window.renderContent(); 
+                    lucide.createIcons(); 
+                }
+            ); 
+        }
         window.addNPC = function(facId) { currentSearchQueries.npcs = ''; const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { fac.members.push({ id: 'npc_' + Date.now(), name: 'New NPC', notes: '' }); window.saveData(); window.renderContent(); lucide.createIcons(); } }
         window.updateNPC = function(facId, npcId, field, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { const npc = fac.members.find(n => n.id === npcId); if(npc) npc[field] = val; } window.saveData(); }
-        window.deleteNPC = function(facId, npcId) { if(confirm('Delete NPC?')) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.members = fac.members.filter(n => n.id !== npcId); window.saveData(); window.renderContent(); lucide.createIcons(); } }
+        window.deleteNPC = function(facId, npcId) { 
+            window.showCustomConfirm(
+                'Delete Character?', 
+                'Are you sure you want to permanently remove this NPC?', 
+                '👤', 
+                () => { 
+                    const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); 
+                    if(fac) fac.members = fac.members.filter(n => n.id !== npcId); 
+                    window.saveData(); 
+                    window.renderContent(); 
+                    lucide.createIcons(); 
+                }
+            ); 
+        }
         window.filterNPCs = function(query) {
             currentSearchQueries.npcs = query;
             const q = query.toLowerCase();
