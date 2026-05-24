@@ -250,59 +250,68 @@
 
         // Track Auth State changes
         onAuthStateChanged(auth, async (u) => {
-            const authOverlay = document.getElementById('auth-overlay');
-            
-            // Only allow designated email logins. Force-logout anonymous accounts leftover from prior configs.
-            if (u && !u.isAnonymous) {
-                cloudUser = u;
-                isCloudReady = true;
-                if(authOverlay) authOverlay.classList.add('hidden'); // Hide Lock Screen
-                updateCloudUIStatus("Connecting...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+            try {
+                const authOverlay = document.getElementById('auth-overlay');
                 
-                // Set up real-time listener instead of a one-time getDoc
-                listenToCloudData();
-            } else {
-                if (u && u.isAnonymous) {
-                    await signOut(auth); // Clear out conflicting anonymous browser tokens
+                // Only allow designated email logins. Force-logout anonymous accounts leftover from prior configs.
+                if (u && !u.isAnonymous) {
+                    cloudUser = u;
+                    isCloudReady = true;
+                    if(authOverlay) authOverlay.classList.add('hidden'); // Hide Lock Screen
+                    updateCloudUIStatus("Connecting...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+                    
+                    // Set up real-time listener instead of a one-time getDoc
+                    listenToCloudData();
+                } else {
+                    if (u && u.isAnonymous) {
+                        await signOut(auth); // Clear out conflicting anonymous browser tokens
+                    }
+                    if (unsubscribeSnapshot) {
+                        unsubscribeSnapshot();
+                        unsubscribeSnapshot = null;
+                    }
+                    cloudUser = null;
+                    isCloudReady = false;
+                    if(authOverlay) authOverlay.classList.remove('hidden'); // Show Lock Screen
+                    updateCloudUIStatus("Please Sign In", "lock", "bg-stone-800 text-stone-400");
                 }
-                if (unsubscribeSnapshot) {
-                    unsubscribeSnapshot();
-                    unsubscribeSnapshot = null;
-                }
-                cloudUser = null;
-                isCloudReady = false;
-                if(authOverlay) authOverlay.classList.remove('hidden'); // Show Lock Screen
-                updateCloudUIStatus("Please Sign In", "lock", "bg-stone-800 text-stone-400");
+            } catch (err) {
+                handleSyncError(err);
             }
         });
 
         // Setup real-time listeners with diagnostic feedback
         function listenToCloudData() {
-            if (!cloudUser || !db) return;
-            const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data');
-            
-            unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
-                if (isLocalSaving) {
-                    return; // Hold incoming snaps temporarily while user is actively typing
-                }
+            try {
+                if (!cloudUser || !db) return;
+                // Corrected 6-segment path to comply with Firestore document addressing rules
+                const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data', 'sheet');
                 
-                if (docSnap.exists()) {
-                    characterData = { ...initialCharacterData, ...docSnap.data() };
-                    document.getElementById('header-name-input').value = characterData.name;
-                    window.renderContent();
-                    lucide.createIcons();
-                    updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
-                } else {
-                    // Seed new user account with clean defaults
-                    setDoc(docRef, characterData).then(() => {
+                unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
+                    if (isLocalSaving) {
+                        return; // Hold incoming snaps temporarily while user is actively typing
+                    }
+                    
+                    if (docSnap.exists()) {
+                        characterData = { ...initialCharacterData, ...docSnap.data() };
+                        document.getElementById('header-name-input').value = characterData.name;
+                        window.renderContent();
+                        lucide.createIcons();
                         updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
-                    }).catch(err => {
-                        handleSyncError(err);
-                    });
-                }
-            }, (error) => {
-                handleSyncError(error);
-            });
+                    } else {
+                        // Seed new user account with clean defaults
+                        setDoc(docRef, characterData).then(() => {
+                            updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
+                        }).catch(err => {
+                            handleSyncError(err);
+                        });
+                    }
+                }, (error) => {
+                    handleSyncError(error);
+                });
+            } catch (err) {
+                handleSyncError(err);
+            }
         }
 
         function handleSyncError(error) {
@@ -310,7 +319,7 @@
             if (error.code === 'permission-denied') {
                 updateCloudUIStatus("Rules Error: Denied", "shield-alert", "bg-red-950 text-red-400 border border-red-800");
             } else {
-                updateCloudUIStatus("Sync Error: " + error.code, "cloud-off", "bg-red-950 text-red-400");
+                updateCloudUIStatus("Sync Error: " + (error.code || error.message || "Unknown"), "cloud-off", "bg-red-950 text-red-400");
             }
         }
 
@@ -405,7 +414,8 @@
             
             saveTimeout = setTimeout(async () => {
                 if (isCloudReady && cloudUser && db) {
-                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data');
+                    // Corrected 6-segment path to comply with Firestore document addressing rules
+                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data', 'sheet');
                     try {
                         isLocalSaving = true; // Block incoming echo updates
                         await setDoc(docRef, characterData);
@@ -418,6 +428,7 @@
                     } catch (e) {
                         console.error("Cloud save failed, relying on local backup", e);
                         isLocalSaving = false;
+                        handleSyncError(e);
                         triggerSaveIndicator();
                     }
                 } else {
