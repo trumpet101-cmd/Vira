@@ -414,7 +414,9 @@
                         lvl1: "", lvl4: "", lvl8: "", lvl12: "", lvl16: "", lvl19: "", lvl20: ""
                     },
                     features: "",
-                    equipment: ""
+                    equipment: "",
+                    acSelection: ["unarmored", ""],
+                    shieldActive: false
                 },
                 campaignNotes: {
                     sessionNotes: [],
@@ -436,6 +438,19 @@
         let characterData = JSON.parse(JSON.stringify(initialCharacterData));
         let currentCharacterId = localStorage.getItem('current_character_id') || 'default';
         let characterList = JSON.parse(localStorage.getItem('character_list')) || [];
+
+        // --- ARMOR GLOBAL REFERENCE ---
+        const ARMOR_OPTIONS = {
+            unarmored: { name: "Unarmored Defense", type: "Unarmored", stealth: "Normal", isDisadv: false },
+            studded: { name: "Studded Leather (Light)", type: "Light", stealth: "Normal", isDisadv: false },
+            chainshirt: { name: "Chain Shirt (Medium)", type: "Medium", stealth: "Normal", isDisadv: false },
+            scalemail: { name: "Scale Mail (Medium)", type: "Medium", stealth: "Disadv.", isDisadv: true },
+            breastplate: { name: "Breastplate (Medium)", type: "Medium", stealth: "Normal", isDisadv: false },
+            halfplate: { name: "Halfplate (Medium)", type: "Medium", stealth: "Disadv.", isDisadv: true },
+            chainmail: { name: "Chain Mail (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true },
+            splint: { name: "Splint (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true },
+            plate: { name: "Plate (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true }
+        };
 
         // --- ROBUST LORE & DATA MIGRATION ENGINE ---
         function migrateData(data) {
@@ -469,8 +484,8 @@
             }
 
             // Migrate stats progression structure
-            if (!data.build || !data.build.abilities) {
-                if (!data.build) data.build = {};
+            if (!data.build) data.build = {};
+            if (!data.build.abilities) {
                 data.build.abilities = [
                     { name: "Strength", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
                     { name: "Dexterity", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
@@ -504,6 +519,14 @@
                 }
                 if (typeof data.build.equipment !== 'string') {
                     data.build.equipment = "";
+                }
+
+                // Setup default selections for AC progression
+                if (!data.build.acSelection || !Array.isArray(data.build.acSelection)) {
+                    data.build.acSelection = ["unarmored", "breastplate", ""];
+                }
+                if (data.build.shieldActive === undefined) {
+                    data.build.shieldActive = false;
                 }
             }
         }
@@ -1378,6 +1401,27 @@
             lucide.createIcons();
         };
 
+        // --- ARMORED/SHIELD STATE MUTATION HANDLERS ---
+        window.updateAcSelection = function(index, value) {
+            if (!characterData.build) characterData.build = {};
+            if (!characterData.build.acSelection) characterData.build.acSelection = [];
+            
+            characterData.build.acSelection[index] = value;
+            
+            // Clean empty slots to maintain high layout compactness
+            characterData.build.acSelection = characterData.build.acSelection.filter(item => item !== "");
+            
+            window.saveData();
+            window.renderContent();
+        };
+
+        window.toggleShieldActive = function(checked) {
+            if (!characterData.build) characterData.build = {};
+            characterData.build.shieldActive = checked;
+            window.saveData();
+            window.recalculateBuildScores();
+        };
+
         // --- DYNAMIC ABILITY PROGRESSION MODIFIERS HANDLER ---
         window.updateAbilityPoint = function(index, field, val) {
             const intVal = parseInt(val) || 0;
@@ -1420,25 +1464,68 @@
                 });
             });
 
-            keys.forEach(key => {
-                const dex = cumulativeScores[key]["Dexterity"] || 10;
-                const con = cumulativeScores[key]["Constitution"] || 10;
+            // Recalculate and populates each Dynamic AC Row for keys slice(2)
+            const selectedArmors = (characterData.build.acSelection || []).filter(item => item !== "");
+            const showBlank = selectedArmors.length < 5;
+            const totalRows = selectedArmors.length + (showBlank ? 1 : 0);
+            const shieldBonus = (characterData.build.shieldActive) ? 2 : 0;
+            const levelKeys = keys.slice(2);
+
+            for (let rIdx = 0; rIdx < totalRows; rIdx++) {
+                const armorKey = selectedArmors[rIdx] || "";
                 
-                const dexMod = Math.floor((dex - 10) / 2);
-                const conMod = Math.floor((con - 10) / 2);
+                levelKeys.forEach(colKey => {
+                    const dex = cumulativeScores[colKey]["Dexterity"] || 10;
+                    const con = cumulativeScores[colKey]["Constitution"] || 10;
+                    
+                    const dexMod = Math.floor((dex - 10) / 2);
+                    const conMod = Math.floor((con - 10) / 2);
 
-                const unarmored = 10 + dexMod + conMod;
-                const unarmoredEl = document.getElementById(`ac-unarmored-${key}`);
-                if (unarmoredEl) unarmoredEl.innerText = unarmored;
+                    let acVal = "-";
+                    if (armorKey !== "") {
+                        let baseAc = 10;
+                        let dexContribution = dexMod;
+                        let conContribution = 0;
 
-                const chain = 13 + Math.min(2, dexMod);
-                const chainEl = document.getElementById(`ac-chain-${key}`);
-                if (chainEl) chainEl.innerText = chain;
+                        if (armorKey === "unarmored") {
+                            baseAc = 10;
+                            dexContribution = dexMod;
+                            conContribution = conMod;
+                        } else if (armorKey === "studded") {
+                            baseAc = 12;
+                            dexContribution = dexMod;
+                        } else if (armorKey === "chainshirt") {
+                            baseAc = 13;
+                            dexContribution = Math.min(2, dexMod);
+                        } else if (armorKey === "scalemail") {
+                            baseAc = 14;
+                            dexContribution = Math.min(2, dexMod);
+                        } else if (armorKey === "breastplate") {
+                            baseAc = 14;
+                            dexContribution = Math.min(2, dexMod);
+                        } else if (armorKey === "halfplate") {
+                            baseAc = 15;
+                            dexContribution = Math.min(2, dexMod);
+                        } else if (armorKey === "chainmail") {
+                            baseAc = 16;
+                            dexContribution = 0;
+                        } else if (armorKey === "splint") {
+                            baseAc = 17;
+                            dexContribution = 0;
+                        } else if (armorKey === "plate") {
+                            baseAc = 18;
+                            dexContribution = 0;
+                        }
 
-                const scale = 14 + Math.min(2, dexMod);
-                const scaleEl = document.getElementById(`ac-scale-${key}`);
-                if (scaleEl) scaleEl.innerText = scale;
-            });
+                        acVal = baseAc + dexContribution + conContribution + shieldBonus;
+                    }
+
+                    const valEl = document.getElementById(`ac-val-${rIdx}-${colKey}`);
+                    if (valEl) {
+                        valEl.innerText = acVal;
+                    }
+                });
+            }
         };
 
         // --- BACKSTORY DYNAMIC MANAGEMENT ---
@@ -2375,6 +2462,45 @@
                     </tr>
                 `).join('');
 
+                // Calculate the armor rows list based on current active choices
+                const selectedArmors = (characterData.build.acSelection || []).filter(item => item !== "");
+                const showBlankDropdown = selectedArmors.length < 5;
+                const totalAcRows = selectedArmors.length + (showBlankDropdown ? 1 : 0);
+
+                let acRowsHtml = "";
+                for (let rIdx = 0; rIdx < totalAcRows; rIdx++) {
+                    const armorKey = selectedArmors[rIdx] || "";
+                    const armorDef = ARMOR_OPTIONS[armorKey] || { name: "", type: "-", stealth: "-", isDisadv: false };
+                    
+                    const stealthHtml = armorDef.isDisadv 
+                        ? `<span class="text-red-600 font-bold text-xs">Disadv.</span>` 
+                        : (armorKey !== "" ? `<span class="text-stone-500 font-medium text-xs">Normal</span>` : `-`);
+
+                    acRowsHtml += `
+                        <tr class="border-b border-stone-100 hover:bg-stone-50/40">
+                            <td class="px-4 py-3 font-semibold text-stone-700 bg-stone-50 border-r border-stone-200">
+                                <select onchange="window.updateAcSelection(${rIdx}, this.value)" class="seamless-input font-bold text-sm bg-stone-100 border border-stone-200 rounded-lg py-1.5 px-2.5 text-stone-700 focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none w-full max-w-[220px]">
+                                    <option value="">Select Armor...</option>
+                                    <option value="unarmored" ${armorKey === 'unarmored' ? 'selected' : ''}>Unarmored Defense</option>
+                                    <option value="studded" ${armorKey === 'studded' ? 'selected' : ''}>Studded Leather (Light)</option>
+                                    <option value="chainshirt" ${armorKey === 'chainshirt' ? 'selected' : ''}>Chain Shirt (Medium)</option>
+                                    <option value="scalemail" ${armorKey === 'scalemail' ? 'selected' : ''}>Scale Mail (Medium)</option>
+                                    <option value="breastplate" ${armorKey === 'breastplate' ? 'selected' : ''}>Breastplate (Medium)</option>
+                                    <option value="halfplate" ${armorKey === 'halfplate' ? 'selected' : ''}>Halfplate (Medium)</option>
+                                    <option value="chainmail" ${armorKey === 'chainmail' ? 'selected' : ''}>Chain Mail (Heavy)</option>
+                                    <option value="splint" ${armorKey === 'splint' ? 'selected' : ''}>Splint (Heavy)</option>
+                                    <option value="plate" ${armorKey === 'plate' ? 'selected' : ''}>Plate (Heavy)</option>
+                                </select>
+                            </td>
+                            <td class="px-3 py-3 text-center text-stone-600 text-sm font-semibold">${armorDef.type}</td>
+                            <td class="px-3 py-3 text-center border-r border-stone-200 text-sm">${stealthHtml}</td>
+                            ${keys.slice(2).map(col => `
+                                <td class="px-3 py-3 text-center font-black text-emerald-700 text-sm" id="ac-val-${rIdx}-${col.key}">-</td>
+                            `).join('')}
+                        </tr>
+                    `;
+                }
+
                 html = `
                 <div class="space-y-8 animate-fade-in">
                     
@@ -2452,50 +2578,33 @@
                                     <table class="w-full text-sm text-left border border-stone-200 rounded-xl overflow-hidden shadow-sm">
                                         <thead>
                                             <tr class="bg-emerald-950 text-emerald-50 text-xs font-extrabold uppercase border-b border-emerald-900">
-                                                <th class="p-3 border-r border-emerald-900 w-[180px]">AC calculation options</th>
-                                                <th class="p-3 text-center">Starting</th>
-                                                <th class="p-3 text-center border-r border-emerald-900">Species</th>
+                                                <th class="p-3 border-r border-emerald-900 w-[240px]">AC calculation options</th>
+                                                <th class="p-3 text-center w-[120px]">Armor Type</th>
+                                                <th class="p-3 text-center border-r border-emerald-900 w-[100px]">Stealth</th>
                                                 ${keys.slice(2).map(col => `
                                                     <th class="p-3 text-center text-emerald-300 font-extrabold">${col.label} AC</th>
                                                 `).join('')}
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white">
-                                            <tr class="border-b border-stone-100 hover:bg-stone-50/40">
-                                                <td class="px-4 py-3 font-semibold text-stone-700 bg-stone-50 border-r border-stone-200 flex flex-col">
-                                                    <span>Unarmored Defense</span>
-                                                    <span class="text-[10px] text-stone-400 font-medium">10 AC + Dex Mod + Con Mod</span>
-                                                </td>
-                                                <td class="px-3 py-3 text-center font-extrabold text-stone-800 text-sm" id="ac-unarmored-starting"></td>
-                                                <td class="px-3 py-3 text-center border-r border-stone-200 bg-stone-50/20 font-extrabold text-stone-800 text-sm" id="ac-unarmored-species"></td>
-                                                ${keys.slice(2).map(col => `
-                                                    <td class="px-3 py-3 text-center font-black text-emerald-700 text-sm" id="ac-unarmored-${col.key}"></td>
-                                                `).join('')}
-                                            </tr>
-                                            <tr class="border-b border-stone-100 hover:bg-stone-50/40">
-                                                <td class="px-4 py-3 font-semibold text-stone-700 bg-stone-50 border-r border-stone-200 flex flex-col">
-                                                    <span>Chain Shirt</span>
-                                                    <span class="text-[10px] text-stone-400 font-medium">13 AC + Dex Mod (Max 2)</span>
-                                                </td>
-                                                <td class="px-3 py-3 text-center font-extrabold text-stone-800 text-sm" id="ac-chain-starting"></td>
-                                                <td class="px-3 py-3 text-center border-r border-stone-200 bg-stone-50/20 font-extrabold text-stone-800 text-sm" id="ac-chain-species"></td>
-                                                ${keys.slice(2).map(col => `
-                                                    <td class="px-3 py-3 text-center font-black text-stone-700 text-sm" id="ac-chain-${col.key}"></td>
-                                                `).join('')}
-                                            </tr>
-                                            <tr class="hover:bg-stone-50/40">
-                                                <td class="px-4 py-3 font-semibold text-stone-700 bg-stone-50 border-r border-stone-200 flex flex-col">
-                                                    <span>Scale/Breastplate</span>
-                                                    <span class="text-[10px] text-stone-400 font-medium">14 AC + Dex Mod (Max 2)</span>
-                                                </td>
-                                                <td class="px-3 py-3 text-center font-extrabold text-stone-800 text-sm" id="ac-scale-starting"></td>
-                                                <td class="px-3 py-3 text-center border-r border-stone-200 bg-stone-50/20 font-extrabold text-stone-800 text-sm" id="ac-scale-species"></td>
-                                                ${keys.slice(2).map(col => `
-                                                    <td class="px-3 py-3 text-center font-black text-stone-700 text-sm" id="ac-scale-${col.key}"></td>
-                                                `).join('')}
-                                            </tr>
+                                            ${acRowsHtml}
                                         </tbody>
                                     </table>
+                                </div>
+
+                                <!-- Shield Toggle Box -->
+                                <div class="mt-4 flex items-center justify-between bg-stone-50 p-4 rounded-xl border border-stone-200">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="p-2 bg-emerald-100 rounded-xl text-emerald-700 shadow-sm"><i data-lucide="shield" class="w-5 h-5"></i></span>
+                                        <div>
+                                            <h5 class="font-bold text-stone-800 text-sm">Equip Shield</h5>
+                                            <p class="text-xs text-stone-400">Adds +2 to all AC calculation rows when active</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="shield-toggle" onchange="window.toggleShieldActive(this.checked)" ${characterData.build.shieldActive ? 'checked' : ''} class="sr-only peer">
+                                        <div class="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                    </label>
                                 </div>
 
                             </div>
