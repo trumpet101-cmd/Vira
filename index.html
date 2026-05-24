@@ -112,7 +112,6 @@
             
             <!-- Type-To-Confirm Double-Verification Input -->
             <div id="dialog-input-container" class="mt-4 hidden text-left animate-fade-in">
-                <!-- Text-verification label (with uppercase removed) -->
                 <label class="block text-xs font-bold text-stone-500 tracking-wider mb-1" id="dialog-input-label">Type "Delete" to confirm</label>
                 <input type="text" id="dialog-input" class="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 focus:ring-2 focus:ring-red-500 focus:outline-none transition-all font-semibold" placeholder="">
             </div>
@@ -381,6 +380,7 @@
         function getCleanCharacterData(name, race, charClass) {
             return {
                 name: name || "New Character",
+                avatar: "",
                 basics: { 
                     race: race || "Unknown Race", 
                     class: charClass || "Unknown Class", 
@@ -482,17 +482,25 @@
                 data.build.feats = { lvl1: "", lvl4: "", lvl8: "", lvl12: "", lvl16: "", lvl19: "", lvl20: "" };
             }
 
-            // Safe migration of features and equipment into robust strings
+            // Safe migration of features and equipment into robust string formats (unordered lists)
             if (data.build) {
                 if (Array.isArray(data.build.features)) {
-                    data.build.features = data.build.features.join('\n');
+                    if (data.build.features.length > 0) {
+                        data.build.features = '<ul>' + data.build.features.map(f => `<li>${f}</li>`).join('') + '</ul>';
+                    } else {
+                        data.build.features = "";
+                    }
                 }
                 if (typeof data.build.features !== 'string') {
                     data.build.features = "";
                 }
 
                 if (Array.isArray(data.build.equipment)) {
-                    data.build.equipment = data.build.equipment.join('\n');
+                    if (data.build.equipment.length > 0) {
+                        data.build.equipment = '<ul>' + data.build.equipment.map(e => `<li>${e}</li>`).join('') + '</ul>';
+                    } else {
+                        data.build.equipment = "";
+                    }
                 }
                 if (typeof data.build.equipment !== 'string') {
                     data.build.equipment = "";
@@ -526,7 +534,7 @@
         }
         migrateData(characterData);
 
-        // --- NAVIGATION CONFIGURATION (RESTORED KEY VARIABLE) ---
+        // --- NAVIGATION CONFIGURATION ---
         const navItems = [
             { id: 'campaignNotes', label: 'Campaign Notes', icon: 'map' },
             { id: 'campaign_sessionNotes', label: 'Session Notes', icon: 'scroll-text', isSubItem: true },
@@ -1260,6 +1268,50 @@
                     }, 300); // 300ms pause for beautiful transition between modals
                 }
             );
+        };
+
+        // --- CHARACTER PORTRAIT UPLOAD, CROP & COMPRESSION HANDLERS ---
+        window.handleCharAvatarUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const TARGET_SIZE = 256; // Standard crisp square crop
+
+                    let width = img.width;
+                    let height = img.height;
+
+                    let size = Math.min(width, height);
+                    let xOffset = (width - size) / 2;
+                    let yOffset = (height - size) / 2;
+
+                    canvas.width = TARGET_SIZE;
+                    canvas.height = TARGET_SIZE;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, TARGET_SIZE, TARGET_SIZE);
+
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+                    characterData.avatar = compressedBase64;
+                    window.saveData();
+                    window.renderContent();
+                    lucide.createIcons();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.deleteCharAvatar = function(event) {
+            event.stopPropagation();
+            delete characterData.avatar;
+            window.saveData();
+            window.renderContent();
+            lucide.createIcons();
         };
 
         // --- DYNAMIC ABILITY PROGRESSION MODIFIERS HANDLER ---
@@ -2047,9 +2099,31 @@
 
             if (activeTab === 'backstory') {
                 let basicsHtml = `
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 mb-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 mb-6 animate-fade-in">
                     <div class="flex flex-col md:flex-row gap-6 items-start">
-                        <div class="w-24 h-24 bg-stone-100 rounded-full flex-shrink-0 border-2 border-stone-200 shadow-sm flex items-center justify-center overflow-hidden"><span class="text-4xl">🧝‍♀️</span></div>
+                        
+                        <!-- Interactive Character Portrait Slot -->
+                        <div class="flex-shrink-0 flex items-start">
+                            <div class="relative w-24 h-24 rounded-full border-2 border-stone-200 hover:border-emerald-400 bg-stone-50 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all duration-200" onclick="document.getElementById('char-avatar-input').click()" title="Click to upload character portrait">
+                                ${characterData.avatar ? 
+                                    `<img src="${characterData.avatar}" class="w-full h-full object-cover">` : 
+                                    `<span class="text-4xl">🧝‍♀️</span>`
+                                }
+                                <!-- Camera Hover Overlay -->
+                                <div class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                    <i data-lucide="camera" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <!-- Delete Portrait Button overlay -->
+                                ${characterData.avatar ? `
+                                    <button onclick="window.deleteCharAvatar(event)" class="absolute top-0 right-0 p-1 bg-red-600 hover:bg-red-700 text-white rounded-bl shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="Remove portrait">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                            <!-- Hidden input files collector -->
+                            <input type="file" id="char-avatar-input" accept="image/*" class="hidden" onchange="window.handleCharAvatarUpload(event)">
+                        </div>
+
                         <div class="flex-1 w-full">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div class="bg-stone-50 p-3 rounded-lg border border-stone-100 col-span-1 md:col-span-3">
@@ -2176,7 +2250,8 @@
                                 </div>
                             </div>
                             <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
-                                <div class="p-5">${getMentionableDiv('personality', p.id, p.notes, `min-h-[100px] ${hoverTheme}`)}</div>
+                                <!-- Upgraded open trait editor boxes to outline list format -->
+                                <div class="p-5">${getOutlineNotesEditor('personality', p.id, p.notes, `min-h-[100px] ${hoverTheme}`, 'Start typing traits... Enter starts a bullet, Tab indents, Shift+Tab outdents. Type @ to link notes.')}</div>
                             </div>
                         </div>`;
                 });
@@ -2363,20 +2438,22 @@
                         </div>
                     </div>
 
-                    <div class="grid md:grid-cols-2 gap-8">
+                    <div class="grid md:grid-cols-2 gap-8 animate-fade-in">
                         <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
-                            <h3 class="text-xl font-bold text-stone-800 mb-2 flex items-center space-x-2">
+                            <h3 class="text-xl font-bold text-stone-800 mb-2 flex items-center space-x-2 border-b border-stone-100 pb-2">
                                 <span class="p-1.5 bg-emerald-50 rounded-lg text-emerald-600"><i data-lucide="feather" class="w-4 h-4"></i></span>
                                 <span>Features & Traits</span>
                             </h3>
-                            ${getMentionableDiv('build', 'features', characterData.build.features)}
+                            <!-- Upgraded features box to outline list editor style -->
+                            ${getOutlineNotesEditor('build', 'features', characterData.build.features, 'min-h-[150px]', 'Start typing features... Hitting Enter starts a bullet, Tab indents, Shift+Tab outdents. Type @ to link notes.')}
                         </section>
                         <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
-                            <h3 class="text-xl font-bold text-stone-800 mb-2 flex items-center space-x-2">
+                            <h3 class="text-xl font-bold text-stone-800 mb-2 flex items-center space-x-2 border-b border-stone-100 pb-2">
                                 <span class="p-1.5 bg-emerald-50 rounded-lg text-emerald-600"><i data-lucide="clipboard" class="w-4 h-4"></i></span>
                                 <span>Misc Notes</span>
                             </h3>
-                            ${getMentionableDiv('build', 'equipment', characterData.build.equipment)}
+                            <!-- Upgraded equipment/misc notes box to outline list editor style -->
+                            ${getOutlineNotesEditor('build', 'equipment', characterData.build.equipment, 'min-h-[150px]', 'Start typing notes or equipment... Hitting Enter starts a bullet, Tab indents, Shift+Tab outdents. Type @ to link notes.')}
                         </section>
                     </div>
                 </div>`;
