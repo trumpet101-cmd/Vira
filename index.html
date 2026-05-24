@@ -50,7 +50,6 @@
 </head>
 <body class="bg-stone-100 text-stone-800 font-sans h-screen flex overflow-hidden">
 
-    <!-- Auth Lock Screen Overlay -->
     <div id="auth-overlay" class="fixed inset-0 bg-stone-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-md p-8 animate-fade-in">
             <div class="text-center mb-8">
@@ -83,10 +82,8 @@
         </div>
     </div>
 
-    <!-- Mobile Menu Overlay -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden" onclick="toggleMobileMenu()"></div>
 
-    <!-- Sidebar -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out w-64 bg-stone-900 text-stone-200 flex flex-col z-30 shadow-xl">
         <div class="p-6 flex items-center justify-between border-b border-stone-800">
             <div>
@@ -116,7 +113,6 @@
         </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-stone-50 relative">
         
         <header class="bg-white shadow-sm px-6 py-4 flex items-center justify-between z-10">
@@ -141,11 +137,9 @@
             <div class="h-24 md:h-12"></div>
         </div>
 
-        <!-- Global Mention Dropdown -->
         <ul id="mention-dropdown" class="hidden absolute z-50 bg-white border border-stone-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto w-72 text-sm flex flex-col"></ul>
     </main>
 
-    <!-- Use Type Module for Firebase Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -164,7 +158,7 @@
             return val;
         }
 
-        // --- INITIAL DATA ---
+        // --- INITIAL DATA (CLEANED) ---
         const initialCharacterData = {
             name: "Víra Tahlwyn",
             basics: { race: "Wood Elf", class: "Barbarian (World Tree)", age: 27, background: "Nomadic Tribesman (Custom)", tribe: "Eryndral Tribe (Orroyen)", familiar: "Tato (Squirrel)" },
@@ -186,14 +180,11 @@
                 equipment: [ "Halberd", "Handaxe (x4)", "Find Familiar Herbs", "Explorer's Pack", "Gold: 125g remaining" ]
             },
             campaignNotes: {
-                sessionNotes: [ { id: 'sess_1', title: 'Session 1', date: 'May 20, 2026', notes: '- Met the Witchlight Carnival.<br>- Started the journey to Emon.', isCollapsed: false } ],
-                quests: [
-                    { id: 'quest_1', title: 'Find the lost Gau Drashari tree', subtitle: 'Main Quest', notes: 'I must follow the visions to restore balance to the forest.', isCompleted: false },
-                    { id: 'quest_2', title: 'Travel to Emon', subtitle: 'Side Quest', notes: 'Traveling with Witchlight Carnival for 8 days.', isCompleted: false }
-                ],
-                npcs: [ { id: 'fac_1', name: 'Witchlight Carnival', members: [ { id: 'npc_1', name: 'Mister Witch', notes: 'Shadar-Kai, Carnival Owner.' } ] } ],
-                locations: [ { id: 'loc_1', title: 'Yrm’Saldr', subtitle: 'The Eternal Canopy (Jungle)', notes: '', isCollapsed: false }, { id: 'loc_2', title: 'Emon', subtitle: 'The capital city', notes: '', isCollapsed: false } ],
-                misc: "Need to buy more healing potions when in the city."
+                sessionNotes: [],
+                quests: [],
+                npcs: [],
+                locations: [],
+                misc: ""
             }
         };
 
@@ -652,8 +643,11 @@
             const arr = faction.members;
             const index = arr.findIndex(n => n.id === npcId);
             if (index !== -1) {
-                [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]];
-                window.saveData(); window.renderContent(); lucide.createIcons();
+                const targetIdx = index + direction;
+                if (targetIdx >= 0 && targetIdx < arr.length) {
+                    [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]];
+                    window.saveData(); window.renderContent(); lucide.createIcons();
+                }
             }
         };
 
@@ -1007,7 +1001,7 @@
                                             <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
                                         </button>
                                         <input type="text" oninput="window.updateLocation('${loc.id}', 'title', this.value)" value="${escapeHtml(loc.title)}" class="seamless-input font-bold text-lg text-stone-800 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Location Name">
-                                        <input type="text" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 bg-transparent px-2 py-1 w-full sm:w-auto rounded" placeholder="Region / Details">
+                                        <input type="text" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm text-stone-500 bg-transparent px-2 py-1 w-full sm:w-auto rounded" placeholder="Region / Details">
                                     </div>
                                     <div class="flex items-center space-x-1 ml-2">
                                         <button onclick="window.moveLocation('${loc.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Location Up">
