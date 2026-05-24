@@ -696,6 +696,9 @@
                     characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...docSnap.data() };
                     migrateData(characterData);
                     
+                    // Cache the synced down character details so it's instantly available offline and for deep backup
+                    localStorage.setItem('character_data_' + currentCharacterId, JSON.stringify(characterData));
+                    
                     document.getElementById('header-name-input').value = characterData.name;
                     window.renderContent();
                     lucide.createIcons();
@@ -819,7 +822,7 @@
         }
 
         // --- FULL-VAULT (ALL CHARACTERS) BACKUP EXPORT & IMPORT FLOW ---
-        window.exportJSON = function() {
+        window.exportJSON = async function() {
             // Build the multi-character vault structure
             const backupPayload = {
                 vira_vault_backup: true,
@@ -829,15 +832,49 @@
                 characters: {}
             };
             
-            // Populate all data from your local cache database
-            characterList.forEach(char => {
-                const data = localStorage.getItem('character_data_' + char.id);
-                if (data) {
-                    backupPayload.characters[char.id] = JSON.parse(data);
-                } else if (char.id === currentCharacterId) {
-                    backupPayload.characters[char.id] = characterData;
+            updateCloudUIStatus("Preparing Backup...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+            
+            if (isCloudReady && cloudUser && db) {
+                try {
+                    // Pull absolute live, up-to-date document data directly from Firestore collections
+                    for (const char of characterList) {
+                        const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', char.id);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            backupPayload.characters[char.id] = docSnap.data();
+                        } else {
+                            // Fallback to local storage cache if specific document is missing
+                            const localData = localStorage.getItem('character_data_' + char.id);
+                            if (localData) {
+                                backupPayload.characters[char.id] = JSON.parse(localData);
+                            } else if (char.id === currentCharacterId) {
+                                backupPayload.characters[char.id] = characterData;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Cloud fetch during backup failed, relying on local browser cache", e);
+                    // Fallback to local browser storage cache
+                    characterList.forEach(char => {
+                        const data = localStorage.getItem('character_data_' + char.id);
+                        if (data) {
+                            backupPayload.characters[char.id] = JSON.parse(data);
+                        } else if (char.id === currentCharacterId) {
+                            backupPayload.characters[char.id] = characterData;
+                        }
+                    });
                 }
-            });
+            } else {
+                // Offline fallback - read from local cache
+                characterList.forEach(char => {
+                    const data = localStorage.getItem('character_data_' + char.id);
+                    if (data) {
+                        backupPayload.characters[char.id] = JSON.parse(data);
+                    } else if (char.id === currentCharacterId) {
+                        backupPayload.characters[char.id] = characterData;
+                    }
+                });
+            }
             
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPayload, null, 2));
             const a = document.createElement('a');
@@ -846,6 +883,13 @@
             document.body.appendChild(a);
             a.click();
             a.remove();
+            
+            // Re-trigger standard synced status label
+            if (isCloudReady) {
+                updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
+            } else {
+                updateCloudUIStatus("Local Storage Active", "hard-drive", "bg-stone-800 text-stone-400");
+            }
         };
 
         window.importJSON = function(event) {
@@ -871,11 +915,31 @@
                                     localStorage.removeItem('character_data_' + c.id);
                                 });
                                 
+                                // Retrieve the old list to identify what needs to be pruned on Firestore
+                                const oldList = [...characterList];
+                                
                                 // Restore index character structures
                                 characterList = parsedData.characterList || [];
                                 localStorage.setItem('character_list', JSON.stringify(characterList));
                                 
-                                // Restore individual sheets
+                                // Re-calculate new unique set of IDs
+                                const newIds = new Set(characterList.map(c => c.id));
+                                
+                                // Overwrite or clean old sheets on Firestore first if online
+                                if (isCloudReady && cloudUser && db) {
+                                    for (const oldChar of oldList) {
+                                        if (!newIds.has(oldChar.id)) {
+                                            const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', oldChar.id);
+                                            try {
+                                                await deleteDoc(docRef);
+                                            } catch (e) {
+                                                console.error("Clean-up purge failed for ID: " + oldChar.id, e);
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Restore individual sheets to cache & cloud
                                 for (const [charId, charData] of Object.entries(parsedData.characters)) {
                                     migrateData(charData);
                                     localStorage.setItem('character_data_' + charId, JSON.stringify(charData));
@@ -2106,7 +2170,7 @@
                         <div class="flex-shrink-0 flex items-start">
                             <div class="relative w-24 h-24 rounded-full border-2 border-stone-200 hover:border-emerald-400 bg-stone-50 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all duration-200" onclick="document.getElementById('char-avatar-input').click()" title="Click to upload character portrait">
                                 ${characterData.avatar ? 
-                                    `<img src="${characterData.avatar}" class="w-full h-full object-cover">` : 
+                                    `<img src="${characterData.avatar}" class="w-full h-full object-cover animate-fade-in">` : 
                                     `<span class="text-4xl">🧝‍♀️</span>`
                                 }
                                 <!-- Camera Hover Overlay -->
