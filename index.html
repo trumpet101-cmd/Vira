@@ -184,22 +184,70 @@
             return val;
         }
 
-        // --- INITIAL DATA ---
+        // --- INITIAL DATA (MODULAR TEMPLATE) ---
         const initialCharacterData = {
             name: "Víra Tahlwyn",
             basics: { race: "Wood Elf", class: "Barbarian (World Tree)", age: 27, background: "Nomadic Tribesman (Custom)", tribe: "Eryndral Tribe (Orroyen)", familiar: "Tato (Squirrel)" },
-            backstory: {
-                earlyLife: `Growing up, Vira had a very traditional nomadic life within the Orroyen tribe...\n\nFrom her mother she learned to be upbeat, friendly and open - always seeing meeting others as a chance to “plant new seeds of friendship”.\n\nHer father was the careful balance to that - he taught her discipline, patience, vigilance.`,
-                theThreat: `As with all members of the Orroyen tribes, Vira was well aware of the Iron Authority; the Hobgoblin nation who would see the destruction and conquest of the Jungle and all those who dwell within it.`,
-                theVision: `Many years later, Vira now 27, was led by a playful squirrel (Tato) to a clearing void of the thick dense jungle...`,
-                theJourney: `After waking, she sought guidance. Syngorn was unhelpful; the elves were xenophobic and dismissive of her visions...`
-            },
-            personality: {
-                normal: "Has a very similar personality to her mother. 'Every stranger met is a seed of friendship planted'. A typically positive and upbeat personality. Excited for new opportunities.",
-                raging: "Eye Color turns from a vibrant green to a dark oak brown. Ties up her hair into a ponytail. Adopts a personality closer to her father; stern, stoic and intensely focused.",
-                likes: "Trees, Jungle life, Flora. Her Halberd. Her nomadic lifestyle. Respects animals as a means of hunting for survival.",
-                dislikes: "Hobgoblins & Goblins of The Iron Authority. Closed spaces (sealed stone structures, caverns, deep caves)."
-            },
+            backstory: [
+                {
+                    id: 'b_1',
+                    title: "Early Life",
+                    notes: `Growing up, Vira had a very traditional nomadic life within the Orroyen tribe...\n\nFrom her mother she learned to be upbeat, friendly and open - always seeing meeting others as a chance to “plant new seeds of friendship”.\n\nHer father was the careful balance to that - he taught her discipline, patience, vigilance.`,
+                    isCollapsed: false
+                },
+                {
+                    id: 'b_2',
+                    title: "The Threat",
+                    notes: `As with all members of the Orroyen tribes, Vira was well aware of the Iron Authority; the Hobgoblin nation who would see the destruction and conquest of the Jungle and all those who dwell within it.`,
+                    isCollapsed: false
+                },
+                {
+                    id: 'b_3',
+                    title: "The Vision",
+                    notes: `Many years later, Vira now 27, was led by a playful squirrel (Tato) to a clearing void of the thick dense jungle...`,
+                    isCollapsed: false
+                },
+                {
+                    id: 'b_4',
+                    title: "The Journey",
+                    notes: `After waking, she sought guidance. Syngorn was unhelpful; the elves were xenophobic and dismissive of her visions...`,
+                    isCollapsed: false
+                }
+            ],
+            personality: [
+                {
+                    id: 'p_1',
+                    title: "Normal Personality",
+                    subtitle: "Default State",
+                    notes: "Has a very similar personality to her mother. 'Every stranger met is a seed of friendship planted'. A typically positive and upbeat personality. Excited for new opportunities.",
+                    isCollapsed: false,
+                    isRed: false
+                },
+                {
+                    id: 'p_2',
+                    title: "Raging Personality",
+                    subtitle: "Combat State",
+                    notes: "Eye Color turns from a vibrant green to a dark oak brown. Ties up her hair into a ponytail. Adopts a personality closer to her father; stern, stoic and intensely focused.",
+                    isCollapsed: false,
+                    isRed: true
+                },
+                {
+                    id: 'p_3',
+                    title: "Likes",
+                    subtitle: "Interests & Preference",
+                    notes: "Trees, Jungle life, Flora. Her Halberd. Her nomadic lifestyle. Respects animals as a means of hunting for survival.",
+                    isCollapsed: false,
+                    isRed: false
+                },
+                {
+                    id: 'p_4',
+                    title: "Dislikes",
+                    subtitle: "Fears & Aversions",
+                    notes: "Hobgoblins & Goblins of The Iron Authority. Closed spaces (sealed stone structures, caverns, deep caves).",
+                    isCollapsed: false,
+                    isRed: false
+                }
+            ],
             build: {
                 stats: [ { name: "Strength", value: 15 }, { name: "Dexterity", value: 14 }, { name: "Constitution", value: 13 }, { name: "Intelligence", value: 10 }, { name: "Wisdom", value: 12 }, { name: "Charisma", value: 8 } ],
                 features: [ "Barbarian (World Tree)", "Speed: 35 feet", "Darkvision: 60 feet", "Fey Ancestry: Advantage on Charm saves", "Trance: 4 hour long rest", "Origin Feat: Magic Initiate (Wizard) - Find Familiar, Message, Mending" ],
@@ -218,17 +266,50 @@
         let activeTab = 'campaignNotes';
         let isMobileMenuOpen = false;
         let questSectionsState = { inProgressCollapsed: false, completedCollapsed: false };
-        let currentSearchQueries = { sessionNotes: '', quests: '', locations: '', npcs: '' };
+        let currentSearchQueries = { sessionNotes: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
         
         let characterData = { ...initialCharacterData };
+
+        // --- ROBUST LORE & DATA MIGRATION ENGINE ---
+        function migrateData(data) {
+            if (!data.campaignNotes) data.campaignNotes = initialCharacterData.campaignNotes;
+            if (typeof data.campaignNotes.npcs === 'string') data.campaignNotes.npcs = initialCharacterData.campaignNotes.npcs;
+            if (typeof data.campaignNotes.sessionNotes === 'string') {
+                data.campaignNotes.sessionNotes = [ { id: 'sess_migrated', title: 'Imported Session Notes', date: '', notes: data.campaignNotes.sessionNotes, isCollapsed: false } ];
+            }
+            
+            // Migrate backstory if it exists but is formatted as a legacy key-value object
+            if (data.backstory && !Array.isArray(data.backstory)) {
+                const oldBackstory = data.backstory;
+                data.backstory = [
+                    { id: 'b_1', title: "Early Life", notes: oldBackstory.earlyLife || "", isCollapsed: false },
+                    { id: 'b_2', title: "The Threat", notes: oldBackstory.theThreat || "", isCollapsed: false },
+                    { id: 'b_3', title: "The Vision", notes: oldBackstory.theVision || "", isCollapsed: false },
+                    { id: 'b_4', title: "The Journey", notes: oldBackstory.theJourney || "", isCollapsed: false }
+                ];
+            } else if (!data.backstory) {
+                data.backstory = [...initialCharacterData.backstory];
+            }
+
+            // Migrate personality if it exists but is formatted as a legacy key-value object
+            if (data.personality && !Array.isArray(data.personality)) {
+                const oldPersonality = data.personality;
+                data.personality = [
+                    { id: 'p_1', title: "Normal Personality", subtitle: "Default State", notes: oldPersonality.normal || "", isCollapsed: false, isRed: false },
+                    { id: 'p_2', title: "Raging Personality", subtitle: "Combat State", notes: oldPersonality.raging || "", isCollapsed: false, isRed: true },
+                    { id: 'p_3', title: "Likes", subtitle: "Interests & Preference", notes: oldPersonality.likes || "", isCollapsed: false, isRed: false },
+                    { id: 'p_4', title: "Dislikes", subtitle: "Fears & Aversions", notes: oldPersonality.dislikes || "", isCollapsed: false, isRed: false }
+                ];
+            } else if (!data.personality) {
+                data.personality = [...initialCharacterData.personality];
+            }
+        }
+
         let loadedData = JSON.parse(localStorage.getItem('viraDndNotes'));
-        
         if (loadedData) {
             characterData = { ...initialCharacterData, ...loadedData };
-            if (!characterData.campaignNotes) characterData.campaignNotes = initialCharacterData.campaignNotes;
-            if (typeof characterData.campaignNotes.npcs === 'string') characterData.campaignNotes.npcs = initialCharacterData.campaignNotes.npcs;
-            if (typeof characterData.campaignNotes.sessionNotes === 'string') characterData.campaignNotes.sessionNotes = [ { id: 'sess_migrated', title: 'Imported Session Notes', date: '', notes: characterData.campaignNotes.sessionNotes, isCollapsed: false } ];
         }
+        migrateData(characterData); // Apply fallback corrections to structural notes on load
 
         const navItems = [
             { id: 'campaignNotes', label: 'Campaign Notes', icon: 'map' },
@@ -314,6 +395,7 @@
                     
                     if (docSnap.exists()) {
                         characterData = { ...initialCharacterData, ...docSnap.data() };
+                        migrateData(characterData); // Maintain structural integrity on sync-down
                         document.getElementById('header-name-input').value = characterData.name;
                         window.renderContent();
                         lucide.createIcons();
@@ -419,6 +501,7 @@
                         () => {
                             // Merge imported data safely on top of structural defaults
                             characterData = { ...initialCharacterData, ...parsedData };
+                            migrateData(characterData); // Migrate custom schema
                             
                             // Commit changes to LocalStorage and stream up to Firestore
                             window.saveData();
@@ -592,6 +675,153 @@
             }
         };
 
+        // --- BACKSTORY DYNAMIC MANAGEMENT ---
+        window.addBackstory = function() {
+            currentSearchQueries.backstory = '';
+            characterData.backstory.unshift({
+                id: 'b_' + Date.now(),
+                title: 'New Lore Section',
+                notes: '',
+                isCollapsed: false
+            });
+            window.saveData();
+            window.renderContent();
+            lucide.createIcons();
+        }
+        window.updateBackstory = function(bId, field, val) {
+            const entry = characterData.backstory.find(b => b.id === bId);
+            if(entry) entry[field] = val;
+            window.saveData();
+        }
+        window.deleteBackstory = function(bId) {
+            window.showCustomConfirm(
+                'Delete Backstory Section?',
+                'Are you sure you want to permanently delete this backstory section?',
+                '📜',
+                () => {
+                    characterData.backstory = characterData.backstory.filter(b => b.id !== bId);
+                    window.saveData();
+                    window.renderContent();
+                    lucide.createIcons();
+                }
+            );
+        }
+        window.toggleBackstoryCollapse = function(bId) {
+            const entry = characterData.backstory.find(b => b.id === bId);
+            if(entry) {
+                entry.isCollapsed = !entry.isCollapsed;
+                window.saveData();
+                window.renderContent();
+                lucide.createIcons();
+            }
+        }
+        window.toggleAllBackstory = function(collapse) {
+            characterData.backstory.forEach(b => b.isCollapsed = collapse);
+            window.saveData();
+            window.renderContent();
+            lucide.createIcons();
+        }
+        window.moveBackstory = function(bId, direction) {
+            const arr = characterData.backstory;
+            const index = arr.findIndex(b => b.id === bId);
+            if (index !== -1) {
+                const targetIdx = index + direction;
+                if (targetIdx >= 0 && targetIdx < arr.length) {
+                    [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]];
+                    window.saveData();
+                    window.renderContent();
+                    lucide.createIcons();
+                }
+            }
+        }
+        window.filterBackstory = function(query) {
+            currentSearchQueries.backstory = query;
+            const q = query.toLowerCase();
+            document.querySelectorAll('.backstory-block').forEach(block => {
+                if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden');
+                else block.classList.add('hidden');
+            });
+        }
+
+        // --- PERSONALITY DYNAMIC MANAGEMENT ---
+        window.addPersonality = function() {
+            currentSearchQueries.personality = '';
+            characterData.personality.unshift({
+                id: 'p_' + Date.now(),
+                title: 'New Trait / Code',
+                subtitle: 'A brief state description',
+                notes: '',
+                isCollapsed: false,
+                isRed: false
+            });
+            window.saveData();
+            window.renderContent();
+            lucide.createIcons();
+        }
+        window.updatePersonality = function(pId, field, val) {
+            const entry = characterData.personality.find(p => p.id === pId);
+            if(entry) entry[field] = val;
+            window.saveData();
+        }
+        window.togglePersonalityRed = function(pId) {
+            const entry = characterData.personality.find(p => p.id === pId);
+            if(entry) {
+                entry.isRed = !entry.isRed;
+                window.saveData();
+                window.renderContent();
+                lucide.createIcons();
+            }
+        }
+        window.deletePersonality = function(pId) {
+            window.showCustomConfirm(
+                'Delete Personality Trait?',
+                'Are you sure you want to permanently delete this personality section?',
+                '🧠',
+                () => {
+                    characterData.personality = characterData.personality.filter(p => p.id !== pId);
+                    window.saveData();
+                    window.renderContent();
+                    lucide.createIcons();
+                }
+            );
+        }
+        window.togglePersonalityCollapse = function(pId) {
+            const entry = characterData.personality.find(p => p.id === pId);
+            if(entry) {
+                entry.isCollapsed = !entry.isCollapsed;
+                window.saveData();
+                window.renderContent();
+                lucide.createIcons();
+            }
+        }
+        window.toggleAllPersonality = function(collapse) {
+            characterData.personality.forEach(p => p.isCollapsed = collapse);
+            window.saveData();
+            window.renderContent();
+            lucide.createIcons();
+        }
+        window.movePersonality = function(pId, direction) {
+            const arr = characterData.personality;
+            const index = arr.findIndex(p => p.id === pId);
+            if (index !== -1) {
+                const targetIdx = index + direction;
+                if (targetIdx >= 0 && targetIdx < arr.length) {
+                    [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]];
+                    window.saveData();
+                    window.renderContent();
+                    lucide.createIcons();
+                }
+            }
+        }
+        window.filterPersonality = function(query) {
+            currentSearchQueries.personality = query;
+            const q = query.toLowerCase();
+            document.querySelectorAll('.personality-block').forEach(block => {
+                if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden');
+                else block.classList.add('hidden');
+            });
+        }
+
         // --- THE MENTION SYSTEM ---
         let mentionContext = null;
 
@@ -614,6 +844,12 @@
             });
             characterData.campaignNotes.locations.forEach(loc => {
                 if (loc.title.toLowerCase().includes(q)) results.push({ type: 'Location', id: 'campaign_locations', label: loc.title });
+            });
+            characterData.backstory.forEach(b => {
+                if (b.title.toLowerCase().includes(q)) results.push({ type: 'Backstory', id: 'backstory', label: b.title });
+            });
+            characterData.personality.forEach(p => {
+                if (p.title.toLowerCase().includes(q)) results.push({ type: 'Personality', id: 'personality', label: p.title });
             });
             
             return results;
@@ -646,7 +882,13 @@
         window.handleInput = function(event, section, field) {
             const div = event.target;
             
-            if (section === 'campaignNotes_session') {
+            if (section === 'backstory') {
+                const bEntry = characterData.backstory.find(b => b.id === field);
+                if(bEntry) bEntry.notes = div.innerHTML;
+            } else if (section === 'personality') {
+                const pEntry = characterData.personality.find(p => p.id === field);
+                if(pEntry) pEntry.notes = div.innerHTML;
+            } else if (section === 'campaignNotes_session') {
                 const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === field);
                 if(sess) sess.notes = div.innerHTML;
             } else if (section === 'campaignNotes_quest') {
@@ -1057,19 +1299,134 @@
                 </div>`;
             } 
             else if (activeTab === 'backstory') {
-                html = `<div class="space-y-8 animate-fade-in">${['earlyLife', 'theThreat', 'theVision', 'theJourney'].map(key => `<section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><h3 class="text-xl font-bold text-stone-800 mb-4 capitalize">${key.replace(/([A-Z])/g, ' $1').trim()}</h3>${getMentionableDiv('backstory', key, characterData.backstory[key])}</section>`).join('')}</div>`;
+                let contentHtml = `
+                    <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div class="relative w-full sm:w-2/3">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
+                            <input type="text" id="backstory-search" oninput="window.filterBackstory(this.value)" placeholder="Search backstory..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 rounded-xl bg-white shadow-sm">
+                        </div>
+                        <div class="flex space-x-2 w-full sm:w-auto">
+                            <button onclick="window.toggleAllBackstory(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Expand All</button>
+                            <button onclick="window.toggleAllBackstory(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Collapse All</button>
+                            <button onclick="window.addBackstory()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 text-emerald-800 font-medium rounded-lg hover:bg-emerald-200 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>`;
+
+                if (characterData.backstory.length === 0) {
+                    contentHtml += `<p class="text-stone-500 text-center py-8 italic">No backstory segments added yet.</p>`;
+                }
+
+                characterData.backstory.forEach((b, idx) => {
+                    const isCollapsed = b.isCollapsed;
+                    const isFirst = idx === 0;
+                    const isLast = idx === characterData.backstory.length - 1;
+                    contentHtml += `
+                        <div class="backstory-block mb-4 border border-stone-200 rounded-xl bg-white shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${b.title} ${b.notes}`)}">
+                            <div class="bg-stone-50/80 border-b border-stone-200 px-5 py-4 flex justify-between items-start transition-colors">
+                                <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
+                                    <button onclick="window.toggleBackstoryCollapse('${b.id}')" class="p-1 hover:bg-stone-200 rounded transition-colors focus:outline-none hidden sm:block">
+                                        <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
+                                    </button>
+                                    <input type="text" oninput="window.updateBackstory('${b.id}', 'title', this.value)" value="${escapeHtml(b.title)}" class="seamless-input font-bold text-lg text-stone-800 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Backstory Title">
+                                </div>
+                                <div class="flex items-center space-x-1 ml-2">
+                                    <button onclick="window.moveBackstory('${b.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Up">
+                                        <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="window.moveBackstory('${b.id}', 1)" ${isLast ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Down">
+                                        <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="window.deleteBackstory('${b.id}')" class="text-stone-300 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
+                                <div class="p-5">${getMentionableDiv('backstory', b.id, b.notes, 'min-h-[150px]')}</div>
+                            </div>
+                        </div>`;
+                });
+
+                html = `
+                <div class="space-y-6 animate-fade-in h-full flex flex-col">
+                    <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex-grow flex flex-col">
+                        <h3 class="text-2xl font-bold text-stone-800 mb-6 flex items-center space-x-2 border-b border-stone-100 pb-4">
+                            <i data-lucide="book-open" class="text-emerald-600"></i><span>Backstory</span>
+                        </h3>
+                        <div class="flex-grow flex flex-col">
+                            ${contentHtml}
+                        </div>
+                    </section>
+                </div>`;
             }
             else if (activeTab === 'personality') {
+                let contentHtml = `
+                    <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div class="relative w-full sm:w-2/3">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
+                            <input type="text" id="personality-search" oninput="window.filterPersonality(this.value)" placeholder="Search traits..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 rounded-xl bg-white shadow-sm">
+                        </div>
+                        <div class="flex space-x-2 w-full sm:w-auto">
+                            <button onclick="window.toggleAllPersonality(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Expand All</button>
+                            <button onclick="window.toggleAllPersonality(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Collapse All</button>
+                            <button onclick="window.addPersonality()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 text-emerald-800 font-medium rounded-lg hover:bg-emerald-200 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>`;
+
+                if (characterData.personality.length === 0) {
+                    contentHtml += `<p class="text-stone-500 text-center py-8 italic">No personality traits added yet.</p>`;
+                }
+
+                characterData.personality.forEach((p, idx) => {
+                    const isCollapsed = p.isCollapsed;
+                    const isFirst = idx === 0;
+                    const isLast = idx === characterData.personality.length - 1;
+                    const cardBg = p.isRed ? 'bg-red-50/70 border-red-200 shadow-sm shadow-red-100/30 animate-fade-in' : 'bg-white border-stone-200';
+                    const titleTextTheme = p.isRed ? 'text-red-950 font-black' : 'text-stone-800 font-bold';
+                    const subtitleTextTheme = p.isRed ? 'text-red-700' : 'text-emerald-600';
+                    const hoverTheme = p.isRed ? 'hover:bg-red-100/30' : 'hover:bg-stone-100/30';
+                    
+                    contentHtml += `
+                        <div class="personality-block mb-4 border rounded-xl shadow-sm overflow-hidden ${cardBg}" data-searchable="${escapeHtml(`${p.title} ${p.subtitle} ${p.notes}`)}">
+                            <div class="bg-stone-50/40 border-b border-stone-200/50 px-5 py-4 flex justify-between items-start transition-colors">
+                                <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
+                                    <button onclick="window.togglePersonalityCollapse('${p.id}')" class="p-1 hover:bg-stone-200 rounded transition-colors focus:outline-none hidden sm:block">
+                                        <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
+                                    </button>
+                                    <input type="text" oninput="window.updatePersonality('${p.id}', 'title', this.value)" value="${escapeHtml(p.title)}" class="seamless-input text-lg bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded ${titleTextTheme}" placeholder="Trait Title">
+                                    <input type="text" oninput="window.updatePersonality('${p.id}', 'subtitle', this.value)" value="${escapeHtml(p.subtitle)}" class="seamless-input text-sm font-semibold bg-transparent px-2 py-1 w-full sm:w-auto rounded ${subtitleTextTheme}" placeholder="Subheading / State">
+                                </div>
+                                <div class="flex items-center space-x-1 ml-2">
+                                    <button onclick="window.togglePersonalityRed('${p.id}')" class="p-1.5 rounded transition-colors ${p.isRed ? 'text-red-600 hover:bg-red-100 bg-red-100/80 font-bold' : 'text-stone-400 hover:text-red-500 hover:bg-stone-100'}" title="Toggle Rage Red Highlight">
+                                        <i data-lucide="flame" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="window.movePersonality('${p.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Up">
+                                        <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="window.movePersonality('${p.id}', 1)" ${isLast ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Down">
+                                        <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="window.deletePersonality('${p.id}')" class="text-stone-300 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
+                                <div class="p-5">${getMentionableDiv('personality', p.id, p.notes, `min-h-[100px] ${hoverTheme}`)}</div>
+                            </div>
+                        </div>`;
+                });
+
                 html = `
-                <div class="grid md:grid-cols-2 gap-6 animate-fade-in">
-                    <div class="space-y-6">
-                        <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><h3 class="text-xl font-bold text-stone-800 mb-4 flex items-center space-x-2"><span>🌿</span><span>Normal Personality</span></h3>${getMentionableDiv('personality', 'normal', characterData.personality.normal)}</section>
-                        <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><h3 class="text-xl font-bold text-stone-800 mb-4 flex items-center space-x-2"><span>👍</span><span>Likes</span></h3>${getMentionableDiv('personality', 'likes', characterData.personality.likes)}</section>
-                    </div>
-                    <div class="space-y-6">
-                        <section class="bg-red-50 p-6 rounded-2xl shadow-sm border border-red-200"><h3 class="text-xl font-bold text-stone-800 mb-4 flex items-center space-x-2"><span>🔥</span><span>Raging Personality</span></h3>${getMentionableDiv('personality', 'raging', characterData.personality.raging)}</section>
-                        <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><h3 class="text-xl font-bold text-stone-800 mb-4 flex items-center space-x-2"><span>👎</span><span>Dislikes & Fears</span></h3>${getMentionableDiv('personality', 'dislikes', characterData.personality.dislikes)}</section>
-                    </div>
+                <div class="space-y-6 animate-fade-in h-full flex flex-col">
+                    <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex-grow flex flex-col">
+                        <h3 class="text-2xl font-bold text-stone-800 mb-6 flex items-center space-x-2 border-b border-stone-100 pb-4">
+                            <i data-lucide="brain" class="text-emerald-600"></i><span>Personality & Traits</span>
+                        </h3>
+                        <div class="flex-grow flex flex-col">
+                            ${contentHtml}
+                        </div>
+                    </section>
                 </div>`;
             }
             else if (activeTab === 'build') {
@@ -1369,6 +1726,12 @@
             } else if (activeTab === 'campaign_npcs' && currentSearchQueries.npcs) {
                 const searchInput = document.getElementById('npc-search');
                 if (searchInput) { searchInput.value = currentSearchQueries.npcs; window.filterNPCs(currentSearchQueries.npcs); }
+            } else if (activeTab === 'backstory' && currentSearchQueries.backstory) {
+                const searchInput = document.getElementById('backstory-search');
+                if (searchInput) { searchInput.value = currentSearchQueries.backstory; window.filterBackstory(currentSearchQueries.backstory); }
+            } else if (activeTab === 'personality' && currentSearchQueries.personality) {
+                const searchInput = document.getElementById('personality-search');
+                if (searchInput) { searchInput.value = currentSearchQueries.personality; window.filterPersonality(currentSearchQueries.personality); }
             }
         }
 
