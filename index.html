@@ -441,24 +441,51 @@
 
         // --- ARMOR GLOBAL REFERENCE ---
         const ARMOR_OPTIONS = {
-            unarmored: { name: "Unarmored Defense", type: "Unarmored", stealth: "Normal", isDisadv: false },
-            studded: { name: "Studded Leather (Light)", type: "Light", stealth: "Normal", isDisadv: false },
-            chainshirt: { name: "Chain Shirt (Medium)", type: "Medium", stealth: "Normal", isDisadv: false },
-            scalemail: { name: "Scale Mail (Medium)", type: "Medium", stealth: "Disadv.", isDisadv: true },
-            breastplate: { name: "Breastplate (Medium)", type: "Medium", stealth: "Normal", isDisadv: false },
-            halfplate: { name: "Halfplate (Medium)", type: "Medium", stealth: "Disadv.", isDisadv: true },
-            chainmail: { name: "Chain Mail (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true },
-            splint: { name: "Splint (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true },
-            plate: { name: "Plate (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true }
+            unarmored: { name: "Unarmored Barbarian", type: "Unarmored", stealth: "Normal", isDisadv: false, formula: "10 + Dex Mod + Con Mod" },
+            unarmored_monk: { name: "Unarmored Monk", type: "Unarmored", stealth: "Normal", isDisadv: false, formula: "10 + Dex Mod + Wis Mod" },
+            studded: { name: "Studded Leather (Light)", type: "Light", stealth: "Normal", isDisadv: false, formula: "12 + Dex Mod" },
+            chainshirt: { name: "Chain Shirt (Medium)", type: "Medium", stealth: "Normal", isDisadv: false, formula: "13 + Dex Mod (Max 2)" },
+            scalemail: { name: "Scale Mail (Medium)", type: "Medium", stealth: "Disadv.", isDisadv: true, formula: "14 + Dex Mod (Max 2)" },
+            breastplate: { name: "Breastplate (Medium)", type: "Medium", stealth: "Normal", isDisadv: false, formula: "14 + Dex Mod (Max 2)" },
+            halfplate: { name: "Halfplate (Medium)", type: "Medium", stealth: "Disadv.", isDisadv: true, formula: "15 + Dex Mod (Max 2)" },
+            chainmail: { name: "Chain Mail (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true, formula: "16" },
+            splint: { name: "Splint (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true, formula: "17" },
+            plate: { name: "Plate (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true, formula: "18" }
         };
 
-        // --- ROBUST LORE & DATA MIGRATION ENGINE ---
+        // --- ROBUST LORE & DATA MIGRATION ENGINE (DEEP GUARDIAN UPGRADE) ---
         function migrateData(data) {
             if (!data) return;
-            if (!data.campaignNotes) data.campaignNotes = { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "" };
-            if (typeof data.campaignNotes.npcs === 'string') data.campaignNotes.npcs = [];
+
+            // Heal master name
+            if (!data.name) data.name = "Unnamed Character";
+
+            // Heal basics dashboard keys
+            if (!data.basics || typeof data.basics !== 'object') {
+                data.basics = { race: "", class: "", age: "", background: "", tribe: "", familiar: "" };
+            } else {
+                const basicsKeys = ["race", "class", "age", "background", "tribe", "familiar"];
+                basicsKeys.forEach(k => {
+                    if (data.basics[k] === undefined) data.basics[k] = "";
+                });
+            }
+
+            // Ensure campaignNotes structure is completely present with fallback arrays
+            if (!data.campaignNotes || typeof data.campaignNotes !== 'object') {
+                data.campaignNotes = { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "" };
+            }
+            if (!Array.isArray(data.campaignNotes.sessionNotes)) data.campaignNotes.sessionNotes = [];
+            if (!Array.isArray(data.campaignNotes.quests)) data.campaignNotes.quests = [];
+            if (!Array.isArray(data.campaignNotes.npcs)) data.campaignNotes.npcs = [];
+            if (!Array.isArray(data.campaignNotes.locations)) data.campaignNotes.locations = [];
+            if (typeof data.campaignNotes.misc !== 'string') data.campaignNotes.misc = "";
+            
+            // Safe conversion of legacy string-based campaignNotes.sessionNotes
             if (typeof data.campaignNotes.sessionNotes === 'string') {
                 data.campaignNotes.sessionNotes = [ { id: 'sess_migrated', title: 'Imported Session Notes', date: '', notes: data.campaignNotes.sessionNotes, isCollapsed: false } ];
+            }
+            if (typeof data.campaignNotes.npcs === 'string') {
+                data.campaignNotes.npcs = [];
             }
             
             // Migrate backstory - safeguard clean references
@@ -469,6 +496,10 @@
                     { id: 'b_3', title: "The Vision", notes: "", isCollapsed: false },
                     { id: 'b_4', title: "The Journey", notes: "", isCollapsed: false }
                 ];
+            } else {
+                data.backstory.forEach(b => {
+                    if (b.isCollapsed === undefined) b.isCollapsed = false;
+                });
             }
 
             // Migrate personality - safeguard clean references
@@ -480,12 +511,15 @@
                     { id: 'p_4', title: "Dislikes", subtitle: "Fears & Aversions", notes: "", isCollapsed: false }
                 ];
             } else {
-                data.personality.forEach(p => { if ('isRed' in p) delete p.isRed; });
+                data.personality.forEach(p => { 
+                    if ('isRed' in p) delete p.isRed; 
+                    if (p.isCollapsed === undefined) p.isCollapsed = false;
+                });
             }
 
             // Migrate stats progression structure
-            if (!data.build) data.build = {};
-            if (!data.build.abilities) {
+            if (!data.build || typeof data.build !== 'object') data.build = {};
+            if (!data.build.abilities || !Array.isArray(data.build.abilities)) {
                 data.build.abilities = [
                     { name: "Strength", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
                     { name: "Dexterity", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
@@ -494,10 +528,18 @@
                     { name: "Wisdom", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
                     { name: "Charisma", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 }
                 ];
+            }
+            if (!data.build.feats || typeof data.build.feats !== 'object') {
                 data.build.feats = { lvl1: "", lvl4: "", lvl8: "", lvl12: "", lvl16: "", lvl19: "", lvl20: "" };
+            } else {
+                // Ensure all feat level nodes are present
+                const featKeys = ["lvl1", "lvl4", "lvl8", "lvl12", "lvl16", "lvl19", "lvl20"];
+                featKeys.forEach(k => {
+                    if (data.build.feats[k] === undefined) data.build.feats[k] = "";
+                });
             }
 
-            // Safe migration of features and equipment into robust string formats (unordered lists)
+            // Safe migration of features and equipment arrays into robust outline list formats
             if (data.build) {
                 if (Array.isArray(data.build.features)) {
                     if (data.build.features.length > 0) {
@@ -931,7 +973,7 @@
                             'Are you sure you want to proceed? This will overwrite ALL characters currently in your vault with the characters inside this backup.', 
                             '📥', 
                             async () => {
-                                updateCloudUIStatus("Importing Vault...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+                                updateCloudUIStatus("Importing Vault...", "loader-2", "bg-amber-950/50 text-amber-400 animate-pulse");
                                 
                                 // Purge existing local character cache entries
                                 characterList.forEach(c => {
@@ -1477,20 +1519,27 @@
                 levelKeys.forEach(colKey => {
                     const dex = cumulativeScores[colKey]["Dexterity"] || 10;
                     const con = cumulativeScores[colKey]["Constitution"] || 10;
+                    const wis = cumulativeScores[colKey]["Wisdom"] || 10;
                     
                     const dexMod = Math.floor((dex - 10) / 2);
                     const conMod = Math.floor((con - 10) / 2);
+                    const wisMod = Math.floor((wis - 10) / 2);
 
                     let acVal = "-";
                     if (armorKey !== "") {
                         let baseAc = 10;
                         let dexContribution = dexMod;
                         let conContribution = 0;
+                        let wisContribution = 0;
 
                         if (armorKey === "unarmored") {
                             baseAc = 10;
                             dexContribution = dexMod;
                             conContribution = conMod;
+                        } else if (armorKey === "unarmored_monk") {
+                            baseAc = 10;
+                            dexContribution = dexMod;
+                            wisContribution = wisMod;
                         } else if (armorKey === "studded") {
                             baseAc = 12;
                             dexContribution = dexMod;
@@ -1517,7 +1566,7 @@
                             dexContribution = 0;
                         }
 
-                        acVal = baseAc + dexContribution + conContribution + shieldBonus;
+                        acVal = baseAc + dexContribution + conContribution + wisContribution + shieldBonus;
                     }
 
                     const valEl = document.getElementById(`ac-val-${rIdx}-${colKey}`);
@@ -2007,7 +2056,7 @@
             if (direction === -1) { 
                 for (let i = index - 1; i >= 0; i--) if (arr[i].isCompleted === isCompleted) { targetIdx = i; break; }
             } else { 
-                for (let i = index + 1; i < arr.length; i++) if (arr[i].isCompleted === isCompleted) { targetIdx = i; break; }
+                for (let i = index + 1; i < arr.length; i) if (arr[i].isCompleted === isCompleted) { targetIdx = i; break; }
             }
             
             if (targetIdx !== -1) {
@@ -2370,9 +2419,6 @@
                 }
 
                 characterData.personality.forEach((p, idx) => {
-                    const isCollapsed = p.isCollapsed;
-                    const isFirst = idx === 0;
-                    const isLast = idx === characterData.personality.length - 1;
                     const cardBg = 'bg-white border-stone-200';
                     const titleTextTheme = 'text-stone-800 font-bold';
                     const subtitleTextTheme = 'text-emerald-600';
@@ -2383,16 +2429,16 @@
                             <div class="bg-stone-50/40 border-b border-stone-200/50 px-5 py-4 flex justify-between items-start transition-colors">
                                 <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                     <button onclick="window.togglePersonalityCollapse('${p.id}')" class="p-1 hover:bg-stone-200 rounded transition-colors focus:outline-none hidden sm:block">
-                                        <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
+                                        <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${p.isCollapsed ? 'collapsed' : ''}"></i>
                                     </button>
                                     <input type="text" oninput="window.updatePersonality('${p.id}', 'title', this.value)" value="${escapeHtml(p.title)}" class="seamless-input text-lg bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded ${titleTextTheme}" placeholder="Trait Title">
                                     <input type="text" oninput="window.updatePersonality('${p.id}', 'subtitle', this.value)" value="${escapeHtml(p.subtitle)}" class="seamless-input text-sm font-semibold bg-transparent px-2 py-1 w-full sm:w-auto rounded ${subtitleTextTheme}" placeholder="Subheading / State">
                                 </div>
                                 <div class="flex items-center space-x-1 ml-2">
-                                    <button onclick="window.movePersonality('${p.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Up">
+                                    <button onclick="window.movePersonality('${p.id}', -1)" ${idx === 0 ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Up">
                                         <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="window.movePersonality('${p.id}', 1)" ${isLast ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Down">
+                                    <button onclick="window.movePersonality('${p.id}', 1)" ${idx === characterData.personality.length - 1 ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Down">
                                         <i data-lucide="arrow-down" class="w-4 h-4"></i>
                                     </button>
                                     <button onclick="window.deletePersonality('${p.id}')" class="text-stone-300 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete">
@@ -2400,8 +2446,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
-                                <!-- Upgraded open trait editor boxes to outline list format -->
+                            <div class="collapsible-content ${p.isCollapsed ? 'collapsed' : ''}">
                                 <div class="p-5">${getOutlineNotesEditor('personality', p.id, p.notes, `min-h-[100px] ${hoverTheme}`, 'Start typing traits... Enter starts a bullet, Tab indents, Shift+Tab outdents. Type @ to link notes.')}</div>
                             </div>
                         </div>`;
@@ -2470,18 +2515,24 @@
                 let acRowsHtml = "";
                 for (let rIdx = 0; rIdx < totalAcRows; rIdx++) {
                     const armorKey = selectedArmors[rIdx] || "";
-                    const armorDef = ARMOR_OPTIONS[armorKey] || { name: "", type: "-", stealth: "-", isDisadv: false };
+                    const armorDef = ARMOR_OPTIONS[armorKey] || { name: "", type: "-", stealth: "-", isDisadv: false, formula: "" };
                     
                     const stealthHtml = armorDef.isDisadv 
                         ? `<span class="text-red-600 font-bold text-xs">Disadv.</span>` 
                         : (armorKey !== "" ? `<span class="text-stone-500 font-medium text-xs">Normal</span>` : `-`);
+
+                    // Display calculation formula in small lighter subtext directly underneath the selector
+                    const formulaSubtext = (armorKey !== "" && armorDef.formula) 
+                        ? `<div class="text-[10px] text-stone-400 mt-1 pl-1 font-medium italic animate-fade-in">${armorDef.formula}</div>` 
+                        : '';
 
                     acRowsHtml += `
                         <tr class="border-b border-stone-100 hover:bg-stone-50/40">
                             <td class="px-4 py-3 font-semibold text-stone-700 bg-stone-50 border-r border-stone-200">
                                 <select onchange="window.updateAcSelection(${rIdx}, this.value)" class="seamless-input font-bold text-sm bg-stone-100 border border-stone-200 rounded-lg py-1.5 px-2.5 text-stone-700 focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none w-full max-w-[220px]">
                                     <option value="">Select Armor...</option>
-                                    <option value="unarmored" ${armorKey === 'unarmored' ? 'selected' : ''}>Unarmored Defense</option>
+                                    <option value="unarmored" ${armorKey === 'unarmored' ? 'selected' : ''}>Unarmored Barbarian</option>
+                                    <option value="unarmored_monk" ${armorKey === 'unarmored_monk' ? 'selected' : ''}>Unarmored Monk</option>
                                     <option value="studded" ${armorKey === 'studded' ? 'selected' : ''}>Studded Leather (Light)</option>
                                     <option value="chainshirt" ${armorKey === 'chainshirt' ? 'selected' : ''}>Chain Shirt (Medium)</option>
                                     <option value="scalemail" ${armorKey === 'scalemail' ? 'selected' : ''}>Scale Mail (Medium)</option>
@@ -2491,6 +2542,7 @@
                                     <option value="splint" ${armorKey === 'splint' ? 'selected' : ''}>Splint (Heavy)</option>
                                     <option value="plate" ${armorKey === 'plate' ? 'selected' : ''}>Plate (Heavy)</option>
                                 </select>
+                                ${formulaSubtext}
                             </td>
                             <td class="px-3 py-3 text-center text-stone-600 text-sm font-semibold">${armorDef.type}</td>
                             <td class="px-3 py-3 text-center border-r border-stone-200 text-sm">${stealthHtml}</td>
@@ -2593,7 +2645,11 @@
                                 </div>
 
                                 <!-- Shield Toggle Box -->
-                                <div class="mt-4 flex items-center justify-between bg-stone-50 p-4 rounded-xl border border-stone-200">
+                                <div class="mt-4 flex items-center justify-start bg-stone-50 p-4 rounded-xl border border-stone-200 space-x-4">
+                                    <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                        <input type="checkbox" id="shield-toggle" onchange="window.toggleShieldActive(this.checked)" ${characterData.build.shieldActive ? 'checked' : ''} class="sr-only peer">
+                                        <div class="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                    </label>
                                     <div class="flex items-center space-x-3">
                                         <span class="p-2 bg-emerald-100 rounded-xl text-emerald-700 shadow-sm"><i data-lucide="shield" class="w-5 h-5"></i></span>
                                         <div>
@@ -2601,10 +2657,6 @@
                                             <p class="text-xs text-stone-400">Adds +2 to all AC calculation rows when active</p>
                                         </div>
                                     </div>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="shield-toggle" onchange="window.toggleShieldActive(this.checked)" ${characterData.build.shieldActive ? 'checked' : ''} class="sr-only peer">
-                                        <div class="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                                    </label>
                                 </div>
 
                             </div>
