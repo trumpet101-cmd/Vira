@@ -251,15 +251,20 @@
         // Track Auth State changes
         onAuthStateChanged(auth, async (u) => {
             const authOverlay = document.getElementById('auth-overlay');
-            if (u) {
+            
+            // Only allow designated email logins. Force-logout anonymous accounts leftover from prior configs.
+            if (u && !u.isAnonymous) {
                 cloudUser = u;
                 isCloudReady = true;
                 if(authOverlay) authOverlay.classList.add('hidden'); // Hide Lock Screen
-                updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
+                updateCloudUIStatus("Connecting...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
                 
                 // Set up real-time listener instead of a one-time getDoc
                 listenToCloudData();
             } else {
+                if (u && u.isAnonymous) {
+                    await signOut(auth); // Clear out conflicting anonymous browser tokens
+                }
                 if (unsubscribeSnapshot) {
                     unsubscribeSnapshot();
                     unsubscribeSnapshot = null;
@@ -267,19 +272,18 @@
                 cloudUser = null;
                 isCloudReady = false;
                 if(authOverlay) authOverlay.classList.remove('hidden'); // Show Lock Screen
-                updateCloudUIStatus("Offline Mode", "hard-drive", "bg-stone-800 text-stone-400");
+                updateCloudUIStatus("Please Sign In", "lock", "bg-stone-800 text-stone-400");
             }
         });
 
-        // Setup real-time listeners
+        // Setup real-time listeners with diagnostic feedback
         function listenToCloudData() {
             if (!cloudUser || !db) return;
             const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data');
             
             unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
-                // If we are actively committing typing changes, ignore the instant database echo snapshot
                 if (isLocalSaving) {
-                    return;
+                    return; // Hold incoming snaps temporarily while user is actively typing
                 }
                 
                 if (docSnap.exists()) {
@@ -287,13 +291,27 @@
                     document.getElementById('header-name-input').value = characterData.name;
                     window.renderContent();
                     lucide.createIcons();
+                    updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
                 } else {
-                    // Seed new user on first signup
-                    setDoc(docRef, characterData);
+                    // Seed new user account with clean defaults
+                    setDoc(docRef, characterData).then(() => {
+                        updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
+                    }).catch(err => {
+                        handleSyncError(err);
+                    });
                 }
             }, (error) => {
-                console.error("Realtime subscription failed:", error);
+                handleSyncError(error);
             });
+        }
+
+        function handleSyncError(error) {
+            console.error("Firestore operation failed:", error);
+            if (error.code === 'permission-denied') {
+                updateCloudUIStatus("Rules Error: Denied", "shield-alert", "bg-red-950 text-red-400 border border-red-800");
+            } else {
+                updateCloudUIStatus("Sync Error: " + error.code, "cloud-off", "bg-red-950 text-red-400");
+            }
         }
 
         // Sign-In/Register Flow Controllers
@@ -353,7 +371,7 @@
         function updateCloudUIStatus(text, icon, classes) {
             const btn = document.getElementById('cloud-status-btn');
             if(btn) {
-                btn.className = `w-full flex items-center justify-center space-x-2 px-4 py-2 rounded text-sm transition-colors ${classes}`;
+                btn.className = `w-full flex items-center justify-center space-x-2 px-4 py-2 rounded text-sm transition-all ${classes}`;
                 btn.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i><span>${text}</span>`;
                 lucide.createIcons();
             }
