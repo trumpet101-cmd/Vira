@@ -35,6 +35,7 @@
         .seamless-input { transition: all 0.2s ease; }
         .seamless-input:hover { background-color: rgba(28, 25, 23, 0.05); } 
         .seamless-input:focus { background-color: #ffffff; outline: none; box-shadow: 0 0 0 2px #10b981; }
+        .dark .seamless-input:focus { background-color: #1c1917; box-shadow: 0 0 0 2px #10b981; }
 
         /* Content Editable Placeholder Hack */
         [contenteditable="true"]:empty:before {
@@ -68,25 +69,25 @@
         }
     </style>
 </head>
-<body class="bg-stone-100 text-stone-800 font-sans h-screen flex overflow-hidden">
+<body class="bg-stone-100 text-stone-800 dark:bg-stone-950 dark:text-stone-100 font-sans h-screen flex overflow-hidden">
 
     <!-- Auth Lock Screen Overlay -->
     <div id="auth-overlay" class="fixed inset-0 bg-stone-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-md p-8 animate-fade-in">
+        <div class="bg-white dark:bg-stone-900 dark:border-stone-800 rounded-2xl shadow-2xl border border-stone-200 w-full max-w-md p-8 animate-fade-in">
             <div class="text-center mb-8">
                 <span class="text-4xl">🌿</span>
-                <h2 class="text-2xl font-black text-stone-800 mt-2 tracking-tight" id="auth-title">D&D Vault Authentication</h2>
+                <h2 class="text-2xl font-black text-stone-800 dark:text-stone-100 mt-2 tracking-tight" id="auth-title">D&D Vault Authentication</h2>
                 <p class="text-sm text-stone-500 mt-1" id="auth-subtitle">Log in to sync your character sheets and notes</p>
             </div>
             
             <form id="auth-form" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Email Address</label>
-                    <input type="email" id="auth-email" required class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="dm_or_player@example.com">
+                    <input type="email" id="auth-email" required class="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="dm_or_player@example.com">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Password</label>
-                    <input type="password" id="auth-password" required class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="••••••••">
+                    <input type="password" id="auth-password" required class="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="••••••••">
                 </div>
                 <div id="auth-error" class="text-red-600 text-sm hidden bg-red-50 p-3 rounded-lg border border-red-100 leading-relaxed font-medium"></div>
                 
@@ -105,19 +106,19 @@
 
     <!-- Reusable Custom Dialog/Alert Modal -->
     <div id="custom-dialog" class="fixed inset-0 bg-stone-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-sm p-6 text-center animate-fade-in">
+        <div class="bg-white dark:bg-stone-900 dark:border-stone-800 rounded-2xl shadow-2xl border border-stone-200 w-full max-w-sm p-6 text-center animate-fade-in">
             <div class="text-4xl mb-3" id="dialog-icon">⚠️</div>
-            <h3 class="text-xl font-bold text-stone-800 tracking-tight" id="dialog-title">Are you sure?</h3>
+            <h3 class="text-xl font-bold text-stone-800 dark:text-stone-100 tracking-tight" id="dialog-title">Are you sure?</h3>
             <p class="text-sm text-stone-500 mt-2 leading-relaxed" id="dialog-message">This action cannot be undone.</p>
             
             <!-- Type-To-Confirm Double-Verification Input -->
             <div id="dialog-input-container" class="mt-4 hidden text-left animate-fade-in">
                 <label class="block text-xs font-bold text-stone-500 tracking-wider mb-1" id="dialog-input-label">Type "Delete" to confirm</label>
-                <input type="text" id="dialog-input" class="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 focus:ring-2 focus:ring-red-500 focus:outline-none transition-all font-semibold" placeholder="">
+                <input type="text" id="dialog-input" class="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-red-500 focus:outline-none transition-all font-semibold" placeholder="">
             </div>
 
             <div class="flex space-x-3 mt-6">
-                <button id="dialog-cancel-btn" class="flex-1 py-2.5 border border-stone-200 hover:bg-stone-50 text-stone-600 font-semibold rounded-xl transition-all">Cancel</button>
+                <button id="dialog-cancel-btn" class="flex-1 py-2.5 border border-stone-200 dark:border-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 hover:bg-stone-50 text-stone-600 font-semibold rounded-xl transition-all">Cancel</button>
                 <button id="dialog-confirm-btn" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all">Confirm</button>
             </div>
         </div>
@@ -125,18 +126,18 @@
 
     <!-- Character Manager Modal -->
     <div id="character-modal" class="fixed inset-0 bg-stone-950/80 backdrop-blur-md z-[90] flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-xl p-6 sm:p-8 flex flex-col max-h-[85vh] animate-fade-in">
+        <div class="bg-white dark:bg-stone-900 dark:border-stone-800 rounded-2xl shadow-2xl border border-stone-200 w-full max-w-xl p-6 sm:p-8 flex flex-col max-h-[85vh] animate-fade-in">
             
             <!-- Modal Header -->
-            <div class="flex justify-between items-center pb-4 border-b border-stone-200">
+            <div class="flex justify-between items-center pb-4 border-b border-stone-200 dark:border-stone-800">
                 <div class="flex items-center space-x-3">
                     <span class="text-3xl">👥</span>
                     <div>
-                        <h3 class="text-2xl font-black text-stone-800 tracking-tight">Character Vault</h3>
+                        <h3 class="text-2xl font-black text-stone-800 dark:text-stone-100 tracking-tight">Character Vault</h3>
                         <p class="text-xs text-stone-500 font-medium">Manage and switch between your active campaign sheets</p>
                     </div>
                 </div>
-                <button onclick="window.hideCharacterModal()" class="text-stone-400 hover:text-stone-600 p-2 rounded-lg hover:bg-stone-50 transition-colors">
+                <button onclick="window.hideCharacterModal()" class="text-stone-400 hover:text-stone-600 p-2 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
                     <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
@@ -150,7 +151,7 @@
                         <h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest">Active Sheets</h4>
                         <!-- Simple local filter bar -->
                         <div class="relative w-44">
-                            <input type="text" id="character-modal-search" oninput="window.filterCharacterModalList(this.value)" placeholder="Search sheets..." class="seamless-input text-xs w-full pl-7 pr-2.5 py-1.5 border border-stone-200 rounded-lg bg-white shadow-sm focus:ring-1 focus:ring-emerald-500">
+                            <input type="text" id="character-modal-search" oninput="window.filterCharacterModalList(this.value)" placeholder="Search sheets..." class="seamless-input text-xs w-full pl-7 pr-2.5 py-1.5 border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-lg bg-white shadow-sm focus:ring-1 focus:ring-emerald-500">
                             <i data-lucide="search" class="w-3.5 h-3.5 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
                         </div>
                     </div>
@@ -160,23 +161,23 @@
                 </div>
 
                 <!-- Add New Character Section -->
-                <div class="bg-stone-50 border border-stone-200 p-5 rounded-2xl">
-                    <h4 class="text-xs font-bold text-stone-500 uppercase tracking-widest mb-4 flex items-center space-x-2">
+                <div class="bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 p-5 rounded-2xl">
+                    <h4 class="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-widest mb-4 flex items-center space-x-2">
                         <i data-lucide="sparkles" class="w-4 h-4 text-emerald-600"></i>
                         <span>Create New Character</span>
                     </h4>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div class="sm:col-span-1">
-                            <label class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">Name</label>
-                            <input type="text" id="new-char-name" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all font-semibold" placeholder="e.g. Orin Starfall">
+                            <label class="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Name</label>
+                            <input type="text" id="new-char-name" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all font-semibold" placeholder="e.g. Orin Starfall">
                         </div>
                         <div class="sm:col-span-1">
-                            <label class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">Race</label>
-                            <input type="text" id="new-char-race" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="e.g. Tiefling">
+                            <label class="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Race</label>
+                            <input type="text" id="new-char-race" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="e.g. Tiefling">
                         </div>
                         <div class="sm:col-span-1">
-                            <label class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">Class</label>
-                            <input type="text" id="new-char-class" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="e.g. Wizard (Evocation)">
+                            <label class="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Class</label>
+                            <input type="text" id="new-char-class" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="e.g. Wizard (Evocation)">
                         </div>
                     </div>
                     <button onclick="window.createNewCharacter()" class="w-full mt-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md shadow-emerald-600/10 flex items-center justify-center space-x-2 text-sm">
@@ -208,6 +209,19 @@
 
         <div class="p-4 border-t border-stone-800 space-y-3">
             
+            <!-- Dark Mode Toggle Button -->
+            <button onclick="window.toggleDarkMode()" class="w-full flex items-center justify-between px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold rounded-xl transition-all border border-stone-700/50 text-sm">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="moon" class="w-4.5 h-4.5 text-amber-400" id="dark-mode-moon-icon"></i>
+                    <i data-lucide="sun" class="w-4.5 h-4.5 text-amber-400 hidden" id="dark-mode-sun-icon"></i>
+                    <span id="dark-mode-text">Dark Mode</span>
+                </div>
+                <!-- Sliding toggle visual marker -->
+                <div class="w-8 h-4 bg-stone-600 rounded-full relative transition-all duration-200 border border-stone-500">
+                    <div id="dark-mode-switch-dot" class="w-3 h-3 bg-stone-100 rounded-full absolute top-[1px] left-[1px] transition-all duration-200"></div>
+                </div>
+            </button>
+
             <!-- Character Switcher Button -->
             <button onclick="window.openCharacterModal()" class="w-full flex items-center justify-center space-x-2 py-2.5 bg-emerald-900/50 hover:bg-emerald-800 text-emerald-100 font-bold rounded-xl transition-all shadow-md shadow-emerald-950/40 border border-emerald-700/50 text-sm">
                 <i data-lucide="users" class="w-4.5 h-4.5"></i>
@@ -237,20 +251,20 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-stone-50 relative">
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-stone-50 dark:bg-stone-950 relative">
         
-        <header class="bg-white shadow-sm px-6 py-4 flex items-center justify-between z-10">
+        <header class="bg-white dark:bg-stone-900 border-b dark:border-stone-800/80 shadow-sm dark:shadow-none px-6 py-4 flex items-center justify-between z-10">
             <div class="flex items-center space-x-4">
-                <button class="md:hidden text-stone-600 hover:text-emerald-600" onclick="toggleMobileMenu()">
+                <button class="md:hidden text-stone-600 dark:text-stone-400 hover:text-emerald-600" onclick="toggleMobileMenu()">
                     <i data-lucide="menu"></i>
                 </button>
-                <h2 class="text-2xl font-bold text-stone-800 tracking-tight flex items-center space-x-2">
+                <h2 class="text-2xl font-bold text-stone-800 dark:text-stone-100 tracking-tight flex items-center space-x-2">
                     <span class="text-emerald-600">🌿</span>
-                    <input type="text" id="header-name-input" oninput="updateField(null, 'name', this.value)" class="font-bold text-stone-800 bg-transparent border-none focus:outline-none focus:ring-0 w-full max-w-[250px] p-0 m-0">
+                    <input type="text" id="header-name-input" oninput="updateField(null, 'name', this.value)" class="font-bold text-stone-800 dark:text-stone-100 bg-transparent border-none focus:outline-none focus:ring-0 w-full max-w-[250px] p-0 m-0">
                 </h2>
             </div>
             
-            <div class="flex items-center space-x-2 text-stone-400 bg-stone-50 px-3 py-1.5 rounded-full border border-stone-200 transition-all duration-300" id="save-indicator">
+            <div class="flex items-center space-x-2 text-stone-400 dark:text-stone-500 bg-stone-50 dark:bg-stone-800/60 px-3 py-1.5 rounded-full border border-stone-200 dark:border-stone-800 transition-all duration-300" id="save-indicator">
                 <span id="save-icon-wrapper" class="flex items-center justify-center">
                     <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
                 </span>
@@ -264,11 +278,24 @@
         </div>
 
         <!-- Global Mention Dropdown -->
-        <ul id="mention-dropdown" class="hidden absolute z-50 bg-white border border-stone-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto w-72 text-sm flex flex-col"></ul>
+        <ul id="mention-dropdown" class="hidden absolute z-50 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-2xl max-h-64 overflow-y-auto w-72 text-sm flex flex-col"></ul>
     </main>
 
     <!-- Use Type Module for Firebase Imports -->
     <script type="module">
+        // Apply Dark Mode directly at the very top of script run-time to prevent any white flashes!
+        const isCurrentlyDark = localStorage.getItem('dark_mode_active') === 'true';
+        if (isCurrentlyDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // --- CONFIGURE TAILWIND PLAY CDN FOR CLASS-BASED DARK MODE ---
+        tailwind.config = {
+            darkMode: 'class'
+        };
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -783,6 +810,45 @@
             }
         }
 
+        // --- DARK MODE LOGIC COHESIVE SYSTEM ---
+        window.toggleDarkMode = function() {
+            const html = document.documentElement;
+            const isDark = html.classList.toggle('dark');
+            localStorage.setItem('dark_mode_active', isDark ? 'true' : 'false');
+            window.updateDarkModeUI();
+        };
+
+        window.updateDarkModeUI = function() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const labelText = document.getElementById('dark-mode-text');
+            const dot = document.getElementById('dark-mode-switch-dot');
+            const moonIcon = document.getElementById('dark-mode-moon-icon');
+            const sunIcon = document.getElementById('dark-mode-sun-icon');
+            
+            if (isDark) {
+                if (labelText) labelText.innerText = "Dark Mode";
+                if (dot) {
+                    dot.style.transform = "translateX(16px)";
+                    dot.classList.remove('bg-stone-100');
+                    dot.classList.add('bg-emerald-400');
+                }
+                if (moonIcon) moonIcon.classList.add('hidden');
+                if (sunIcon) sunIcon.classList.remove('hidden');
+            } else {
+                if (labelText) labelText.innerText = "Light Mode";
+                if (dot) {
+                    dot.style.transform = "translateX(0px)";
+                    dot.classList.remove('bg-emerald-400');
+                    dot.classList.add('bg-stone-100');
+                }
+                if (moonIcon) moonIcon.classList.remove('hidden');
+                if (sunIcon) sunIcon.classList.add('hidden');
+            }
+        };
+
+        // Run theme validation right during initial code evaluation loop
+        setTimeout(() => window.updateDarkModeUI(), 100);
+
         // --- CUSTOM MODAL DIALOG CONTROLLERS ---
         window.showCustomConfirm = function(title, message, icon, onConfirm, requiredInputText = null) {
             const dialog = document.getElementById('custom-dialog');
@@ -1250,24 +1316,24 @@
 
             listContainer.innerHTML = filtered.map(char => {
                 const isActive = char.id === currentCharacterId;
-                const borderClass = isActive ? 'border-emerald-500 bg-emerald-50/50' : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50 bg-white';
+                const borderClass = isActive ? 'border-emerald-500 bg-emerald-50/50' : 'border-stone-200 dark:border-stone-800 hover:border-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 bg-white dark:bg-stone-900';
                 const activeBadge = isActive ? `<span class="px-2.5 py-0.5 text-[10px] font-bold bg-emerald-600 text-white rounded-full uppercase tracking-wider shadow-sm flex items-center space-x-1"><i data-lucide="check" class="w-3 h-3"></i><span>Active</span></span>` : '';
-                const titleColor = isActive ? 'text-emerald-900 font-extrabold' : 'text-stone-800 font-bold';
+                const titleColor = isActive ? 'text-emerald-900 dark:text-emerald-400 font-extrabold' : 'text-stone-800 dark:text-stone-100 font-bold';
 
                 return `
                     <div onclick="window.switchCharacter('${char.id}')" class="p-4 border rounded-xl flex items-center justify-between cursor-pointer transition-all ${borderClass}">
                         <div class="flex items-center space-x-3 min-w-0 flex-1">
-                            <div class="w-9 h-9 rounded-full ${isActive ? 'bg-emerald-600 text-white' : 'bg-stone-100 text-stone-500'} flex items-center justify-center font-bold text-xs flex-shrink-0">
+                            <div class="w-9 h-9 rounded-full ${isActive ? 'bg-emerald-600 text-white' : 'bg-stone-100 dark:bg-stone-800 text-stone-500'} flex items-center justify-center font-bold text-xs flex-shrink-0">
                                 ${char.name.substring(0, 2).toUpperCase()}
                             </div>
                             <div class="min-w-0">
                                 <h5 class="${titleColor} text-sm tracking-tight truncate">${escapeHtml(char.name)}</h5>
-                                <p class="text-xs text-stone-500 truncate font-semibold">${escapeHtml(char.race)} • ${escapeHtml(char.class)}</p>
+                                <p class="text-xs text-stone-500 dark:text-stone-400 truncate font-semibold">${escapeHtml(char.race)} • ${escapeHtml(char.class)}</p>
                             </div>
                         </div>
                         <div class="flex items-center space-x-2 flex-shrink-0 ml-4">
                             ${activeBadge}
-                            <button onclick="window.deleteCharacter(event, '${char.id}')" class="text-stone-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Delete Sheet">
+                            <button onclick="window.deleteCharacter(event, '${char.id}')" class="text-stone-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-stone-800 transition-colors" title="Delete Sheet">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -1499,8 +1565,8 @@
                         const mod = Math.floor((currentVal - 10) / 2);
                         const modStr = (mod >= 0 ? '+' : '') + mod;
                         scoreCell.innerHTML = `
-                            <span class="font-extrabold text-stone-800 text-sm">${currentVal}</span>
-                            <span class="text-xs text-emerald-600 font-bold ml-1">(${modStr})</span>
+                            <span class="font-extrabold text-stone-800 dark:text-stone-200 text-sm">${currentVal}</span>
+                            <span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold ml-1">(${modStr})</span>
                         `;
                     }
                 });
@@ -1906,14 +1972,14 @@
             dropdown.innerHTML = mentionContext.results.map((res, i) => {
                 const isActive = i === mentionContext.selectedIndex;
                 const activeClasses = isActive 
-                    ? 'bg-emerald-100 border-l-4 border-emerald-500 pl-3' 
-                    : 'bg-white hover:bg-emerald-50 border-l-4 border-transparent pl-4';
+                    ? 'bg-emerald-100 border-l-4 border-emerald-500 dark:bg-emerald-950/40 pl-3' 
+                    : 'bg-white dark:bg-stone-900 border-l-4 border-transparent pl-4';
                 
                 return `
                     <li onmousedown="event.preventDefault(); window.insertMention('${res.id}', '${escapeHtml(res.label).replace(/'/g, "\\'")}')" 
-                        class="py-3 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 last:border-0 ${activeClasses}">
-                        <span class="font-bold text-stone-800">${escapeHtml(res.label)}</span>
-                        <span class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">${res.type}</span>
+                        class="py-3 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}">
+                        <span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span>
+                        <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">${res.type}</span>
                     </li>
                 `;
             }).join('');
@@ -1941,7 +2007,7 @@
                 
                 const a = document.createElement('a');
                 a.href = "#";
-                a.className = "text-emerald-700 bg-emerald-100/80 font-bold px-1.5 py-0.5 mx-0.5 rounded shadow-sm hover:bg-emerald-200 hover:text-emerald-800 transition-colors inline-flex items-center no-underline cursor-pointer";
+                a.className = "text-emerald-700 bg-emerald-100/80 dark:text-emerald-300 dark:bg-emerald-950/60 font-bold px-1.5 py-0.5 mx-0.5 rounded shadow-sm hover:bg-emerald-200 hover:text-emerald-800 dark:hover:bg-emerald-900 dark:hover:text-emerald-200 transition-colors inline-flex items-center no-underline cursor-pointer";
                 a.contentEditable = "false";
                 a.setAttribute('onclick', `window.setTab('${targetTabId}'); return false;`);
                 a.innerText = "@" + label;
@@ -1979,7 +2045,7 @@
                 oninput="window.handleInput(event, ${sectionArg}, '${field}')"
                 onkeydown="window.handleKeyDown(event)"
                 onpaste="window.handlePaste(event)"
-                class="w-full seamless-input rounded-lg p-3 -mx-3 min-h-[40px] cursor-text focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none whitespace-pre-wrap font-sans leading-relaxed text-stone-700 bg-transparent ${extraClasses}"
+                class="w-full seamless-input rounded-lg p-3 -mx-3 min-h-[40px] cursor-text focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none whitespace-pre-wrap font-sans leading-relaxed text-stone-700 dark:text-stone-300 bg-transparent ${extraClasses}"
                 data-placeholder="Click to type... Type @ to link notes.">${renderHTML(value)}</div>`;
         }
 
@@ -1991,7 +2057,7 @@
                 onfocus="window.handleOutlineFocus(event)"
                 onblur="window.handleOutlineBlur(event)"
                 onpaste="window.handlePaste(event)"
-                class="w-full seamless-input rounded-lg p-3 -mx-3 cursor-text focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none whitespace-pre-wrap font-sans leading-relaxed text-stone-700 bg-transparent ${extraClasses}"
+                class="w-full seamless-input rounded-lg p-3 -mx-3 cursor-text focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none whitespace-pre-wrap font-sans leading-relaxed text-stone-700 dark:text-stone-200 bg-transparent ${extraClasses}"
                 data-placeholder="${escapeHtml(placeholder)}">${renderHTML(value)}</div>`;
         }
 
@@ -2273,7 +2339,7 @@
 
         // --- RENDERERS ---
         function renderTocCard(title, targetTab, icon, description) {
-            return `<div onclick="window.setTab('${targetTab}')" class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 hover:border-emerald-400 hover:shadow-md cursor-pointer transition-all group flex flex-col h-full"><div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 mb-4 group-hover:scale-110 transition-transform"><i data-lucide="${icon}"></i></div><h4 class="text-lg font-bold text-stone-800 mb-2">${title}</h4><p class="text-sm text-stone-500 flex-grow">${description}</p><div class="mt-4 text-emerald-600 text-sm font-medium flex items-center opacity-0 group-hover:opacity-100 transition-opacity"><span>Open</span><i data-lucide="chevron-right" class="w-4 h-4 ml-1"></i></div></div>`;
+            return `<div onclick="window.setTab('${targetTab}')" class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800/80 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-md cursor-pointer transition-all group flex flex-col h-full"><div class="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 group-hover:scale-110 transition-transform"><i data-lucide="${icon}"></i></div><h4 class="text-lg font-bold text-stone-800 dark:text-stone-100 mb-2">${title}</h4><p class="text-sm text-stone-500 dark:text-stone-400 flex-grow">${description}</p><div class="mt-4 text-emerald-600 dark:text-emerald-400 text-sm font-medium flex items-center opacity-0 group-hover:opacity-100 transition-opacity"><span>Open</span><i data-lucide="chevron-right" class="w-4 h-4 ml-1"></i></div></div>`;
         }
 
         function renderNavigation() {
@@ -2297,14 +2363,17 @@
             const container = document.getElementById('content-area');
             let html = '';
 
+            // Update theme controller visual markers
+            window.updateDarkModeUI();
+
             if (activeTab === 'backstory') {
                 let basicsHtml = `
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 mb-6 animate-fade-in">
+                <div class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 mb-6 animate-fade-in">
                     <div class="flex flex-col md:flex-row gap-6 items-start">
                         
                         <!-- Interactive Character Portrait Slot -->
                         <div class="flex-shrink-0 flex items-start">
-                            <div class="relative w-24 h-24 rounded-full border-2 border-stone-200 hover:border-emerald-400 bg-stone-50 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all duration-200" onclick="document.getElementById('char-avatar-input').click()" title="Click to upload character portrait">
+                            <div class="relative w-24 h-24 rounded-full border-2 border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all duration-200" onclick="document.getElementById('char-avatar-input').click()" title="Click to upload character portrait">
                                 ${characterData.avatar ? 
                                     `<img src="${characterData.avatar}" class="w-full h-full object-cover animate-fade-in">` : 
                                     `<span class="text-4xl">🧝‍♀️</span>`
@@ -2326,14 +2395,14 @@
 
                         <div class="flex-1 w-full">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div class="bg-stone-50 p-3 rounded-lg border border-stone-100 col-span-1 md:col-span-3">
-                                    <div class="text-xs text-stone-400 font-semibold uppercase tracking-wider mb-1">Character Name</div>
-                                    <input type="text" id="inline-name-input" oninput="window.updateField(null, 'name', this.value)" value="${escapeHtml(characterData.name)}" class="seamless-input w-full bg-transparent font-black text-xl text-stone-800 rounded px-1 -mx-1 py-0.5 focus:outline-none">
+                                <div class="bg-stone-50 dark:bg-stone-950 p-3 rounded-lg border border-stone-100 dark:border-stone-800 col-span-1 md:col-span-3">
+                                    <div class="text-xs text-stone-400 dark:text-stone-500 font-semibold uppercase tracking-wider mb-1">Character Name</div>
+                                    <input type="text" id="inline-name-input" oninput="window.updateField(null, 'name', this.value)" value="${escapeHtml(characterData.name)}" class="seamless-input w-full bg-transparent font-black text-xl text-stone-800 dark:text-stone-100 rounded px-1 -mx-1 py-0.5 focus:outline-none">
                                 </div>
                                 ${Object.entries(characterData.basics).map(([key, val]) => `
-                                    <div class="bg-stone-50 p-3 rounded-lg border border-stone-100">
-                                        <div class="text-xs text-stone-400 font-semibold uppercase tracking-wider mb-1 capitalize">${key}</div>
-                                        <input type="text" oninput="window.updateField('basics', '${key}', this.value)" value="${escapeHtml(val)}" class="seamless-input w-full bg-transparent font-medium text-stone-800 rounded px-1 -mx-1 py-0.5 focus:outline-none">
+                                    <div class="bg-stone-50 dark:bg-stone-950 p-3 rounded-lg border border-stone-100 dark:border-stone-800">
+                                        <div class="text-xs text-stone-400 dark:text-stone-500 font-semibold uppercase tracking-wider mb-1 capitalize">${key}</div>
+                                        <input type="text" oninput="window.updateField('basics', '${key}', this.value)" value="${escapeHtml(val)}" class="seamless-input w-full bg-transparent font-medium text-stone-800 dark:text-stone-200 rounded px-1 -mx-1 py-0.5 focus:outline-none">
                                     </div>`).join('')}
                             </div>
                         </div>
@@ -2344,12 +2413,12 @@
                     <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
                         <div class="relative w-full sm:w-2/3">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
-                            <input type="text" id="backstory-search" oninput="window.filterBackstory(this.value)" placeholder="Search backstory..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 rounded-xl bg-white shadow-sm">
+                            <input type="text" id="backstory-search" oninput="window.filterBackstory(this.value)" placeholder="Search backstory..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 dark:text-stone-100 shadow-sm">
                         </div>
                         <div class="flex space-x-2 w-full sm:w-auto">
-                            <button onclick="window.toggleAllBackstory(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Expand All</button>
-                            <button onclick="window.toggleAllBackstory(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Collapse All</button>
-                            <button onclick="window.addBackstory()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 text-emerald-800 font-medium rounded-lg hover:bg-emerald-200 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                            <button onclick="window.toggleAllBackstory(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Expand All</button>
+                            <button onclick="window.toggleAllBackstory(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Collapse All</button>
+                            <button onclick="window.addBackstory()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
                         </div>
                     </div>`;
 
@@ -2362,22 +2431,22 @@
                     const isFirst = idx === 0;
                     const isLast = idx === characterData.backstory.length - 1;
                     contentHtml += `
-                        <div class="backstory-block mb-4 border border-stone-200 rounded-xl bg-white shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${b.title} ${b.notes}`)}">
-                            <div class="bg-stone-50/80 border-b border-stone-200 px-5 py-4 flex justify-between items-start transition-colors">
+                        <div class="backstory-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${b.title} ${b.notes}`)}">
+                            <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                 <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
-                                    <button onclick="window.toggleBackstoryCollapse('${b.id}')" class="p-1 hover:bg-stone-200 rounded transition-colors focus:outline-none hidden sm:block">
+                                    <button onclick="window.toggleBackstoryCollapse('${b.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
                                         <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
                                     </button>
-                                    <input type="text" oninput="window.updateBackstory('${b.id}', 'title', this.value)" value="${escapeHtml(b.title)}" class="seamless-input font-bold text-lg text-stone-800 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Backstory Title">
+                                    <input type="text" oninput="window.updateBackstory('${b.id}', 'title', this.value)" value="${escapeHtml(b.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Backstory Title">
                                 </div>
                                 <div class="flex items-center space-x-1 ml-2">
-                                    <button onclick="window.moveBackstory('${b.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Up">
+                                    <button onclick="window.moveBackstory('${b.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Up">
                                         <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="window.moveBackstory('${b.id}', 1)" ${isLast ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Down">
+                                    <button onclick="window.moveBackstory('${b.id}', 1)" ${isLast ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Down">
                                         <i data-lucide="arrow-down" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="window.deleteBackstory('${b.id}')" class="text-stone-300 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete">
+                                    <button onclick="window.deleteBackstory('${b.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
                                 </div>
@@ -2390,8 +2459,8 @@
 
                 html = `
                 <div class="space-y-6 animate-fade-in h-full flex flex-col">
-                    <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex-grow flex flex-col">
-                        <h3 class="text-2xl font-bold text-stone-800 mb-6 flex items-center space-x-2 border-b border-stone-100 pb-4">
+                    <section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 flex-grow flex flex-col">
+                        <h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800/80 pb-4">
                             <i data-lucide="book-open" class="text-emerald-600"></i><span>Backstory & Overview</span>
                         </h3>
                         <div class="flex-grow flex flex-col">
@@ -2405,12 +2474,12 @@
                     <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
                         <div class="relative w-full sm:w-2/3">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
-                            <input type="text" id="personality-search" oninput="window.filterPersonality(this.value)" placeholder="Search traits..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 rounded-xl bg-white shadow-sm">
+                            <input type="text" id="personality-search" oninput="window.filterPersonality(this.value)" placeholder="Search traits..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 dark:text-stone-100 shadow-sm">
                         </div>
                         <div class="flex space-x-2 w-full sm:w-auto">
-                            <button onclick="window.toggleAllPersonality(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Expand All</button>
-                            <button onclick="window.toggleAllPersonality(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Collapse All</button>
-                            <button onclick="window.addPersonality()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 text-emerald-800 font-medium rounded-lg hover:bg-emerald-200 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                            <button onclick="window.toggleAllPersonality(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Expand All</button>
+                            <button onclick="window.toggleAllPersonality(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Collapse All</button>
+                            <button onclick="window.addPersonality()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
                         </div>
                     </div>`;
 
@@ -2419,29 +2488,29 @@
                 }
 
                 characterData.personality.forEach((p, idx) => {
-                    const cardBg = 'bg-white border-stone-200';
-                    const titleTextTheme = 'text-stone-800 font-bold';
-                    const subtitleTextTheme = 'text-emerald-600';
-                    const hoverTheme = 'hover:bg-stone-100/30';
+                    const cardBg = 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800';
+                    const titleTextTheme = 'text-stone-800 dark:text-stone-100 font-bold';
+                    const subtitleTextTheme = 'text-emerald-600 dark:text-emerald-400';
+                    const hoverTheme = 'hover:bg-stone-100/30 dark:hover:bg-stone-800/40';
                     
                     contentHtml += `
                         <div class="personality-block mb-4 border rounded-xl shadow-sm overflow-hidden ${cardBg}" data-searchable="${escapeHtml(`${p.title} ${p.subtitle} ${p.notes}`)}">
-                            <div class="bg-stone-50/40 border-b border-stone-200/50 px-5 py-4 flex justify-between items-start transition-colors">
+                            <div class="bg-stone-50/40 dark:bg-stone-800/40 border-b border-stone-200/50 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                 <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
-                                    <button onclick="window.togglePersonalityCollapse('${p.id}')" class="p-1 hover:bg-stone-200 rounded transition-colors focus:outline-none hidden sm:block">
+                                    <button onclick="window.togglePersonalityCollapse('${p.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
                                         <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${p.isCollapsed ? 'collapsed' : ''}"></i>
                                     </button>
                                     <input type="text" oninput="window.updatePersonality('${p.id}', 'title', this.value)" value="${escapeHtml(p.title)}" class="seamless-input text-lg bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded ${titleTextTheme}" placeholder="Trait Title">
                                     <input type="text" oninput="window.updatePersonality('${p.id}', 'subtitle', this.value)" value="${escapeHtml(p.subtitle)}" class="seamless-input text-sm font-semibold bg-transparent px-2 py-1 w-full sm:w-auto rounded ${subtitleTextTheme}" placeholder="Subheading / State">
                                 </div>
                                 <div class="flex items-center space-x-1 ml-2">
-                                    <button onclick="window.movePersonality('${p.id}', -1)" ${idx === 0 ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Up">
+                                    <button onclick="window.movePersonality('${p.id}', -1)" ${idx === 0 ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Up">
                                         <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="window.movePersonality('${p.id}', 1)" ${idx === characterData.personality.length - 1 ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Down">
+                                    <button onclick="window.movePersonality('${p.id}', 1)" ${idx === characterData.personality.length - 1 ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Down">
                                         <i data-lucide="arrow-down" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="window.deletePersonality('${p.id}')" class="text-stone-300 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete">
+                                    <button onclick="window.deletePersonality('${p.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
                                 </div>
@@ -2454,8 +2523,8 @@
 
                 html = `
                 <div class="space-y-6 animate-fade-in h-full flex flex-col">
-                    <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex-grow flex flex-col">
-                        <h3 class="text-2xl font-bold text-stone-800 mb-6 flex items-center space-x-2 border-b border-stone-100 pb-4">
+                    <section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 flex-grow flex flex-col">
+                        <h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800 pb-4">
                             <i data-lucide="brain" class="text-emerald-600"></i><span>Personality & Traits</span>
                         </h3>
                         <div class="flex-grow flex flex-col">
@@ -2480,27 +2549,27 @@
                 ];
 
                 let modifierRows = abilities.map((ability, aIdx) => `
-                    <tr class="border-b border-stone-100 hover:bg-stone-50/50 transition-colors">
-                        <td class="px-4 py-3 font-bold text-stone-700 bg-stone-50 border-r border-stone-200">${ability.name}</td>
+                    <tr class="border-b border-stone-100 dark:border-stone-800 hover:bg-stone-50/50 dark:hover:bg-stone-800/30 transition-colors">
+                        <td class="px-4 py-3 font-bold text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800">${ability.name}</td>
                         <td class="px-2 py-3 text-center">
-                            <input type="number" oninput="window.updateAbilityPoint(${aIdx}, 'starting', this.value)" value="${ability.starting || 0}" class="seamless-input w-14 text-center bg-stone-50 border border-stone-200 rounded-lg py-1 px-1.5 focus:ring-2 focus:ring-emerald-500 focus:bg-white text-stone-800 font-semibold focus:outline-none">
+                            <input type="number" oninput="window.updateAbilityPoint(${aIdx}, 'starting', this.value)" value="${ability.starting || 0}" class="seamless-input w-14 text-center bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1.5 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 text-stone-800 dark:text-stone-100 font-semibold focus:outline-none">
                         </td>
-                        <td class="px-2 py-3 text-center border-r border-stone-200 bg-stone-50/40">
-                            <input type="number" oninput="window.updateAbilityPoint(${aIdx}, 'species', this.value)" value="${ability.species || 0}" class="seamless-input w-12 text-center bg-stone-50 border border-stone-200 rounded-lg py-1 px-1 focus:ring-2 focus:ring-emerald-500 focus:bg-white text-emerald-700 font-bold focus:outline-none">
+                        <td class="px-2 py-3 text-center border-r border-stone-200 dark:border-stone-800 bg-stone-50/40 dark:bg-stone-900/30">
+                            <input type="number" oninput="window.updateAbilityPoint(${aIdx}, 'species', this.value)" value="${ability.species || 0}" class="seamless-input w-12 text-center bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 text-emerald-700 dark:text-emerald-400 font-bold focus:outline-none">
                         </td>
                         ${keys.slice(2).map(col => `
                             <td class="px-2 py-3 text-center">
-                                <input type="number" oninput="window.updateAbilityPoint(${aIdx}, '${col.key}', this.value)" value="${ability[col.key] || 0}" class="seamless-input w-12 text-center bg-stone-50 border border-stone-200 rounded-lg py-1 px-1 focus:ring-2 focus:ring-emerald-500 focus:bg-white text-stone-700 focus:outline-none">
+                                <input type="number" oninput="window.updateAbilityPoint(${aIdx}, '${col.key}', this.value)" value="${ability[col.key] || 0}" class="seamless-input w-12 text-center bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 text-stone-700 dark:text-stone-200 focus:outline-none">
                             </td>
                         `).join('')}
                     </tr>
                 `).join('');
 
                 let calculatedProgressRows = abilities.map((ability, aIdx) => `
-                    <tr class="border-b border-stone-100 hover:bg-emerald-50/10 transition-colors">
-                        <td class="px-4 py-3 font-bold text-stone-700 bg-stone-50 border-r border-stone-200">${ability.name}</td>
+                    <tr class="border-b border-stone-100 dark:border-stone-800 hover:bg-emerald-50/10 dark:hover:bg-emerald-950/10 transition-colors">
+                        <td class="px-4 py-3 font-bold text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800">${ability.name}</td>
                         <td class="px-3 py-3 text-center" id="score-cell-${aIdx}-starting"></td>
-                        <td class="px-3 py-3 text-center border-r border-stone-200 bg-stone-50/20" id="score-cell-${aIdx}-species"></td>
+                        <td class="px-3 py-3 text-center border-r border-stone-200 dark:border-stone-800 bg-stone-50/20 dark:bg-stone-900/10" id="score-cell-${aIdx}-species"></td>
                         ${keys.slice(2).map(col => `
                             <td class="px-3 py-3 text-center" id="score-cell-${aIdx}-${col.key}"></td>
                         `).join('')}
@@ -2518,36 +2587,36 @@
                     const armorDef = ARMOR_OPTIONS[armorKey] || { name: "", type: "-", stealth: "-", isDisadv: false, formula: "" };
                     
                     const stealthHtml = armorDef.isDisadv 
-                        ? `<span class="text-red-600 font-bold text-xs">Disadv.</span>` 
-                        : (armorKey !== "" ? `<span class="text-stone-500 font-medium text-xs">Normal</span>` : `-`);
+                        ? `<span class="text-red-600 dark:text-red-400 font-bold text-xs">Disadv.</span>` 
+                        : (armorKey !== "" ? `<span class="text-stone-500 dark:text-stone-400 font-medium text-xs">Normal</span>` : `-`);
 
                     // Display calculation formula in small lighter subtext directly underneath the selector
                     const formulaSubtext = (armorKey !== "" && armorDef.formula) 
-                        ? `<div class="text-[10px] text-stone-400 mt-1 pl-1 font-medium italic animate-fade-in">${armorDef.formula}</div>` 
+                        ? `<div class="text-[10px] text-stone-400 dark:text-stone-500 mt-1 pl-1 font-medium italic animate-fade-in">${armorDef.formula}</div>` 
                         : '';
 
                     acRowsHtml += `
-                        <tr class="border-b border-stone-100 hover:bg-stone-50/40">
-                            <td class="px-4 py-3 font-semibold text-stone-700 bg-stone-50 border-r border-stone-200">
-                                <select onchange="window.updateAcSelection(${rIdx}, this.value)" class="seamless-input font-bold text-sm bg-stone-100 border border-stone-200 rounded-lg py-1.5 px-2.5 text-stone-700 focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none w-full max-w-[220px]">
-                                    <option value="">Select Armor...</option>
-                                    <option value="unarmored" ${armorKey === 'unarmored' ? 'selected' : ''}>Unarmored Barbarian</option>
-                                    <option value="unarmored_monk" ${armorKey === 'unarmored_monk' ? 'selected' : ''}>Unarmored Monk</option>
-                                    <option value="studded" ${armorKey === 'studded' ? 'selected' : ''}>Studded Leather (Light)</option>
-                                    <option value="chainshirt" ${armorKey === 'chainshirt' ? 'selected' : ''}>Chain Shirt (Medium)</option>
-                                    <option value="scalemail" ${armorKey === 'scalemail' ? 'selected' : ''}>Scale Mail (Medium)</option>
-                                    <option value="breastplate" ${armorKey === 'breastplate' ? 'selected' : ''}>Breastplate (Medium)</option>
-                                    <option value="halfplate" ${armorKey === 'halfplate' ? 'selected' : ''}>Halfplate (Medium)</option>
-                                    <option value="chainmail" ${armorKey === 'chainmail' ? 'selected' : ''}>Chain Mail (Heavy)</option>
-                                    <option value="splint" ${armorKey === 'splint' ? 'selected' : ''}>Splint (Heavy)</option>
-                                    <option value="plate" ${armorKey === 'plate' ? 'selected' : ''}>Plate (Heavy)</option>
+                        <tr class="border-b border-stone-100 dark:border-stone-800 hover:bg-stone-50/40 dark:hover:bg-stone-900/30">
+                            <td class="px-4 py-3 font-semibold text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800">
+                                <select onchange="window.updateAcSelection(${rIdx}, this.value)" class="seamless-input font-bold text-sm bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-800 rounded-lg py-1.5 px-2.5 text-stone-700 dark:text-stone-200 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 focus:outline-none w-full max-w-[220px]">
+                                    <option value="" class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Select Armor...</option>
+                                    <option value="unarmored" ${armorKey === 'unarmored' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Unarmored Barbarian</option>
+                                    <option value="unarmored_monk" ${armorKey === 'unarmored_monk' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Unarmored Monk</option>
+                                    <option value="studded" ${armorKey === 'studded' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Studded Leather (Light)</option>
+                                    <option value="chainshirt" ${armorKey === 'chainshirt' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Chain Shirt (Medium)</option>
+                                    <option value="scalemail" ${armorKey === 'scalemail' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Scale Mail (Medium)</option>
+                                    <option value="breastplate" ${armorKey === 'breastplate' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Breastplate (Medium)</option>
+                                    <option value="halfplate" ${armorKey === 'halfplate' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Halfplate (Medium)</option>
+                                    <option value="chainmail" ${armorKey === 'chainmail' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Chain Mail (Heavy)</option>
+                                    <option value="splint" ${armorKey === 'splint' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Splint (Heavy)</option>
+                                    <option value="plate" ${armorKey === 'plate' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Plate (Heavy)</option>
                                 </select>
                                 ${formulaSubtext}
                             </td>
-                            <td class="px-3 py-3 text-center text-stone-600 text-sm font-semibold">${armorDef.type}</td>
-                            <td class="px-3 py-3 text-center border-r border-stone-200 text-sm">${stealthHtml}</td>
+                            <td class="px-3 py-3 text-center text-stone-600 dark:text-stone-400 text-sm font-semibold">${armorDef.type}</td>
+                            <td class="px-3 py-3 text-center border-r border-stone-200 dark:border-stone-800 text-sm">${stealthHtml}</td>
                             ${keys.slice(2).map(col => `
-                                <td class="px-3 py-3 text-center font-black text-emerald-700 text-sm" id="ac-val-${rIdx}-${col.key}">-</td>
+                                <td class="px-3 py-3 text-center font-black text-emerald-700 dark:text-emerald-400 text-sm" id="ac-val-${rIdx}-${col.key}">-</td>
                             `).join('')}
                         </tr>
                     `;
@@ -2557,7 +2626,7 @@
                 <div class="space-y-8 animate-fade-in">
                     
                     <!-- Ability Scores & Feats Progress Module -->
-                    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+                    <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm overflow-hidden">
                         <div class="bg-emerald-950 px-6 py-4 border-b border-stone-800 flex items-center justify-between">
                             <div class="flex items-center space-x-3">
                                 <span class="p-2 bg-emerald-900 rounded-xl text-emerald-300"><i data-lucide="calculator" class="w-5 h-5"></i></span>
@@ -2573,10 +2642,10 @@
                                 
                                 <table class="w-full text-sm text-left border-collapse">
                                     <thead>
-                                        <tr class="bg-stone-800 text-stone-200 text-xs font-bold uppercase border-b border-stone-700">
-                                            <th class="p-4 rounded-tl-xl border-r border-stone-700 text-[11px] w-[180px]">Progression Matrix</th>
+                                        <tr class="bg-stone-800 dark:bg-stone-950 text-stone-200 dark:text-stone-400 text-xs font-bold uppercase border-b border-stone-700 dark:border-stone-800">
+                                            <th class="p-4 rounded-tl-xl border-r border-stone-700 dark:border-stone-800 text-[11px] w-[180px]">Progression Matrix</th>
                                             <th class="p-3 text-center text-[11px]">Starting</th>
-                                            <th class="p-3 text-center border-r border-stone-700 text-[11px]">Species</th>
+                                            <th class="p-3 text-center border-r border-stone-700 dark:border-stone-800 text-[11px]">Species</th>
                                             ${keys.slice(2).map(col => `
                                                 <th class="p-3 text-center">
                                                     <div class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-1">${col.featLabel}</div>
@@ -2584,13 +2653,13 @@
                                                 </th>
                                             `).join('')}
                                         </tr>
-                                        <tr class="bg-stone-900/5 border-b border-stone-200">
-                                            <td class="p-3 font-semibold text-stone-400 text-xs italic bg-stone-50 border-r border-stone-200">Associated Feat / ASI</td>
+                                        <tr class="bg-stone-900/5 dark:bg-stone-900/20 border-b border-stone-200 dark:border-stone-800">
+                                            <td class="p-3 font-semibold text-stone-400 text-xs italic bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800">Associated Feat / ASI</td>
                                             <td class="p-3 text-center text-stone-300 bg-stone-50/10">-</td>
-                                            <td class="p-3 text-center text-stone-300 border-r border-stone-200 bg-stone-50/10">-</td>
+                                            <td class="p-3 text-center text-stone-300 border-r border-stone-200 dark:border-stone-800 bg-stone-50/10">-</td>
                                             ${keys.slice(2).map(col => `
                                                 <td class="p-2 text-center">
-                                                    <input type="text" oninput="window.updateFeatName('${col.key}', this.value)" value="${escapeHtml(feats[col.key] || '')}" class="seamless-input w-full text-xs text-center border border-stone-200 rounded-lg py-1 px-1.5 font-bold text-stone-700 bg-white placeholder-stone-300 shadow-sm focus:ring-1 focus:ring-emerald-500" placeholder="Feat Name">
+                                                    <input type="text" oninput="window.updateFeatName('${col.key}', this.value)" value="${escapeHtml(feats[col.key] || '')}" class="seamless-input w-full text-xs text-center border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1.5 font-bold text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 placeholder-stone-300 shadow-sm focus:ring-1 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800" placeholder="Feat Name">
                                                 </td>
                                             `).join('')}
                                         </tr>
@@ -2601,33 +2670,33 @@
                                 </table>
 
                                 <div>
-                                    <h4 class="font-extrabold text-stone-800 text-sm uppercase tracking-wider mb-3 flex items-center space-x-2">
+                                    <h4 class="font-extrabold text-stone-800 dark:text-stone-200 text-sm uppercase tracking-wider mb-3 flex items-center space-x-2">
                                         <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
                                         <span>Cumulative Progression scores</span>
                                     </h4>
-                                    <table class="w-full text-sm text-left border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+                                    <table class="w-full text-sm text-left border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden shadow-sm">
                                         <thead>
-                                            <tr class="bg-stone-100/80 text-stone-600 text-xs font-extrabold uppercase border-b border-stone-200">
-                                                <th class="p-3 border-r border-stone-200 w-[180px]">Stats</th>
+                                            <tr class="bg-stone-100/80 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-xs font-extrabold uppercase border-b border-stone-200 dark:border-stone-800">
+                                                <th class="p-3 border-r border-stone-200 dark:border-stone-800 w-[180px]">Stats</th>
                                                 <th class="p-3 text-center">Starting</th>
-                                                <th class="p-3 text-center border-r border-stone-200">Species</th>
+                                                <th class="p-3 text-center border-r border-stone-200 dark:border-stone-800">Species</th>
                                                 ${keys.slice(2).map(col => `
-                                                    <th class="p-3 text-center font-black text-emerald-800">${col.label} Score</th>
+                                                    <th class="p-3 text-center font-black text-emerald-800 dark:text-emerald-400">${col.label} Score</th>
                                                 `).join('')}
                                             </tr>
                                         </thead>
-                                        <tbody class="bg-white">
+                                        <tbody class="bg-white dark:bg-stone-900">
                                             ${calculatedProgressRows}
                                         </tbody>
                                     </table>
                                 </div>
 
                                 <div>
-                                    <h4 class="font-extrabold text-stone-800 text-sm uppercase tracking-wider mb-3 flex items-center space-x-2">
+                                    <h4 class="font-extrabold text-stone-800 dark:text-stone-200 text-sm uppercase tracking-wider mb-3 flex items-center space-x-2">
                                         <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
                                         <span>Dynamic AC Progression Preview</span>
                                     </h4>
-                                    <table class="w-full text-sm text-left border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+                                    <table class="w-full text-sm text-left border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden shadow-sm">
                                         <thead>
                                             <tr class="bg-emerald-950 text-emerald-50 text-xs font-extrabold uppercase border-b border-emerald-900">
                                                 <th class="p-3 border-r border-emerald-900 w-[240px]">AC calculation options</th>
@@ -2638,23 +2707,23 @@
                                                 `).join('')}
                                             </tr>
                                         </thead>
-                                        <tbody class="bg-white">
+                                        <tbody class="bg-white dark:bg-stone-900">
                                             ${acRowsHtml}
                                         </tbody>
                                     </table>
                                 </div>
 
-                                <!-- Shield Toggle Box -->
-                                <div class="mt-4 flex items-center justify-start bg-stone-50 p-4 rounded-xl border border-stone-200 space-x-4">
+                                <!-- Shield Toggle Box (Toggle moved to the left) -->
+                                <div class="mt-4 flex items-center justify-start bg-stone-50 dark:bg-stone-900/50 p-4 rounded-xl border border-stone-200 dark:border-stone-800 space-x-4">
                                     <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
                                         <input type="checkbox" id="shield-toggle" onchange="window.toggleShieldActive(this.checked)" ${characterData.build.shieldActive ? 'checked' : ''} class="sr-only peer">
-                                        <div class="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                        <div class="w-11 h-6 bg-stone-200 dark:bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
                                     </label>
                                     <div class="flex items-center space-x-3">
-                                        <span class="p-2 bg-emerald-100 rounded-xl text-emerald-700 shadow-sm"><i data-lucide="shield" class="w-5 h-5"></i></span>
+                                        <span class="p-2 bg-emerald-100 dark:bg-emerald-950/40 rounded-xl text-emerald-700 dark:text-emerald-300 shadow-sm"><i data-lucide="shield" class="w-5 h-5"></i></span>
                                         <div>
-                                            <h5 class="font-bold text-stone-800 text-sm">Equip Shield</h5>
-                                            <p class="text-xs text-stone-400">Adds +2 to all AC calculation rows when active</p>
+                                            <h5 class="font-bold text-stone-800 dark:text-stone-200 text-sm">Equip Shield</h5>
+                                            <p class="text-xs text-stone-400 dark:text-stone-500">Adds +2 to all AC calculation rows when active</p>
                                         </div>
                                     </div>
                                 </div>
@@ -2664,17 +2733,17 @@
                     </div>
 
                     <div class="grid md:grid-cols-2 gap-8 animate-fade-in">
-                        <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
-                            <h3 class="text-xl font-bold text-stone-800 mb-2 flex items-center space-x-2 border-b border-stone-100 pb-2">
-                                <span class="p-1.5 bg-emerald-50 rounded-lg text-emerald-600"><i data-lucide="feather" class="w-4 h-4"></i></span>
+                        <section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800">
+                            <h3 class="text-xl font-bold text-stone-800 dark:text-stone-100 mb-2 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800 pb-2">
+                                <span class="p-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg text-emerald-600 dark:text-emerald-400"><i data-lucide="feather" class="w-4 h-4"></i></span>
                                 <span>Features & Traits</span>
                             </h3>
                             <!-- Upgraded features box to outline list editor style -->
                             ${getOutlineNotesEditor('build', 'features', characterData.build.features, 'min-h-[150px]', 'Start typing features... Hitting Enter starts a bullet, Tab indents, Shift+Tab outdents. Type @ to link notes.')}
                         </section>
-                        <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
-                            <h3 class="text-xl font-bold text-stone-800 mb-2 flex items-center space-x-2 border-b border-stone-100 pb-2">
-                                <span class="p-1.5 bg-emerald-50 rounded-lg text-emerald-600"><i data-lucide="clipboard" class="w-4 h-4"></i></span>
+                        <section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800">
+                            <h3 class="text-xl font-bold text-stone-800 dark:text-stone-100 mb-2 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800 pb-2">
+                                <span class="p-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg text-emerald-600 dark:text-emerald-400"><i data-lucide="clipboard" class="w-4 h-4"></i></span>
                                 <span>Misc Notes</span>
                             </h3>
                             <!-- Upgraded equipment/misc notes box to outline list editor style -->
@@ -2710,12 +2779,12 @@
                         <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
                             <div class="relative w-full sm:w-2/3">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
-                                <input type="text" id="session-search" oninput="window.filterSessions(this.value)" placeholder="Search sessions..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 rounded-xl bg-white shadow-sm">
+                                <input type="text" id="session-search" oninput="window.filterSessions(this.value)" placeholder="Search sessions..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 dark:text-stone-100 shadow-sm">
                             </div>
                             <div class="flex space-x-2 w-full sm:w-auto">
-                                <button onclick="window.toggleAllSessions(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Expand All</button>
-                                <button onclick="window.toggleAllSessions(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Collapse All</button>
-                                <button onclick="window.addSession()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 text-emerald-800 font-medium rounded-lg hover:bg-emerald-200 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                                <button onclick="window.toggleAllSessions(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Expand All</button>
+                                <button onclick="window.toggleAllSessions(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Collapse All</button>
+                                <button onclick="window.addSession()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
                             </div>
                         </div>`;
                         
@@ -2726,23 +2795,23 @@
                         const isFirst = idx === 0;
                         const isLast = idx === characterData.campaignNotes.sessionNotes.length - 1;
                         contentHtml += `
-                            <div class="session-block mb-4 border border-stone-200 rounded-xl bg-white shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${sess.title} ${sess.date} ${sess.notes}`)}">
-                                <div class="bg-stone-50/80 border-b border-stone-200 px-5 py-4 flex justify-between items-start transition-colors">
+                            <div class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${sess.title} ${sess.date} ${sess.notes}`)}">
+                                <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                     <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
-                                        <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 rounded transition-colors focus:outline-none hidden sm:block">
+                                        <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
                                             <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
                                         </button>
-                                        <input type="text" oninput="window.updateSession('${sess.id}', 'title', this.value)" value="${escapeHtml(sess.title)}" class="seamless-input font-bold text-lg text-stone-800 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Session Title">
-                                        <input type="text" oninput="window.updateSession('${sess.id}', 'date', this.value)" value="${escapeHtml(sess.date)}" class="seamless-input text-sm text-stone-500 bg-transparent px-2 py-1 w-full sm:w-auto rounded" placeholder="Date">
+                                        <input type="text" oninput="window.updateSession('${sess.id}', 'title', this.value)" value="${escapeHtml(sess.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Session Title">
+                                        <input type="text" oninput="window.updateSession('${sess.id}', 'date', this.value)" value="${escapeHtml(sess.date)}" class="seamless-input text-sm text-stone-500 bg-transparent px-2 py-1 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Date">
                                     </div>
                                     <div class="flex items-center space-x-1 ml-2">
-                                        <button onclick="window.moveSession('${sess.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Session Up">
+                                        <button onclick="window.moveSession('${sess.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Session Up">
                                             <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                         </button>
-                                        <button onclick="window.moveSession('${sess.id}', 1)" ${isLast ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Session Down">
+                                        <button onclick="window.moveSession('${sess.id}', 1)" ${isLast ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Session Down">
                                             <i data-lucide="arrow-down" class="w-4 h-4"></i>
                                         </button>
-                                        <button onclick="window.deleteSession('${sess.id}')" class="text-stone-300 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete Session">
+                                        <button onclick="window.deleteSession('${sess.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/25" title="Delete Session">
                                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                                         </button>
                                     </div>
@@ -2761,45 +2830,45 @@
                         <div class="mb-6 flex gap-4">
                             <div class="relative flex-1">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
-                                <input type="text" id="quest-search" oninput="window.filterQuests(this.value)" placeholder="Search quests..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 rounded-xl bg-white shadow-sm">
+                                <input type="text" id="quest-search" oninput="window.filterQuests(this.value)" placeholder="Search quests..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 dark:text-stone-100 shadow-sm">
                             </div>
-                            <button onclick="window.addQuest()" class="flex items-center space-x-2 px-4 py-3 bg-emerald-100 text-emerald-800 font-medium rounded-xl hover:bg-emerald-200 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i><span class="hidden sm:inline">Add Quest</span></button>
+                            <button onclick="window.addQuest()" class="flex items-center space-x-2 px-4 py-3 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-xl hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i><span class="hidden sm:inline">Add Quest</span></button>
                         </div>`;
 
                     const renderQuestCategory = (title, quests, categoryKey) => {
                         const isCollapsed = questSectionsState[categoryKey];
-                        let sectionHtml = `<div class="quest-section mb-8" data-section-type="${categoryKey}"><div class="flex items-center justify-between mb-4 cursor-pointer hover:bg-stone-50 p-2 rounded -mx-2 transition-colors" onclick="window.toggleQuestSectionCollapse('${categoryKey}')"><h4 class="text-lg font-bold text-stone-700 flex items-center space-x-2"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i><span>${title} (${quests.length})</span></h4></div><div class="collapsible-content space-y-4 ${isCollapsed ? 'collapsed' : ''}">`;
+                        let sectionHtml = `<div class="quest-section mb-8" data-section-type="${categoryKey}"><div class="flex items-center justify-between mb-4 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/30 p-2 rounded -mx-2 transition-colors" onclick="window.toggleQuestSectionCollapse('${categoryKey}')"><h4 class="text-lg font-bold text-stone-700 dark:text-stone-300 flex items-center space-x-2"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i><span>${title} (${quests.length})</span></h4></div><div class="collapsible-content space-y-4 ${isCollapsed ? 'collapsed' : ''}">`;
                         if (quests.length === 0) sectionHtml += `<p class="text-stone-400 italic px-8 py-2">No quests in this category.</p>`;
 
                         quests.forEach((quest, qIdx) => {
                             const isFirst = qIdx === 0;
                             const isLast = qIdx === quests.length - 1;
                             sectionHtml += `
-                                <div class="quest-card bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(`${quest.title} ${quest.subtitle} ${quest.notes}`)}">
-                                    <div class="bg-stone-50 px-4 py-5 flex flex-col items-center justify-start border-r border-stone-100">
-                                        <button onclick="window.toggleQuestCompletion('${quest.id}')" class="text-stone-300 hover:text-emerald-500 transition-colors focus:outline-none">
+                                <div class="quest-card bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(`${quest.title} ${quest.subtitle} ${quest.notes}`)}">
+                                    <div class="bg-stone-50 dark:bg-stone-950 px-4 py-5 flex flex-col items-center justify-start border-r border-stone-100 dark:border-stone-800">
+                                        <button onclick="window.toggleQuestCompletion('${quest.id}')" class="text-stone-300 dark:text-stone-600 hover:text-emerald-500 transition-colors focus:outline-none">
                                             ${quest.isCompleted ? `<i data-lucide="check-square" class="w-6 h-6 text-emerald-500"></i>` : `<i data-lucide="square" class="w-6 h-6 hover:text-emerald-400"></i>`}
                                         </button>
                                     </div>
                                     <div class="p-5 flex-1 flex flex-col">
                                         <div class="flex justify-between items-start mb-2">
                                             <div class="flex-1">
-                                                <input type="text" oninput="window.updateQuest('${quest.id}', 'title', this.value)" value="${escapeHtml(quest.title)}" class="seamless-input font-bold text-lg ${quest.isCompleted ? 'text-stone-500 line-through' : 'text-stone-800'} bg-transparent w-full mb-1 rounded px-2 -ml-2 py-0.5" placeholder="Quest Title">
-                                                <input type="text" oninput="window.updateQuest('${quest.id}', 'subtitle', this.value)" value="${escapeHtml(quest.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 bg-transparent w-full rounded px-2 -ml-2 py-0.5" placeholder="Subtitle / Category">
+                                                <input type="text" oninput="window.updateQuest('${quest.id}', 'title', this.value)" value="${escapeHtml(quest.title)}" class="seamless-input font-bold text-lg ${quest.isCompleted ? 'text-stone-500 dark:text-stone-400 line-through' : 'text-stone-800 dark:text-stone-100'} bg-transparent w-full mb-1 rounded px-2 -ml-2 py-0.5" placeholder="Quest Title">
+                                                <input type="text" oninput="window.updateQuest('${quest.id}', 'subtitle', this.value)" value="${escapeHtml(quest.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 -ml-2 py-0.5" placeholder="Subtitle / Category">
                                             </div>
                                             <div class="flex items-center space-x-1 ml-4">
-                                                <button onclick="window.moveQuest('${quest.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Quest Up">
+                                                <button onclick="window.moveQuest('${quest.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Quest Up">
                                                     <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                                 </button>
-                                                <button onclick="window.moveQuest('${quest.id}', 1)" ${isLast ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Quest Down">
+                                                <button onclick="window.moveQuest('${quest.id}', 1)" ${isLast ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Quest Down">
                                                     <i data-lucide="arrow-down" class="w-4 h-4"></i>
                                                 </button>
-                                                <button onclick="window.deleteQuest('${quest.id}')" class="text-stone-300 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete Quest">
+                                                <button onclick="window.deleteQuest('${quest.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete Quest">
                                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                                 </button>
                                             </div>
                                         </div>
-                                        <div class="mt-2 text-stone-600 ${quest.isCompleted ? 'opacity-75' : ''}">
+                                        <div class="mt-2 text-stone-600 dark:text-stone-300 ${quest.isCompleted ? 'opacity-75' : ''}">
                                             ${getOutlineNotesEditor('campaignNotes_quest', quest.id, quest.notes, 'min-h-[60px]', 'Quest description or sub-objectives... Enter starts a bullet, Tab indents, @ to link.')}
                                         </div>
                                     </div>
@@ -2817,12 +2886,12 @@
                         <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
                             <div class="relative w-full sm:w-2/3">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
-                                <input type="text" id="location-search" oninput="window.filterLocations(this.value)" placeholder="Search locations..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 rounded-xl bg-white shadow-sm">
+                                <input type="text" id="location-search" oninput="window.filterLocations(this.value)" placeholder="Search locations..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 dark:text-stone-100 shadow-sm">
                             </div>
                             <div class="flex space-x-2 w-full sm:w-auto">
-                                <button onclick="window.toggleAllLocations(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Expand All</button>
-                                <button onclick="window.toggleAllLocations(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-stone-50 text-stone-600 rounded-lg text-sm font-medium transition-colors border border-stone-200">Collapse All</button>
-                                <button onclick="window.addLocation()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 text-emerald-800 font-medium rounded-lg hover:bg-emerald-200 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                                <button onclick="window.toggleAllLocations(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Expand All</button>
+                                <button onclick="window.toggleAllLocations(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Collapse All</button>
+                                <button onclick="window.addLocation()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
                             </div>
                         </div>`;
                         
@@ -2833,23 +2902,23 @@
                         const isFirst = idx === 0;
                         const isLast = idx === characterData.campaignNotes.locations.length - 1;
                         contentHtml += `
-                            <div class="location-block mb-4 border border-stone-200 rounded-xl bg-white shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${loc.title} ${loc.subtitle} ${loc.notes}`)}">
-                                <div class="bg-stone-50/80 border-b border-stone-200 px-5 py-4 flex justify-between items-start transition-colors">
+                            <div class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${loc.title} ${loc.subtitle} ${loc.notes}`)}">
+                                <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                     <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
-                                        <button onclick="window.toggleLocationCollapse('${loc.id}')" class="p-1 hover:bg-stone-200 rounded transition-colors focus:outline-none hidden sm:block">
+                                        <button onclick="window.toggleLocationCollapse('${loc.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
                                             <i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
                                         </button>
-                                        <input type="text" oninput="window.updateLocation('${loc.id}', 'title', this.value)" value="${escapeHtml(loc.title)}" class="seamless-input font-bold text-lg text-stone-800 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Location Name">
-                                        <input type="text" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 bg-transparent px-2 py-1 w-full sm:w-auto rounded" placeholder="Region / Details">
+                                        <input type="text" oninput="window.updateLocation('${loc.id}', 'title', this.value)" value="${escapeHtml(loc.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Location Name">
+                                        <input type="text" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent px-2 py-1 w-full sm:w-auto rounded" placeholder="Region / Details">
                                     </div>
                                     <div class="flex items-center space-x-1 ml-2">
-                                        <button onclick="window.moveLocation('${loc.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Location Up">
+                                        <button onclick="window.moveLocation('${loc.id}', -1)" ${isFirst ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Location Up">
                                             <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                         </button>
-                                        <button onclick="window.moveLocation('${loc.id}', 1)" ${isLast ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100"'} title="Move Location Down">
+                                        <button onclick="window.moveLocation('${loc.id}', 1)" ${isLast ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Location Down">
                                             <i data-lucide="arrow-down" class="w-4 h-4"></i>
                                         </button>
-                                        <button onclick="window.deleteLocation('${loc.id}')" class="text-stone-300 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete Location">
+                                        <button onclick="window.deleteLocation('${loc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete Location">
                                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                                         </button>
                                     </div>
@@ -2865,9 +2934,9 @@
                         <div class="mb-6 flex gap-4">
                             <div class="relative flex-1">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
-                                <input type="text" id="npc-search" oninput="window.filterNPCs(this.value)" placeholder="Search NPCs..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 rounded-xl bg-white shadow-sm">
+                                <input type="text" id="npc-search" oninput="window.filterNPCs(this.value)" placeholder="Search NPCs..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 dark:text-stone-100 shadow-sm">
                             </div>
-                            <button onclick="window.addFaction()" class="flex items-center space-x-2 px-4 py-3 bg-emerald-100 text-emerald-800 font-medium rounded-xl hover:bg-emerald-200 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i><span class="hidden sm:inline">Add Faction</span></button>
+                            <button onclick="window.addFaction()" class="flex items-center space-x-2 px-4 py-3 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-xl hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i><span class="hidden sm:inline">Add Faction</span></button>
                         </div>`;
                         
                     if (characterData.campaignNotes.npcs.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No NPCs added yet.</p>`;
@@ -2876,17 +2945,17 @@
                         const isFirstFaction = fIdx === 0;
                         const isLastFaction = fIdx === characterData.campaignNotes.npcs.length - 1;
                         contentHtml += `
-                            <div class="npc-faction-block mb-8 border border-stone-200 rounded-xl overflow-hidden bg-stone-50" data-faction-name="${escapeHtml(faction.name)}">
-                                <div class="bg-stone-200/50 px-4 py-3 border-b border-stone-200 flex justify-between items-center">
-                                    <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 bg-transparent w-2/3 rounded px-2 -ml-2 py-0.5">
+                            <div class="npc-faction-block mb-8 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden bg-stone-50 dark:bg-stone-950" data-faction-name="${escapeHtml(faction.name)}">
+                                <div class="bg-stone-200/50 dark:bg-stone-800/50 px-4 py-3 border-b border-stone-200 dark:border-stone-800 flex justify-between items-center">
+                                    <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-2/3 rounded px-2 -ml-2 py-0.5">
                                     <div class="flex items-center space-x-1">
-                                        <button onclick="window.moveFaction('${faction.id}', -1)" ${isFirstFaction ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-300/50"'} title="Move Faction Up">
+                                        <button onclick="window.moveFaction('${faction.id}', -1)" ${isFirstFaction ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-300/50 dark:hover:bg-stone-800"'} title="Move Faction Up">
                                             <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                         </button>
-                                        <button onclick="window.moveFaction('${faction.id}', 1)" ${isLastFaction ? 'disabled class="text-stone-300 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-300/50"'} title="Move Faction Down">
+                                        <button onclick="window.moveFaction('${faction.id}', 1)" ${isLastFaction ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-300/50 dark:hover:bg-stone-800"'} title="Move Faction Down">
                                             <i data-lucide="arrow-down" class="w-4 h-4"></i>
                                         </button>
-                                        <button onclick="window.deleteFaction('${faction.id}')" class="text-stone-400 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete Faction">
+                                        <button onclick="window.deleteFaction('${faction.id}')" class="text-stone-400 dark:text-stone-500 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete Faction">
                                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                                         </button>
                                     </div>
@@ -2896,11 +2965,11 @@
                                         const isFirstNPC = nIdx === 0;
                                         const isLastNPC = nIdx === faction.members.length - 1;
                                         return `
-                                        <div class="npc-card bg-white p-4 rounded-lg border border-stone-200 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.notes)}">
+                                        <div class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.notes)}">
                                             
                                             <!-- Circular Interactive Avatar Circle Slot -->
                                             <div class="flex-shrink-0 flex items-start mt-1">
-                                                <div class="relative w-14 h-14 rounded-full border border-stone-200 hover:border-emerald-400 bg-stone-50 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all animate-fade-in" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
+                                                <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all animate-fade-in" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
                                                     ${npc.avatar ? 
                                                         `<img src="${npc.avatar}" class="w-full h-full object-cover">` : 
                                                         `<i data-lucide="user" class="w-6 h-6 text-stone-400"></i>`
@@ -2920,25 +2989,25 @@
                                             </div>
 
                                             <div class="flex-1 min-w-0">
-                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5" placeholder="Character Name">
+                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5" placeholder="Character Name">
                                                 ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
                                             </div>
-                                            <div class="flex flex-col justify-between items-end border-l border-stone-100 pl-3 self-stretch flex-shrink-0">
-                                                <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="Delete NPC">
+                                            <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
+                                                <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete NPC">
                                                     <i data-lucide="x" class="w-4 h-4"></i>
                                                 </button>
                                                 <div class="flex space-x-0.5 mt-2">
-                                                    <button onclick="window.moveNPC('${faction.id}', '${npc.id}', -1)" ${isFirstNPC ? 'disabled class="text-stone-200 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100"'} title="Move NPC Up">
+                                                    <button onclick="window.moveNPC('${faction.id}', '${npc.id}', -1)" ${isFirstNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Up">
                                                         <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
                                                     </button>
-                                                    <button onclick="window.moveNPC('${faction.id}', '${npc.id}', 1)" ${isLastNPC ? 'disabled class="text-stone-200 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100"'} title="Move NPC Down">
+                                                    <button onclick="window.moveNPC('${faction.id}', '${npc.id}', 1)" ${isLastNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Down">
                                                         <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
                                                     </button>
                                                 </div>
                                             </div>
                                         </div>`;
                                     }).join('')}
-                                    <button onclick="window.addNPC('${faction.id}')" class="w-full py-2 mt-2 border-2 border-dashed border-stone-300 text-stone-500 rounded-lg hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors flex items-center justify-center space-x-2"><i data-lucide="user-plus" class="w-4 h-4"></i><span>Add Character to Faction</span></button>
+                                    <button onclick="window.addNPC('${faction.id}')" class="w-full py-2 mt-2 border-2 border-dashed border-stone-300 dark:border-stone-800 text-stone-500 dark:text-stone-400 rounded-lg hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors flex items-center justify-center space-x-2"><i data-lucide="user-plus" class="w-4 h-4"></i><span>Add Character to Faction</span></button>
                                 </div>
                             </div>`;
                     });
@@ -2949,8 +3018,8 @@
 
                 html = `
                 <div class="space-y-6 animate-fade-in h-full flex flex-col">
-                    <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex-grow flex flex-col">
-                        <h3 class="text-2xl font-bold text-stone-800 mb-6 flex items-center space-x-2 border-b border-stone-100 pb-4">
+                    <section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 flex-grow flex flex-col">
+                        <h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800/80 pb-4">
                             <i data-lucide="${sectionData.icon}" class="text-emerald-600"></i><span>${sectionData.title}</span>
                         </h3>
                         <div class="flex-grow flex flex-col">
