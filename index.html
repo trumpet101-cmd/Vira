@@ -50,6 +50,7 @@
 </head>
 <body class="bg-stone-100 text-stone-800 font-sans h-screen flex overflow-hidden">
 
+    <!-- Auth Lock Screen Overlay -->
     <div id="auth-overlay" class="fixed inset-0 bg-stone-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-md p-8 animate-fade-in">
             <div class="text-center mb-8">
@@ -82,8 +83,10 @@
         </div>
     </div>
 
+    <!-- Mobile Menu Overlay -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden" onclick="toggleMobileMenu()"></div>
 
+    <!-- Sidebar -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out w-64 bg-stone-900 text-stone-200 flex flex-col z-30 shadow-xl">
         <div class="p-6 flex items-center justify-between border-b border-stone-800">
             <div>
@@ -113,6 +116,7 @@
         </div>
     </aside>
 
+    <!-- Main Content -->
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-stone-50 relative">
         
         <header class="bg-white shadow-sm px-6 py-4 flex items-center justify-between z-10">
@@ -137,13 +141,15 @@
             <div class="h-24 md:h-12"></div>
         </div>
 
+        <!-- Global Mention Dropdown -->
         <ul id="mention-dropdown" class="hidden absolute z-50 bg-white border border-stone-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto w-72 text-sm flex flex-col"></ul>
     </main>
 
+    <!-- Use Type Module for Firebase Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- UTILS ---
         function escapeHtml(unsafe) {
@@ -158,7 +164,7 @@
             return val;
         }
 
-        // --- INITIAL DATA (CLEANED) ---
+        // --- INITIAL DATA ---
         const initialCharacterData = {
             name: "Víra Tahlwyn",
             basics: { race: "Wood Elf", class: "Barbarian (World Tree)", age: 27, background: "Nomadic Tribesman (Custom)", tribe: "Eryndral Tribe (Orroyen)", familiar: "Tato (Squirrel)" },
@@ -222,6 +228,8 @@
         let cloudUser = null;
         let isCloudReady = false;
         let saveTimeout = null;
+        let isLocalSaving = false; // Flag to prevent remote overwrites while typing
+        let unsubscribeSnapshot = null;
 
         // Firebase Configuration
         const firebaseConfig = {
@@ -248,14 +256,45 @@
                 isCloudReady = true;
                 if(authOverlay) authOverlay.classList.add('hidden'); // Hide Lock Screen
                 updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
-                await loadDataFromCloud();
+                
+                // Set up real-time listener instead of a one-time getDoc
+                listenToCloudData();
             } else {
+                if (unsubscribeSnapshot) {
+                    unsubscribeSnapshot();
+                    unsubscribeSnapshot = null;
+                }
                 cloudUser = null;
                 isCloudReady = false;
                 if(authOverlay) authOverlay.classList.remove('hidden'); // Show Lock Screen
                 updateCloudUIStatus("Offline Mode", "hard-drive", "bg-stone-800 text-stone-400");
             }
         });
+
+        // Setup real-time listeners
+        function listenToCloudData() {
+            if (!cloudUser || !db) return;
+            const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data');
+            
+            unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
+                // If we are actively committing typing changes, ignore the instant database echo snapshot
+                if (isLocalSaving) {
+                    return;
+                }
+                
+                if (docSnap.exists()) {
+                    characterData = { ...initialCharacterData, ...docSnap.data() };
+                    document.getElementById('header-name-input').value = characterData.name;
+                    window.renderContent();
+                    lucide.createIcons();
+                } else {
+                    // Seed new user on first signup
+                    setDoc(docRef, characterData);
+                }
+            }, (error) => {
+                console.error("Realtime subscription failed:", error);
+            });
+        }
 
         // Sign-In/Register Flow Controllers
         let isSignUpMode = false;
@@ -311,25 +350,6 @@
             }
         };
 
-        async function loadDataFromCloud() {
-            if (!cloudUser || !db) return;
-            const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data');
-            try {
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    characterData = { ...initialCharacterData, ...docSnap.data() };
-                    document.getElementById('header-name-input').value = characterData.name;
-                    window.renderContent();
-                    lucide.createIcons();
-                } else {
-                    // Seed new user with our default character structure
-                    await setDoc(docRef, characterData);
-                }
-            } catch (e) {
-                console.error("Cloud load failed:", e);
-            }
-        }
-
         function updateCloudUIStatus(text, icon, classes) {
             const btn = document.getElementById('cloud-status-btn');
             if(btn) {
@@ -369,10 +389,17 @@
                 if (isCloudReady && cloudUser && db) {
                     const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data');
                     try {
+                        isLocalSaving = true; // Block incoming echo updates
                         await setDoc(docRef, characterData);
                         triggerSaveIndicator();
+                        
+                        // Briefly wait to let the database write finish settling before turning snap back on
+                        setTimeout(() => {
+                            isLocalSaving = false;
+                        }, 1000);
                     } catch (e) {
                         console.error("Cloud save failed, relying on local backup", e);
+                        isLocalSaving = false;
                         triggerSaveIndicator();
                     }
                 } else {
