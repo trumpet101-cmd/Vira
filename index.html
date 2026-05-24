@@ -109,9 +109,83 @@
             <div class="text-4xl mb-3" id="dialog-icon">⚠️</div>
             <h3 class="text-xl font-bold text-stone-800 tracking-tight" id="dialog-title">Are you sure?</h3>
             <p class="text-sm text-stone-500 mt-2 leading-relaxed" id="dialog-message">This action cannot be undone.</p>
+            
+            <!-- Type-To-Confirm Double-Verification Input -->
+            <div id="dialog-input-container" class="mt-4 hidden text-left animate-fade-in">
+                <!-- Text-verification label (with uppercase removed) -->
+                <label class="block text-xs font-bold text-stone-500 tracking-wider mb-1" id="dialog-input-label">Type "Delete" to confirm</label>
+                <input type="text" id="dialog-input" class="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 focus:ring-2 focus:ring-red-500 focus:outline-none transition-all font-semibold" placeholder="">
+            </div>
+
             <div class="flex space-x-3 mt-6">
                 <button id="dialog-cancel-btn" class="flex-1 py-2.5 border border-stone-200 hover:bg-stone-50 text-stone-600 font-semibold rounded-xl transition-all">Cancel</button>
                 <button id="dialog-confirm-btn" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Manager Modal -->
+    <div id="character-modal" class="fixed inset-0 bg-stone-950/80 backdrop-blur-md z-[90] flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-xl p-6 sm:p-8 flex flex-col max-h-[85vh] animate-fade-in">
+            
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center pb-4 border-b border-stone-200">
+                <div class="flex items-center space-x-3">
+                    <span class="text-3xl">👥</span>
+                    <div>
+                        <h3 class="text-2xl font-black text-stone-800 tracking-tight">Character Vault</h3>
+                        <p class="text-xs text-stone-500 font-medium">Manage and switch between your active campaign sheets</p>
+                    </div>
+                </div>
+                <button onclick="window.hideCharacterModal()" class="text-stone-400 hover:text-stone-600 p-2 rounded-lg hover:bg-stone-50 transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Content Area split in two parts: list & creation -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar my-6 pr-1 space-y-6">
+                
+                <!-- Active Characters Section -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest">Active Sheets</h4>
+                        <!-- Simple local filter bar -->
+                        <div class="relative w-44">
+                            <input type="text" id="character-modal-search" oninput="window.filterCharacterModalList(this.value)" placeholder="Search sheets..." class="seamless-input text-xs w-full pl-7 pr-2.5 py-1.5 border border-stone-200 rounded-lg bg-white shadow-sm focus:ring-1 focus:ring-emerald-500">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+                        </div>
+                    </div>
+                    <div id="character-modal-list" class="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                        <!-- Dynamic list items injected here -->
+                    </div>
+                </div>
+
+                <!-- Add New Character Section -->
+                <div class="bg-stone-50 border border-stone-200 p-5 rounded-2xl">
+                    <h4 class="text-xs font-bold text-stone-500 uppercase tracking-widest mb-4 flex items-center space-x-2">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Create New Character</span>
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="sm:col-span-1">
+                            <label class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">Name</label>
+                            <input type="text" id="new-char-name" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all font-semibold" placeholder="e.g. Orin Starfall">
+                        </div>
+                        <div class="sm:col-span-1">
+                            <label class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">Race</label>
+                            <input type="text" id="new-char-race" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="e.g. Tiefling">
+                        </div>
+                        <div class="sm:col-span-1">
+                            <label class="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">Class</label>
+                            <input type="text" id="new-char-class" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="e.g. Wizard (Evocation)">
+                        </div>
+                    </div>
+                    <button onclick="window.createNewCharacter()" class="w-full mt-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md shadow-emerald-600/10 flex items-center justify-center space-x-2 text-sm">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        <span>Add to Vault</span>
+                    </button>
+                </div>
+
             </div>
         </div>
     </div>
@@ -134,12 +208,19 @@
         <nav class="flex-1 p-4 space-y-2 overflow-y-auto" id="nav-container"></nav>
 
         <div class="p-4 border-t border-stone-800 space-y-3">
+            
+            <!-- Character Switcher Button -->
+            <button onclick="window.openCharacterModal()" class="w-full flex items-center justify-center space-x-2 py-2.5 bg-emerald-900/50 hover:bg-emerald-800 text-emerald-100 font-bold rounded-xl transition-all shadow-md shadow-emerald-950/40 border border-emerald-700/50 text-sm">
+                <i data-lucide="users" class="w-4.5 h-4.5"></i>
+                <span>Switch Character</span>
+            </button>
+
             <div class="grid grid-cols-2 gap-2">
-                <button onclick="exportJSON()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export current sheet data as a physical backup">
+                <button onclick="window.exportJSON()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export entire vault data as a single backup file">
                     <i data-lucide="download" class="w-4 h-4"></i>
-                    <span class="text-[10px] font-bold uppercase tracking-wider">Export</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Backup All</span>
                 </button>
-                <button onclick="document.getElementById('import-json-input').click()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Import an exported JSON backup sheet">
+                <button onclick="document.getElementById('import-json-input').click()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Import a vault backup or a single character sheet">
                     <i data-lucide="upload" class="w-4 h-4"></i>
                     <span class="text-[10px] font-bold uppercase tracking-wider">Import</span>
                 </button>
@@ -191,7 +272,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- UTILS ---
         function escapeHtml(unsafe) {
@@ -296,79 +377,156 @@
             }
         };
 
+        // --- DYNAMIC BLANK SLATE MAKER ---
+        function getCleanCharacterData(name, race, charClass) {
+            return {
+                name: name || "New Character",
+                basics: { 
+                    race: race || "Unknown Race", 
+                    class: charClass || "Unknown Class", 
+                    age: "", 
+                    background: "", 
+                    tribe: "", 
+                    familiar: "" 
+                },
+                backstory: [
+                    { id: 'b_1', title: "Early Life", notes: "", isCollapsed: false },
+                    { id: 'b_2', title: "The Threat", notes: "", isCollapsed: false },
+                    { id: 'b_3', title: "The Vision", notes: "", isCollapsed: false },
+                    { id: 'b_4', title: "The Journey", notes: "", isCollapsed: false }
+                ],
+                personality: [
+                    { id: 'p_1', title: "Normal Personality", subtitle: "Default State", notes: "", isCollapsed: false },
+                    { id: 'p_2', title: "Raging Personality", subtitle: "Combat State", notes: "", isCollapsed: false },
+                    { id: 'p_3', title: "Likes", subtitle: "Interests & Preference", notes: "", isCollapsed: false },
+                    { id: 'p_4', title: "Dislikes", subtitle: "Fears & Aversions", notes: "", isCollapsed: false }
+                ],
+                build: {
+                    abilities: [
+                        { name: "Strength", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
+                        { name: "Dexterity", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
+                        { name: "Constitution", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
+                        { name: "Intelligence", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
+                        { name: "Wisdom", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
+                        { name: "Charisma", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 }
+                    ],
+                    feats: {
+                        lvl1: "", lvl4: "", lvl8: "", lvl12: "", lvl16: "", lvl19: "", lvl20: ""
+                    },
+                    features: "",
+                    equipment: ""
+                },
+                campaignNotes: {
+                    sessionNotes: [],
+                    quests: [],
+                    npcs: [],
+                    locations: [],
+                    misc: ""
+                }
+            };
+        }
+
         // --- APP STATE ---
         let activeTab = 'campaignNotes';
         let isMobileMenuOpen = false;
         let questSectionsState = { inProgressCollapsed: false, completedCollapsed: false };
         let currentSearchQueries = { sessionNotes: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
         
-        let characterData = { ...initialCharacterData };
+        // Deep copy clean data patterns to avoid leaky reference mutations
+        let characterData = JSON.parse(JSON.stringify(initialCharacterData));
+        let currentCharacterId = localStorage.getItem('current_character_id') || 'default';
+        let characterList = JSON.parse(localStorage.getItem('character_list')) || [];
 
         // --- ROBUST LORE & DATA MIGRATION ENGINE ---
         function migrateData(data) {
-            if (!data.campaignNotes) data.campaignNotes = initialCharacterData.campaignNotes;
-            if (typeof data.campaignNotes.npcs === 'string') data.campaignNotes.npcs = initialCharacterData.campaignNotes.npcs;
+            if (!data) return;
+            if (!data.campaignNotes) data.campaignNotes = { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "" };
+            if (typeof data.campaignNotes.npcs === 'string') data.campaignNotes.npcs = [];
             if (typeof data.campaignNotes.sessionNotes === 'string') {
                 data.campaignNotes.sessionNotes = [ { id: 'sess_migrated', title: 'Imported Session Notes', date: '', notes: data.campaignNotes.sessionNotes, isCollapsed: false } ];
             }
             
-            // Migrate backstory
-            if (data.backstory && !Array.isArray(data.backstory)) {
-                const oldBackstory = data.backstory;
+            // Migrate backstory - safeguard clean references
+            if (!data.backstory || !Array.isArray(data.backstory)) {
                 data.backstory = [
-                    { id: 'b_1', title: "Early Life", notes: oldBackstory.earlyLife || "", isCollapsed: false },
-                    { id: 'b_2', title: "The Threat", notes: oldBackstory.theThreat || "", isCollapsed: false },
-                    { id: 'b_3', title: "The Vision", notes: oldBackstory.theVision || "", isCollapsed: false },
-                    { id: 'b_4', title: "The Journey", notes: oldBackstory.theJourney || "", isCollapsed: false }
+                    { id: 'b_1', title: "Early Life", notes: "", isCollapsed: false },
+                    { id: 'b_2', title: "The Threat", notes: "", isCollapsed: false },
+                    { id: 'b_3', title: "The Vision", notes: "", isCollapsed: false },
+                    { id: 'b_4', title: "The Journey", notes: "", isCollapsed: false }
                 ];
-            } else if (!data.backstory) {
-                data.backstory = [...initialCharacterData.backstory];
             }
 
-            // Migrate personality
-            if (data.personality && !Array.isArray(data.personality)) {
-                const oldPersonality = data.personality;
+            // Migrate personality - safeguard clean references
+            if (!data.personality || !Array.isArray(data.personality)) {
                 data.personality = [
-                    { id: 'p_1', title: "Normal Personality", subtitle: "Default State", notes: oldPersonality.normal || "", isCollapsed: false },
-                    { id: 'p_2', title: "Raging Personality", subtitle: "Combat State", notes: oldPersonality.raging || "", isCollapsed: false },
-                    { id: 'p_3', title: "Likes", subtitle: "Interests & Preference", notes: oldPersonality.likes || "", isCollapsed: false },
-                    { id: 'p_4', title: "Dislikes", subtitle: "Fears & Aversions", notes: oldPersonality.dislikes || "", isCollapsed: false }
+                    { id: 'p_1', title: "Normal Personality", subtitle: "Default State", notes: "", isCollapsed: false },
+                    { id: 'p_2', title: "Raging Personality", subtitle: "Combat State", notes: "", isCollapsed: false },
+                    { id: 'p_3', title: "Likes", subtitle: "Interests & Preference", notes: "", isCollapsed: false },
+                    { id: 'p_4', title: "Dislikes", subtitle: "Fears & Aversions", notes: "", isCollapsed: false }
                 ];
-            } else if (!data.personality) {
-                data.personality = [...initialCharacterData.personality];
             } else {
-                // Ensure isRed is stripped off migrated arrays
                 data.personality.forEach(p => { if ('isRed' in p) delete p.isRed; });
             }
 
             // Migrate stats progression structure
-            if (data.build && !data.build.abilities) {
-                const oldStats = data.build.stats || [];
-                const statMap = {};
-                oldStats.forEach(s => {
-                    statMap[s.name] = s.value;
-                });
-
+            if (!data.build || !data.build.abilities) {
+                if (!data.build) data.build = {};
                 data.build.abilities = [
-                    { name: "Strength", starting: statMap["Strength"] || 15, species: 2, lvl1: 0, lvl4: 1, lvl8: 1, lvl12: 1, lvl16: 0, lvl19: 0, lvl20: 4 },
-                    { name: "Dexterity", starting: statMap["Dexterity"] || 13, species: 1, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
-                    { name: "Constitution", starting: statMap["Constitution"] || 14, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 4 },
-                    { name: "Intelligence", starting: statMap["Intelligence"] || 12, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
-                    { name: "Wisdom", starting: statMap["Wisdom"] || 12, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
-                    { name: "Charisma", starting: statMap["Charisma"] || 6, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 }
+                    { name: "Strength", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
+                    { name: "Dexterity", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
+                    { name: "Constitution", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
+                    { name: "Intelligence", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
+                    { name: "Wisdom", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 },
+                    { name: "Charisma", starting: 10, species: 0, lvl1: 0, lvl4: 0, lvl8: 0, lvl12: 0, lvl16: 0, lvl19: 0, lvl20: 0 }
                 ];
+                data.build.feats = { lvl1: "", lvl4: "", lvl8: "", lvl12: "", lvl16: "", lvl19: "", lvl20: "" };
+            }
 
-                data.build.feats = { ...initialCharacterData.build.feats };
+            // Safe migration of features and equipment into robust strings
+            if (data.build) {
+                if (Array.isArray(data.build.features)) {
+                    data.build.features = data.build.features.join('\n');
+                }
+                if (typeof data.build.features !== 'string') {
+                    data.build.features = "";
+                }
+
+                if (Array.isArray(data.build.equipment)) {
+                    data.build.equipment = data.build.equipment.join('\n');
+                }
+                if (typeof data.build.equipment !== 'string') {
+                    data.build.equipment = "";
+                }
             }
         }
 
-        let loadedData = JSON.parse(localStorage.getItem('viraDndNotes'));
-        if (loadedData) {
-            characterData = { ...initialCharacterData, ...loadedData };
+        // --- LOCAL STORAGE FIRST LOAD BOOTSTRAP ---
+        let loadedData = JSON.parse(localStorage.getItem('character_data_' + currentCharacterId));
+        if (!loadedData && currentCharacterId === 'default') {
+            // Check legacy key for existing users upgrade path
+            let legacyData = JSON.parse(localStorage.getItem('viraDndNotes'));
+            if (legacyData) {
+                loadedData = legacyData;
+                localStorage.setItem('character_data_default', JSON.stringify(legacyData));
+                characterList = [{ id: 'default', name: legacyData.name || 'Víra Tahlwyn', race: legacyData.basics?.race || 'Wood Elf', class: legacyData.basics?.class || 'Barbarian (World Tree)' }];
+                localStorage.setItem('character_list', JSON.stringify(characterList));
+            }
         }
-        migrateData(characterData); // Apply fallback corrections to structural notes on load
 
-        // Overview tab removed, Backstory, Personality and Build tabs remain
+        if (loadedData) {
+            characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...loadedData };
+        } else {
+            // Seed clean default character
+            characterData = JSON.parse(JSON.stringify(initialCharacterData));
+            characterList = [{ id: 'default', name: initialCharacterData.name, race: initialCharacterData.basics.race, class: initialCharacterData.basics.class }];
+            localStorage.setItem('character_list', JSON.stringify(characterList));
+            localStorage.setItem('character_data_default', JSON.stringify(characterData));
+            localStorage.setItem('current_character_id', 'default');
+            currentCharacterId = 'default';
+        }
+        migrateData(characterData);
+
+        // --- NAVIGATION CONFIGURATION (RESTORED KEY VARIABLE) ---
         const navItems = [
             { id: 'campaignNotes', label: 'Campaign Notes', icon: 'map' },
             { id: 'campaign_sessionNotes', label: 'Session Notes', icon: 'scroll-text', isSubItem: true },
@@ -386,10 +544,10 @@
         let cloudUser = null;
         let isCloudReady = false;
         let saveTimeout = null;
-        let isLocalSaving = false; // Flag to prevent remote overwrites while typing
-        let unsubscribeSnapshot = null;
+        let isLocalSaving = false;
+        let unsubscribeCharacters = null;
+        let unsubscribeActiveCharacter = null;
 
-        // Firebase Configuration
         const firebaseConfig = {
 		  apiKey: "AIzaSyBbmh-jibUxCwbqVvzEDHX78YEweb_ld04",
 		  authDomain: "vira-dnd.firebaseapp.com",
@@ -401,32 +559,34 @@
         };
         const appId = 'vira-dnd-notes';
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        db = getFirestore(app);
+        const appInstance = initializeApp(firebaseConfig);
+        const auth = getAuth(appInstance);
+        db = getFirestore(appInstance);
 
         // Track Auth State changes
         onAuthStateChanged(auth, async (u) => {
             try {
                 const authOverlay = document.getElementById('auth-overlay');
                 
-                // Only allow designated email logins. Force-logout anonymous accounts leftover from prior configs.
                 if (u && !u.isAnonymous) {
                     cloudUser = u;
                     isCloudReady = true;
                     if(authOverlay) authOverlay.classList.add('hidden'); // Hide Lock Screen
                     updateCloudUIStatus("Connecting...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
                     
-                    // Set up real-time listener instead of a one-time getDoc
-                    listenToCloudData();
+                    // Setup real-time characters list listener
+                    listenToCharactersList();
                 } else {
                     if (u && u.isAnonymous) {
-                        await signOut(auth); // Clear out conflicting anonymous browser tokens
+                        await signOut(auth);
                     }
-                    if (unsubscribeSnapshot) {
-                        unsubscribeSnapshot();
-                        unsubscribeSnapshot = null;
+                    if (unsubscribeActiveCharacter) {
+                        unsubscribeActiveCharacter();
+                        unsubscribeActiveCharacter = null;
+                    }
+                    if (unsubscribeCharacters) {
+                        unsubscribeCharacters();
+                        unsubscribeCharacters = null;
                     }
                     cloudUser = null;
                     isCloudReady = false;
@@ -438,39 +598,104 @@
             }
         });
 
-        // Setup real-time listeners with diagnostic feedback
-        function listenToCloudData() {
+        // Setup real-time character collections listener
+        function listenToCharactersList() {
             try {
                 if (!cloudUser || !db) return;
-                // Corrected 6-segment path to comply with Firestore document addressing rules
-                const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data', 'sheet');
+                const colRef = collection(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters');
                 
-                unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
-                    if (isLocalSaving) {
-                        return; // Hold incoming snaps temporarily while user is actively typing
-                    }
-                    
-                    if (docSnap.exists()) {
-                        characterData = { ...initialCharacterData, ...docSnap.data() };
-                        migrateData(characterData); // Maintain structural integrity on sync-down
-                        document.getElementById('header-name-input').value = characterData.name;
-                        window.renderContent();
-                        lucide.createIcons();
-                        updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
-                    } else {
-                        // Seed new user account with clean defaults
-                        setDoc(docRef, characterData).then(() => {
-                            updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
-                        }).catch(err => {
-                            handleSyncError(err);
+                unsubscribeCharacters = onSnapshot(colRef, async (querySnap) => {
+                    const list = [];
+                    querySnap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        list.push({
+                            id: docSnap.id,
+                            name: data.name || "Unnamed Character",
+                            race: data.basics?.race || "Unknown Race",
+                            class: data.basics?.class || "Unknown Class"
                         });
+                    });
+
+                    characterList = list;
+                    localStorage.setItem('character_list', JSON.stringify(characterList));
+
+                    // Update local Character Selector List view
+                    window.renderCharacterModalList();
+
+                    // If collection is empty, check for legacy document to migrate
+                    if (list.length === 0) {
+                        const legacyDocRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data', 'sheet');
+                        try {
+                            updateCloudUIStatus("Checking Legacy Notes...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+                            const legacySnap = await getDoc(legacyDocRef);
+                            if (legacySnap.exists()) {
+                                updateCloudUIStatus("Migrating Legacy Notes...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+                                const legacyData = legacySnap.data();
+                                
+                                const newCharId = 'char_' + Date.now();
+                                const newCharRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', newCharId);
+                                await setDoc(newCharRef, legacyData);
+                                
+                                currentCharacterId = newCharId;
+                                localStorage.setItem('current_character_id', currentCharacterId);
+                                
+                                await deleteDoc(legacyDocRef);
+                            } else {
+                                // Empty account, create first clean default
+                                const defaultId = 'char_' + Date.now();
+                                const defaultRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', defaultId);
+                                await setDoc(defaultRef, JSON.parse(JSON.stringify(initialCharacterData)));
+                                
+                                currentCharacterId = defaultId;
+                                localStorage.setItem('current_character_id', currentCharacterId);
+                            }
+                        } catch (e) {
+                            console.error("Migration check failed", e);
+                        }
+                    } else {
+                        // Check if active selector contains valid ID on list
+                        const activeExists = list.some(c => c.id === currentCharacterId);
+                        if (!activeExists) {
+                            currentCharacterId = list[0].id;
+                            localStorage.setItem('current_character_id', currentCharacterId);
+                        }
                     }
+
+                    // Spin up real-time listener for selected character
+                    listenToActiveCharacter();
+
                 }, (error) => {
                     handleSyncError(error);
                 });
             } catch (err) {
                 handleSyncError(err);
             }
+        }
+
+        function listenToActiveCharacter() {
+            if (unsubscribeActiveCharacter) {
+                unsubscribeActiveCharacter();
+                unsubscribeActiveCharacter = null;
+            }
+
+            if (!cloudUser || !db || !currentCharacterId) return;
+            const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', currentCharacterId);
+
+            unsubscribeActiveCharacter = onSnapshot(docRef, (docSnap) => {
+                if (isLocalSaving) return;
+
+                if (docSnap.exists()) {
+                    characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...docSnap.data() };
+                    migrateData(characterData);
+                    
+                    document.getElementById('header-name-input').value = characterData.name;
+                    window.renderContent();
+                    lucide.createIcons();
+                    updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
+                }
+            }, (error) => {
+                handleSyncError(error);
+            });
         }
 
         function handleSyncError(error) {
@@ -483,7 +708,7 @@
         }
 
         // --- CUSTOM MODAL DIALOG CONTROLLERS ---
-        window.showCustomConfirm = function(title, message, icon, onConfirm) {
+        window.showCustomConfirm = function(title, message, icon, onConfirm, requiredInputText = null) {
             const dialog = document.getElementById('custom-dialog');
             document.getElementById('dialog-title').innerText = title;
             document.getElementById('dialog-message').innerText = message;
@@ -491,8 +716,9 @@
             
             const confirmBtn = document.getElementById('dialog-confirm-btn');
             const cancelBtn = document.getElementById('dialog-cancel-btn');
+            const inputContainer = document.getElementById('dialog-input-container');
+            const dialogInput = document.getElementById('dialog-input');
             
-            // Re-clone buttons to wipe legacy event listeners
             const newConfirmBtn = confirmBtn.cloneNode(true);
             const newCancelBtn = cancelBtn.cloneNode(true);
             confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
@@ -501,13 +727,40 @@
             cancelBtn.classList.remove('hidden');
             newConfirmBtn.innerText = "Confirm";
             
+            // Double-verification setup
+            if (requiredInputText) {
+                inputContainer.classList.remove('hidden');
+                dialogInput.value = '';
+                newConfirmBtn.disabled = true;
+                newConfirmBtn.className = "flex-1 py-2.5 bg-red-300 text-white font-semibold rounded-xl cursor-not-allowed transition-all";
+                document.getElementById('dialog-input-label').innerText = `Type "${requiredInputText}" to confirm`;
+                
+                dialogInput.oninput = function() {
+                    if (dialogInput.value === requiredInputText) {
+                        newConfirmBtn.disabled = false;
+                        newConfirmBtn.className = "flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all shadow-md shadow-red-600/10";
+                    } else {
+                        newConfirmBtn.disabled = true;
+                        newConfirmBtn.className = "flex-1 py-2.5 bg-red-300 text-white font-semibold rounded-xl cursor-not-allowed transition-all";
+                    }
+                };
+                
+                setTimeout(() => dialogInput.focus(), 100);
+            } else {
+                inputContainer.classList.add('hidden');
+                newConfirmBtn.disabled = false;
+                newConfirmBtn.className = "flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all";
+            }
+            
             newConfirmBtn.addEventListener('click', () => {
                 dialog.classList.add('hidden');
+                inputContainer.classList.add('hidden');
                 onConfirm();
             });
             
             newCancelBtn.addEventListener('click', () => {
                 dialog.classList.add('hidden');
+                inputContainer.classList.add('hidden');
             });
             
             dialog.classList.remove('hidden');
@@ -521,13 +774,16 @@
             
             const confirmBtn = document.getElementById('dialog-confirm-btn');
             const cancelBtn = document.getElementById('dialog-cancel-btn');
+            const inputContainer = document.getElementById('dialog-input-container');
+            if (inputContainer) inputContainer.classList.add('hidden');
             
-            // Re-clone confirm button
             const newConfirmBtn = confirmBtn.cloneNode(true);
             confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
             
-            cancelBtn.classList.add('hidden'); // Hide cancel button for basic alerts
+            cancelBtn.classList.add('hidden');
             newConfirmBtn.innerText = "OK";
+            newConfirmBtn.disabled = false;
+            newConfirmBtn.className = "flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all";
             
             newConfirmBtn.addEventListener('click', () => {
                 dialog.classList.add('hidden');
@@ -536,60 +792,143 @@
             dialog.classList.remove('hidden');
         };
 
-        // --- JSON BACKUP IMPORT FLOW ---
+        // --- SUCCESS SAVE NOTIFICATIONS ---
+        function flashSuccessIndicator(textMsg) {
+            const ind = document.getElementById('save-indicator');
+            const iconWrapper = document.getElementById('save-icon-wrapper');
+            const text = document.getElementById('save-text');
+            
+            ind.classList.remove('opacity-50');
+            iconWrapper.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>`;
+            text.innerText = textMsg;
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                ind.classList.add('opacity-50');
+                text.innerText = isCloudReady ? "Saved to Cloud" : "Saved automatically";
+                lucide.createIcons();
+            }, 4000);
+        }
+
+        // --- FULL-VAULT (ALL CHARACTERS) BACKUP EXPORT & IMPORT FLOW ---
+        window.exportJSON = function() {
+            // Build the multi-character vault structure
+            const backupPayload = {
+                vira_vault_backup: true,
+                version: "2.0",
+                currentCharacterId: currentCharacterId,
+                characterList: characterList,
+                characters: {}
+            };
+            
+            // Populate all data from your local cache database
+            characterList.forEach(char => {
+                const data = localStorage.getItem('character_data_' + char.id);
+                if (data) {
+                    backupPayload.characters[char.id] = JSON.parse(data);
+                } else if (char.id === currentCharacterId) {
+                    backupPayload.characters[char.id] = characterData;
+                }
+            });
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPayload, null, 2));
+            const a = document.createElement('a');
+            a.setAttribute("href", dataStr);
+            a.setAttribute("download", `dnd_vault_full_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        };
+
         window.importJSON = function(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const parsedData = JSON.parse(e.target.result);
                     
-                    // Simple validation to ensure it's a D&D Notes backup file
-                    if (!parsedData.name && !parsedData.basics && !parsedData.campaignNotes) {
-                        throw new Error("Missing structural fields. Selected file does not appear to be an eligible D&D notes backup.");
+                    // Case 1: Full Vault Backup (All Characters)
+                    if (parsedData.vira_vault_backup === true) {
+                        window.showCustomConfirm(
+                            'Import Full Vault?', 
+                            'Are you sure you want to proceed? This will overwrite ALL characters currently in your vault with the characters inside this backup.', 
+                            '📥', 
+                            async () => {
+                                updateCloudUIStatus("Importing Vault...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+                                
+                                // Purge existing local character cache entries
+                                characterList.forEach(c => {
+                                    localStorage.removeItem('character_data_' + c.id);
+                                });
+                                
+                                // Restore index character structures
+                                characterList = parsedData.characterList || [];
+                                localStorage.setItem('character_list', JSON.stringify(characterList));
+                                
+                                // Restore individual sheets
+                                for (const [charId, charData] of Object.entries(parsedData.characters)) {
+                                    migrateData(charData);
+                                    localStorage.setItem('character_data_' + charId, JSON.stringify(charData));
+                                    
+                                    // Sync with firestore document trees if online
+                                    if (isCloudReady && cloudUser && db) {
+                                        const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', charId);
+                                        await setDoc(docRef, charData);
+                                    }
+                                }
+                                
+                                // Swap to the original selector focus or the first sheet available
+                                const targetId = parsedData.currentCharacterId || characterList[0]?.id || 'default';
+                                window.switchCharacter(targetId);
+                                
+                                flashSuccessIndicator("Full Vault imported successfully!");
+                            }
+                        );
+                    } 
+                    // Case 2: Legacy Single Character backup sheet import fallback
+                    else if (parsedData.name || parsedData.basics || parsedData.campaignNotes) {
+                        window.showCustomConfirm(
+                            'Import Character?', 
+                            `Do you want to add this sheet ("${parsedData.name || 'Unnamed'}") as a new character in your vault?`, 
+                            '📥', 
+                            async () => {
+                                updateCloudUIStatus("Importing Character...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+                                
+                                const newCharData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...parsedData };
+                                migrateData(newCharData);
+                                
+                                const newCharId = 'char_' + Date.now();
+                                const newCharName = newCharData.name || "Imported Character";
+                                const newCharRace = newCharData.basics?.race || "Unknown Race";
+                                const newCharClass = newCharData.basics?.class || "Unknown Class";
+                                
+                                // Add to list
+                                characterList.push({ id: newCharId, name: newCharName, race: newCharRace, class: newCharClass });
+                                localStorage.setItem('character_list', JSON.stringify(characterList));
+                                localStorage.setItem('character_data_' + newCharId, JSON.stringify(newCharData));
+                                
+                                // Sync with Firestore if online
+                                if (isCloudReady && cloudUser && db) {
+                                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', newCharId);
+                                    await setDoc(docRef, newCharData);
+                                }
+                                
+                                // Switch directly to newly imported character
+                                window.switchCharacter(newCharId);
+                                
+                                flashSuccessIndicator("Character imported successfully!");
+                            }
+                        );
+                    } else {
+                        throw new Error("Invalid or unrecognized file format.");
                     }
-
-                    window.showCustomConfirm(
-                        'Import Notes?', 
-                        'Are you sure you want to proceed? This will completely overwrite your current live cloud notes with this backup file.', 
-                        '📥', 
-                        () => {
-                            // Merge imported data safely on top of structural defaults
-                            characterData = { ...initialCharacterData, ...parsedData };
-                            migrateData(characterData); // Migrate custom schema
-                            
-                            // Commit changes to LocalStorage and stream up to Firestore
-                            window.saveData();
-
-                            // Force complete UI Refresh
-                            document.getElementById('header-name-input').value = characterData.name;
-                            window.renderContent();
-                            lucide.createIcons();
-
-                            // Temporarily flash progress indicator with customized success state
-                            const ind = document.getElementById('save-indicator');
-                            const iconWrapper = document.getElementById('save-icon-wrapper');
-                            const text = document.getElementById('save-text');
-                            
-                            ind.classList.remove('opacity-50');
-                            iconWrapper.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>`;
-                            text.innerText = "Data imported successfully!";
-                            lucide.createIcons();
-                            
-                            setTimeout(() => {
-                                ind.classList.add('opacity-50');
-                                text.innerText = "Saved automatically";
-                                lucide.createIcons();
-                            }, 4000);
-                        }
-                    );
                 } catch (err) {
                     console.error("Backup Import Failed: ", err);
                     window.showCustomAlert("Import Failed", "The selected file is corrupt or is not structured as an eligible notes backup: " + err.message, "❌");
                 } finally {
-                    event.target.value = ''; // Clean up selector
+                    event.target.value = '';
                 }
             };
             reader.readAsText(file);
@@ -626,7 +965,6 @@
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
 
-            // Strict Administrative Lock: Only allow Trumpet101@gmail.com
             if (email.toLowerCase() !== "trumpet101@gmail.com") {
                 authError.innerText = "Access Denied: This system is private and restricted to the authorized campaign administrator.";
                 authError.classList.remove('hidden');
@@ -676,15 +1014,13 @@
             const text = document.getElementById('save-text');
             
             ind.classList.remove('opacity-50');
-            // Display clean, active spinner while writing changes
             iconWrapper.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 text-emerald-500 animate-spin"></i>`;
             text.innerText = "Saving...";
             lucide.createIcons();
 
             setTimeout(() => {
-                // When saved, fully clear spinner class and inject static feedback checkmark
                 iconWrapper.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>`;
-                text.innerText = isCloudReady ? "Saved to Cloud" : "Saved locally";
+                text.innerText = isCloudReady ? "Saved to Cloud" : "Saved automatically";
                 ind.classList.add('opacity-50');
                 lucide.createIcons();
             }, 600);
@@ -693,19 +1029,32 @@
         window.saveData = function() {
             clearTimeout(saveTimeout);
             
-            // Instantly save to local storage as backup
-            localStorage.setItem('viraDndNotes', JSON.stringify(characterData));
+            // Instantly save to local storage as backup under active character ID
+            localStorage.setItem('character_data_' + currentCharacterId, JSON.stringify(characterData));
+
+            // Sync index metadata list
+            const index = characterList.findIndex(c => c.id === currentCharacterId);
+            if (index !== -1) {
+                let nameChanged = characterList[index].name !== characterData.name;
+                let raceChanged = characterList[index].race !== characterData.basics.race;
+                let classChanged = characterList[index].class !== characterData.basics.class;
+                if (nameChanged || raceChanged || classChanged) {
+                    characterList[index].name = characterData.name;
+                    characterList[index].race = characterData.basics.race;
+                    characterList[index].class = characterData.basics.class;
+                    localStorage.setItem('character_list', JSON.stringify(characterList));
+                    window.renderCharacterModalList();
+                }
+            }
             
             saveTimeout = setTimeout(async () => {
-                if (isCloudReady && cloudUser && db) {
-                    // Corrected 6-segment path to comply with Firestore document addressing rules
-                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data', 'sheet');
+                if (isCloudReady && cloudUser && db && currentCharacterId) {
+                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', currentCharacterId);
                     try {
-                        isLocalSaving = true; // Block incoming echo updates
+                        isLocalSaving = true;
                         await setDoc(docRef, characterData);
                         triggerSaveIndicator();
                         
-                        // Briefly wait to let the database write finish settling before turning snap back on
                         setTimeout(() => {
                             isLocalSaving = false;
                         }, 1000);
@@ -718,7 +1067,7 @@
                 } else {
                     triggerSaveIndicator();
                 }
-            }, 500); // 500ms debounce
+            }, 500);
         }
 
         window.updateField = function(section, field, value) {
@@ -733,20 +1082,198 @@
             }
         };
 
+        // --- CHARACTER SELECTOR VAULT MANAGERS ---
+        window.openCharacterModal = function() {
+            document.getElementById('character-modal').classList.remove('hidden');
+            document.getElementById('character-modal-search').value = '';
+            window.renderCharacterModalList();
+            lucide.createIcons();
+        };
+
+        window.hideCharacterModal = function() {
+            document.getElementById('character-modal').classList.add('hidden');
+        };
+
+        window.renderCharacterModalList = function() {
+            const listContainer = document.getElementById('character-modal-list');
+            if (!listContainer) return;
+
+            const searchQuery = (document.getElementById('character-modal-search')?.value || '').toLowerCase();
+
+            const filtered = characterList.filter(c => 
+                c.name.toLowerCase().includes(searchQuery) ||
+                c.race.toLowerCase().includes(searchQuery) ||
+                c.class.toLowerCase().includes(searchQuery)
+            );
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `<p class="text-stone-400 italic text-center py-6 text-xs">No matching sheets found.</p>`;
+                return;
+            }
+
+            listContainer.innerHTML = filtered.map(char => {
+                const isActive = char.id === currentCharacterId;
+                const borderClass = isActive ? 'border-emerald-500 bg-emerald-50/50' : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50 bg-white';
+                const activeBadge = isActive ? `<span class="px-2.5 py-0.5 text-[10px] font-bold bg-emerald-600 text-white rounded-full uppercase tracking-wider shadow-sm flex items-center space-x-1"><i data-lucide="check" class="w-3 h-3"></i><span>Active</span></span>` : '';
+                const titleColor = isActive ? 'text-emerald-900 font-extrabold' : 'text-stone-800 font-bold';
+
+                return `
+                    <div onclick="window.switchCharacter('${char.id}')" class="p-4 border rounded-xl flex items-center justify-between cursor-pointer transition-all ${borderClass}">
+                        <div class="flex items-center space-x-3 min-w-0 flex-1">
+                            <div class="w-9 h-9 rounded-full ${isActive ? 'bg-emerald-600 text-white' : 'bg-stone-100 text-stone-500'} flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                ${char.name.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div class="min-w-0">
+                                <h5 class="${titleColor} text-sm tracking-tight truncate">${escapeHtml(char.name)}</h5>
+                                <p class="text-xs text-stone-500 truncate font-semibold">${escapeHtml(char.race)} • ${escapeHtml(char.class)}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 flex-shrink-0 ml-4">
+                            ${activeBadge}
+                            <button onclick="window.deleteCharacter(event, '${char.id}')" class="text-stone-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Delete Sheet">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        };
+
+        window.filterCharacterModalList = function() {
+            window.renderCharacterModalList();
+        };
+
+        window.createNewCharacter = async function() {
+            const nameInput = document.getElementById('new-char-name');
+            const raceInput = document.getElementById('new-char-race');
+            const classInput = document.getElementById('new-char-class');
+            
+            const name = nameInput.value.trim();
+            if (!name) {
+                window.showCustomAlert("Validation Error", "Please provide a valid character name.", "✍️");
+                return;
+            }
+
+            const race = raceInput.value.trim() || "Unknown Race";
+            const charClass = classInput.value.trim() || "Unknown Class";
+
+            const newCharData = getCleanCharacterData(name, race, charClass);
+            const newCharId = 'char_' + Date.now();
+
+            nameInput.value = '';
+            raceInput.value = '';
+            classInput.value = '';
+
+            window.hideCharacterModal();
+
+            if (isCloudReady && cloudUser && db) {
+                updateCloudUIStatus("Creating Character...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+                const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', newCharId);
+                try {
+                    await setDoc(docRef, newCharData);
+                    window.switchCharacter(newCharId);
+                } catch (e) {
+                    console.error("Failed to write new character to cloud: ", e);
+                    handleSyncError(e);
+                }
+            } else {
+                localStorage.setItem('character_data_' + newCharId, JSON.stringify(newCharData));
+                characterList.push({ id: newCharId, name, race, class: charClass });
+                localStorage.setItem('character_list', JSON.stringify(characterList));
+                window.switchCharacter(newCharId);
+            }
+        };
+
+        window.switchCharacter = function(charId) {
+            currentCharacterId = charId;
+            localStorage.setItem('current_character_id', currentCharacterId);
+
+            currentSearchQueries = { sessionNotes: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
+
+            if (isCloudReady && cloudUser && db) {
+                listenToActiveCharacter();
+            } else {
+                const loaded = JSON.parse(localStorage.getItem('character_data_' + charId));
+                if (loaded) {
+                    characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...loaded };
+                } else {
+                    characterData = JSON.parse(JSON.stringify(initialCharacterData));
+                }
+                migrateData(characterData);
+                document.getElementById('header-name-input').value = characterData.name;
+                window.renderContent();
+                lucide.createIcons();
+            }
+
+            window.setTab('campaignNotes');
+            window.hideCharacterModal();
+        };
+
+        window.deleteCharacter = function(event, charId) {
+            event.stopPropagation();
+
+            if (characterList.length <= 1) {
+                window.showCustomAlert("Cannot Delete", "You must keep at least one character in your vault.", "🚫");
+                return;
+            }
+
+            const targetChar = characterList.find(c => c.id === charId);
+            const charName = targetChar ? targetChar.name : "this character";
+
+            // Stage 1: Initial Prompt
+            window.showCustomConfirm(
+                'Delete Character?',
+                `Are you absolutely sure you want to delete "${charName}"? This will remove all associated notes, stats, and builds.`,
+                '🗑️',
+                () => {
+                    // Stage 2: Second Double-Verification Popup (Requires typing "Delete")
+                    setTimeout(() => {
+                        window.showCustomConfirm(
+                            'Double Verification Required',
+                            `This is your final warning. To permanently erase "${charName}" and purge all campaign files from cloud nodes, type the word "Delete" below.`,
+                            '🔥',
+                            async () => {
+                                characterList = characterList.filter(c => c.id !== charId);
+                                localStorage.setItem('character_list', JSON.stringify(characterList));
+                                localStorage.removeItem('character_data_' + charId);
+
+                                if (isCloudReady && cloudUser && db) {
+                                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', charId);
+                                    try {
+                                        await deleteDoc(docRef);
+                                    } catch (e) {
+                                        console.error("Failed to delete character on cloud: ", e);
+                                        handleSyncError(e);
+                                    }
+                                }
+
+                                if (charId === currentCharacterId) {
+                                    window.switchCharacter(characterList[0].id);
+                                } else {
+                                    window.renderCharacterModalList();
+                                }
+                            },
+                            "Delete" // Expects exactly "Delete" case-sensitively
+                        );
+                    }, 300); // 300ms pause for beautiful transition between modals
+                }
+            );
+        };
+
         // --- DYNAMIC ABILITY PROGRESSION MODIFIERS HANDLER ---
         window.updateAbilityPoint = function(index, field, val) {
             const intVal = parseInt(val) || 0;
             characterData.build.abilities[index][field] = intVal;
             window.saveData();
-            
-            // Fire off instantaneous calculations in DOM without triggering redrawing selection resets
             window.recalculateBuildScores();
         };
 
         window.updateFeatName = function(key, val) {
             if (!characterData.build.feats) characterData.build.feats = {};
             characterData.build.feats[key] = val;
-            window.saveData(); // Syncs back to the cloud on debounce interval
+            window.saveData();
         };
 
         window.recalculateBuildScores = function() {
@@ -777,7 +1304,6 @@
                 });
             });
 
-            // Re-calculate AC matrix steps based on current level stats
             keys.forEach(key => {
                 const dex = cumulativeScores[key]["Dexterity"] || 10;
                 const con = cumulativeScores[key]["Constitution"] || 10;
@@ -785,17 +1311,14 @@
                 const dexMod = Math.floor((dex - 10) / 2);
                 const conMod = Math.floor((con - 10) / 2);
 
-                // Unarmored Defense: 10 + dexMod + conMod
                 const unarmored = 10 + dexMod + conMod;
                 const unarmoredEl = document.getElementById(`ac-unarmored-${key}`);
                 if (unarmoredEl) unarmoredEl.innerText = unarmored;
 
-                // Chain shirt: 13 + dexMod (max 2)
                 const chain = 13 + Math.min(2, dexMod);
                 const chainEl = document.getElementById(`ac-chain-${key}`);
                 if (chainEl) chainEl.innerText = chain;
 
-                // Scale/Breastplate: 14 + dexMod (max 2)
                 const scale = 14 + Math.min(2, dexMod);
                 const scaleEl = document.getElementById(`ac-scale-${key}`);
                 if (scaleEl) scaleEl.innerText = scale;
@@ -943,7 +1466,6 @@
         window.handleOutlineKeyDown = function(event) {
             const div = event.currentTarget;
             
-            // Intercept keys if the mention autocomplete dropdown is currently open and active
             const dropdown = document.getElementById('mention-dropdown');
             if (dropdown && !dropdown.classList.contains('hidden') && mentionContext) {
                 if (event.key === 'Tab' || event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
@@ -963,17 +1485,14 @@
                 return;
             }
             
-            // Leverage universal mention autocomplete triggers on generic keys
             window.handleKeyDown(event);
         };
 
         window.handleOutlineFocus = function(event) {
             const div = event.currentTarget;
             const html = div.innerHTML.trim();
-            // Automatically initialize a styled outline bullet point if empty or non-existent
             if (html === "" || html === "<br>" || html === "<div><br></div>" || !div.querySelector('ul')) {
                 div.innerHTML = "<ul><li><br></li></ul>";
-                // Standard browser selection microtask wrapper to override cursor placement
                 setTimeout(() => {
                     const range = document.createRange();
                     const sel = window.getSelection();
@@ -992,7 +1511,6 @@
         window.handleOutlineBlur = function(event) {
             const div = event.currentTarget;
             const text = div.innerText.trim();
-            // Reset to blank to restore placeholding layout when unfocused
             if (text === "") {
                 div.innerHTML = "";
                 div.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1002,7 +1520,6 @@
         // --- THE MENTION SYSTEM ---
         let mentionContext = null;
 
-        // Suggestions based on state (Corrected backstory and personality lookup array paths)
         function getMentionSuggestions(query) {
             const q = query.toLowerCase();
             let results = [];
@@ -1301,7 +1818,7 @@
             currentSearchQueries.sessionNotes = ''; 
             characterData.campaignNotes.sessionNotes.unshift({ 
                 id: 'sess_' + Date.now(), 
-                title: '', // Empty baseline title for new session logs
+                title: '', 
                 date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), 
                 notes: '', 
                 isCollapsed: false 
@@ -1438,12 +1955,11 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const TARGET_SIZE = 128; // Fits beautifully inside small circle avatars
+                    const TARGET_SIZE = 128;
 
                     let width = img.width;
                     let height = img.height;
 
-                    // Calculate square crop boundaries (centered)
                     let size = Math.min(width, height);
                     let xOffset = (width - size) / 2;
                     let yOffset = (height - size) / 2;
@@ -1453,7 +1969,6 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, TARGET_SIZE, TARGET_SIZE);
 
-                    // Highly compressed data URL (around ~3KB - ~5KB)
                     const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
 
                     const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
@@ -1473,7 +1988,7 @@
         };
 
         window.deleteNPCAvatar = function(event, facId, npcId) {
-            event.stopPropagation(); // Avoid triggering file select input on upload container
+            event.stopPropagation();
             const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
             if (fac) {
                 const npc = fac.members.find(n => n.id === npcId);
@@ -1504,14 +2019,6 @@
             else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); }
         }
 
-        window.exportJSON = function() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(characterData, null, 2));
-            const a = document.createElement('a');
-            a.setAttribute("href", dataStr);
-            a.setAttribute("download", `${characterData.name.replace(/\s+/g, '_').toLowerCase()}_notes.json`);
-            document.body.appendChild(a); a.click(); a.remove();
-        }
-
         // --- RENDERERS ---
         function renderTocCard(title, targetTab, icon, description) {
             return `<div onclick="window.setTab('${targetTab}')" class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 hover:border-emerald-400 hover:shadow-md cursor-pointer transition-all group flex flex-col h-full"><div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 mb-4 group-hover:scale-110 transition-transform"><i data-lucide="${icon}"></i></div><h4 class="text-lg font-bold text-stone-800 mb-2">${title}</h4><p class="text-sm text-stone-500 flex-grow">${description}</p><div class="mt-4 text-emerald-600 text-sm font-medium flex items-center opacity-0 group-hover:opacity-100 transition-opacity"><span>Open</span><i data-lucide="chevron-right" class="w-4 h-4 ml-1"></i></div></div>`;
@@ -1539,7 +2046,6 @@
             let html = '';
 
             if (activeTab === 'backstory') {
-                // Character Name & Basics Dashboard Block Integrated at the top of backstory
                 let basicsHtml = `
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 mb-6">
                     <div class="flex flex-col md:flex-row gap-6 items-start">
@@ -1702,7 +2208,6 @@
                     { key: 'lvl20', label: 'Lvl 20', labelLong: 'Level 20', featLabel: 'Primal Power' }
                 ];
 
-                // Render Top Points Modifier Table with individual Feat inputs
                 let modifierRows = abilities.map((ability, aIdx) => `
                     <tr class="border-b border-stone-100 hover:bg-stone-50/50 transition-colors">
                         <td class="px-4 py-3 font-bold text-stone-700 bg-stone-50 border-r border-stone-200">${ability.name}</td>
@@ -1720,7 +2225,6 @@
                     </tr>
                 `).join('');
 
-                // Render Middle progression / calculated score matrix placeholder cells
                 let calculatedProgressRows = abilities.map((ability, aIdx) => `
                     <tr class="border-b border-stone-100 hover:bg-emerald-50/10 transition-colors">
                         <td class="px-4 py-3 font-bold text-stone-700 bg-stone-50 border-r border-stone-200">${ability.name}</td>
@@ -1750,11 +2254,10 @@
                         <div class="p-6 overflow-x-auto custom-scrollbar">
                             <div class="min-w-[900px] space-y-8">
                                 
-                                <!-- Modifiers Progression Points Grid -->
                                 <table class="w-full text-sm text-left border-collapse">
                                     <thead>
                                         <tr class="bg-stone-800 text-stone-200 text-xs font-bold uppercase border-b border-stone-700">
-                                            <th class="p-4 rounded-tl-xl border-r border-stone-700 text-[11px] w-[180px]">World Tree Barbarian</th>
+                                            <th class="p-4 rounded-tl-xl border-r border-stone-700 text-[11px] w-[180px]">Progression Matrix</th>
                                             <th class="p-3 text-center text-[11px]">Starting</th>
                                             <th class="p-3 text-center border-r border-stone-700 text-[11px]">Species</th>
                                             ${keys.slice(2).map(col => `
@@ -1780,7 +2283,6 @@
                                     </tbody>
                                 </table>
 
-                                <!-- Running Total Progressive Stats Grid -->
                                 <div>
                                     <h4 class="font-extrabold text-stone-800 text-sm uppercase tracking-wider mb-3 flex items-center space-x-2">
                                         <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
@@ -1803,7 +2305,6 @@
                                     </table>
                                 </div>
 
-                                <!-- Dynamic AC Calculations progression -->
                                 <div>
                                     <h4 class="font-extrabold text-stone-800 text-sm uppercase tracking-wider mb-3 flex items-center space-x-2">
                                         <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
@@ -1862,21 +2363,20 @@
                         </div>
                     </div>
 
-                    <!-- Modified features and Misc Notes panel -->
                     <div class="grid md:grid-cols-2 gap-8">
                         <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
                             <h3 class="text-xl font-bold text-stone-800 mb-2 flex items-center space-x-2">
                                 <span class="p-1.5 bg-emerald-50 rounded-lg text-emerald-600"><i data-lucide="feather" class="w-4 h-4"></i></span>
                                 <span>Features & Traits</span>
                             </h3>
-                            ${getMentionableDiv('build', 'features', characterData.build.features.join('\n').replace(/\n/g, '<br>'))}
+                            ${getMentionableDiv('build', 'features', characterData.build.features)}
                         </section>
                         <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
                             <h3 class="text-xl font-bold text-stone-800 mb-2 flex items-center space-x-2">
                                 <span class="p-1.5 bg-emerald-50 rounded-lg text-emerald-600"><i data-lucide="clipboard" class="w-4 h-4"></i></span>
                                 <span>Misc Notes</span>
                             </h3>
-                            ${getMentionableDiv('build', 'equipment', characterData.build.equipment.join('\n').replace(/\n/g, '<br>'))}
+                            ${getMentionableDiv('build', 'equipment', characterData.build.equipment)}
                         </section>
                     </div>
                 </div>`;
@@ -2098,7 +2598,7 @@
                                             
                                             <!-- Circular Interactive Avatar Circle Slot -->
                                             <div class="flex-shrink-0 flex items-start mt-1">
-                                                <div class="relative w-14 h-14 rounded-full border border-stone-200 hover:border-emerald-400 bg-stone-50 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
+                                                <div class="relative w-14 h-14 rounded-full border border-stone-200 hover:border-emerald-400 bg-stone-50 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all animate-fade-in" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
                                                     ${npc.avatar ? 
                                                         `<img src="${npc.avatar}" class="w-full h-full object-cover">` : 
                                                         `<i data-lucide="user" class="w-6 h-6 text-stone-400"></i>`
@@ -2114,7 +2614,6 @@
                                                         </button>
                                                     ` : ''}
                                                 </div>
-                                                <!-- Hidden custom files collector input -->
                                                 <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
                                             </div>
 
@@ -2161,12 +2660,11 @@
 
             container.innerHTML = html;
 
-            // Trigger progression points re-render instantly on mount of Build panel
             if (activeTab === 'build') {
                 window.recalculateBuildScores();
             }
 
-            // Restore any active search filter so UI matches current query perfectly
+            // Restore search queries
             if (activeTab === 'campaign_sessionNotes' && currentSearchQueries.sessionNotes) {
                 const searchInput = document.getElementById('session-search');
                 if (searchInput) { searchInput.value = currentSearchQueries.sessionNotes; window.filterSessions(currentSearchQueries.sessionNotes); }
