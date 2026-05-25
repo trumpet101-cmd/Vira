@@ -515,10 +515,13 @@
                 data.campaignNotes.npcs = [];
             }
             
-            // Ensure factions and npcs have stable IDs
+            // Ensure factions and npcs have stable IDs and collapse states
             data.campaignNotes.npcs.forEach((fac, facIdx) => {
                 if (!fac.id) {
                     fac.id = 'fac_migrated_' + facIdx + '_' + Date.now();
+                }
+                if (fac.isCollapsed === undefined) {
+                    fac.isCollapsed = false;
                 }
                 if (!Array.isArray(fac.members)) {
                     fac.members = [];
@@ -2260,7 +2263,7 @@
         window.toggleAllLocations = function(collapse) { characterData.campaignNotes.locations.forEach(l => l.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.filterLocations = function(query) { currentSearchQueries.locations = query; const q = query.toLowerCase(); document.querySelectorAll('.location-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
-        window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: 'New Faction', members: [] }); window.saveData(); window.renderContent(); lucide.createIcons(); }
+        window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: 'New Faction', isCollapsed: false, members: [] }); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.updateFaction = function(facId, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.name = val; window.saveData(); }
         window.deleteFaction = function(facId) { 
             window.showCustomConfirm(
@@ -2291,6 +2294,24 @@
                 }
             ); 
         }
+        
+        window.toggleFactionCollapse = function(facId) {
+            const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+            if (fac) {
+                fac.isCollapsed = !fac.isCollapsed;
+                window.saveData();
+                window.renderContent();
+                lucide.createIcons();
+            }
+        };
+
+        window.toggleAllFactions = function(collapse) {
+            characterData.campaignNotes.npcs.forEach(f => f.isCollapsed = collapse);
+            window.saveData();
+            window.renderContent();
+            lucide.createIcons();
+        };
+
         window.filterNPCs = function(query) {
             currentSearchQueries.npcs = query;
             const q = query.toLowerCase();
@@ -2301,6 +2322,28 @@
                     if (npc.dataset.searchable.toLowerCase().includes(q) || factionHasMatch) { npc.classList.remove('hidden'); visibleNpcs++; } 
                     else { npc.classList.add('hidden'); }
                 });
+                
+                // Auto expand if search active and there is a match
+                const contentDiv = faction.querySelector('.collapsible-content');
+                const chevron = faction.querySelector('.chevron');
+                if (q.length > 0 && (visibleNpcs > 0 || factionHasMatch)) {
+                    if (contentDiv) contentDiv.classList.remove('collapsed');
+                    if (chevron) chevron.classList.remove('collapsed');
+                } else if (q.length === 0) {
+                    // Restore original toggle state
+                    const facId = faction.id;
+                    const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+                    if (fac) {
+                        if (fac.isCollapsed) {
+                            if (contentDiv) contentDiv.classList.add('collapsed');
+                            if (chevron) chevron.classList.add('collapsed');
+                        } else {
+                            if (contentDiv) contentDiv.classList.remove('collapsed');
+                            if (chevron) chevron.classList.remove('collapsed');
+                        }
+                    }
+                }
+
                 if (visibleNpcs > 0 || factionHasMatch) faction.classList.remove('hidden');
                 else faction.classList.add('hidden');
             });
@@ -2434,6 +2477,23 @@
             const locationEntry = characterData.campaignNotes.locations.find(l => l.id === itemId);
             if (locationEntry && locationEntry.isCollapsed) {
                 locationEntry.isCollapsed = false;
+                triggeredReRender = true;
+            }
+            
+            // Auto expand factions accordions (NPC page)
+            let factionToExpand = null;
+            const factionEntry = characterData.campaignNotes.npcs.find(f => f.id === itemId);
+            if (factionEntry) {
+                factionToExpand = factionEntry;
+            } else {
+                characterData.campaignNotes.npcs.forEach(f => {
+                    if (f.members.some(npc => npc.id === itemId)) {
+                        factionToExpand = f;
+                    }
+                });
+            }
+            if (factionToExpand && factionToExpand.isCollapsed) {
+                factionToExpand.isCollapsed = false;
                 triggeredReRender = true;
             }
             
@@ -3067,24 +3127,34 @@
                 }
                 else if (subSection === 'npcs') {
                     contentHtml = `
-                        <div class="mb-6 flex gap-4">
-                            <div class="relative flex-1">
+                        <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                            <div class="relative w-full sm:w-2/3">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
                                 <input type="text" id="npc-search" oninput="window.filterNPCs(this.value)" placeholder="Search NPCs..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 dark:text-stone-100 shadow-sm">
                             </div>
-                            <button onclick="window.addFaction()" class="flex items-center space-x-2 px-4 py-3 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-xl hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i><span class="hidden sm:inline">Add Faction</span></button>
+                            <div class="flex space-x-2 w-full sm:w-auto">
+                                <button onclick="window.toggleAllFactions(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Expand All</button>
+                                <button onclick="window.toggleAllFactions(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Collapse All</button>
+                                <button onclick="window.addFaction()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                            </div>
                         </div>`;
                         
                     if (characterData.campaignNotes.npcs.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No NPCs added yet.</p>`;
                     
                     characterData.campaignNotes.npcs.forEach((faction, fIdx) => {
+                        const isCollapsed = faction.isCollapsed;
                         const isFirstFaction = fIdx === 0;
                         const isLastFaction = fIdx === characterData.campaignNotes.npcs.length - 1;
                         contentHtml += `
                             <div id="${faction.id}" class="npc-faction-block mb-8 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden bg-stone-50 dark:bg-stone-950" data-faction-name="${escapeHtml(faction.name)}">
                                 <div class="bg-stone-200/50 dark:bg-stone-800/50 px-4 py-3 border-b border-stone-200 dark:border-stone-800 flex justify-between items-center">
-                                    <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-2/3 rounded px-2 -ml-2 py-0.5">
-                                    <div class="flex items-center space-x-1">
+                                    <div class="flex items-center space-x-2 flex-1 min-w-0">
+                                        <button onclick="window.toggleFactionCollapse('${faction.id}')" class="p-1 hover:bg-stone-300/50 dark:hover:bg-stone-700/50 rounded transition-colors focus:outline-none">
+                                            <i data-lucide="chevron-down" class="w-5 h-5 text-stone-500 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
+                                        </button>
+                                        <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-full rounded px-2 py-0.5">
+                                    </div>
+                                    <div class="flex items-center space-x-1 ml-2">
                                         <button onclick="window.moveFaction('${faction.id}', -1)" ${isFirstFaction ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-300/50 dark:hover:bg-stone-800"'} title="Move Faction Up">
                                             <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                         </button>
@@ -3096,54 +3166,56 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="p-4 space-y-4">
-                                    ${faction.members.map((npc, nIdx) => {
-                                        const isFirstNPC = nIdx === 0;
-                                        const isLastNPC = nIdx === faction.members.length - 1;
-                                        return `
-                                        <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.notes)}">
-                                            
-                                            <!-- Circular Interactive Avatar Circle Slot -->
-                                            <div class="flex-shrink-0 flex items-start mt-1">
-                                                <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all animate-fade-in" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
-                                                    ${npc.avatar ? 
-                                                        `<img src="${npc.avatar}" class="w-full h-full object-cover">` : 
-                                                        `<i data-lucide="user" class="w-6 h-6 text-stone-400"></i>`
-                                                    }
-                                                    <!-- Slick Camera Overlay on Hover -->
-                                                    <div class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                                                        <i data-lucide="camera" class="w-4 h-4 text-white"></i>
+                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
+                                    <div class="p-4 space-y-4">
+                                        ${faction.members.map((npc, nIdx) => {
+                                            const isFirstNPC = nIdx === 0;
+                                            const isLastNPC = nIdx === faction.members.length - 1;
+                                            return `
+                                            <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.notes)}">
+                                                
+                                                <!-- Circular Interactive Avatar Circle Slot -->
+                                                <div class="flex-shrink-0 flex items-start mt-1">
+                                                    <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all animate-fade-in" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
+                                                        ${npc.avatar ? 
+                                                            `<img src="${npc.avatar}" class="w-full h-full object-cover">` : 
+                                                            `<i data-lucide="user" class="w-6 h-6 text-stone-400"></i>`
+                                                        }
+                                                        <!-- Slick Camera Overlay on Hover -->
+                                                        <div class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                                            <i data-lucide="camera" class="w-4 h-4 text-white"></i>
+                                                        </div>
+                                                        <!-- Quick Delete Avatar Button overlay -->
+                                                        ${npc.avatar ? `
+                                                            <button onclick="window.deleteNPCAvatar(event, '${faction.id}', '${npc.id}')" class="absolute top-0 right-0 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-bl shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="Remove character avatar">
+                                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                            </button>
+                                                        ` : ''}
                                                     </div>
-                                                    <!-- Quick Delete Avatar Button overlay -->
-                                                    ${npc.avatar ? `
-                                                        <button onclick="window.deleteNPCAvatar(event, '${faction.id}', '${npc.id}')" class="absolute top-0 right-0 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-bl shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="Remove character avatar">
-                                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                                        </button>
-                                                    ` : ''}
+                                                    <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
                                                 </div>
-                                                <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
-                                            </div>
 
-                                            <div class="flex-1 min-w-0">
-                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5" placeholder="Character Name">
-                                                ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
-                                            </div>
-                                            <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
-                                                <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete NPC">
-                                                    <i data-lucide="x" class="w-4 h-4"></i>
-                                                </button>
-                                                <div class="flex space-x-0.5 mt-2">
-                                                    <button onclick="window.moveNPC('${faction.id}', '${npc.id}', -1)" ${isFirstNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Up">
-                                                        <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
-                                                    </button>
-                                                    <button onclick="window.moveNPC('${faction.id}', '${npc.id}', 1)" ${isLastNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Down">
-                                                        <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
-                                                    </button>
+                                                <div class="flex-1 min-w-0">
+                                                    <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5" placeholder="Character Name">
+                                                    ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
                                                 </div>
-                                            </div>
-                                        </div>`;
-                                    }).join('')}
-                                    <button onclick="window.addNPC('${faction.id}')" class="w-full py-2 mt-2 border-2 border-dashed border-stone-300 dark:border-stone-800 text-stone-500 dark:text-stone-400 rounded-lg hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors flex items-center justify-center space-x-2"><i data-lucide="user-plus" class="w-4 h-4"></i><span>Add Character to Faction</span></button>
+                                                <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
+                                                    <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete NPC">
+                                                        <i data-lucide="x" class="w-4 h-4"></i>
+                                                    </button>
+                                                    <div class="flex space-x-0.5 mt-2">
+                                                        <button onclick="window.moveNPC('${faction.id}', '${npc.id}', -1)" ${isFirstNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Up">
+                                                            <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
+                                                        </button>
+                                                        <button onclick="window.moveNPC('${faction.id}', '${npc.id}', 1)" ${isLastNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Down">
+                                                            <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>`;
+                                        }).join('')}
+                                        <button onclick="window.addNPC('${faction.id}')" class="w-full py-2 mt-2 border-2 border-dashed border-stone-300 dark:border-stone-800 text-stone-500 dark:text-stone-400 rounded-lg hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors flex items-center justify-center space-x-2"><i data-lucide="user-plus" class="w-4 h-4"></i><span>Add Character to Faction</span></button>
+                                    </div>
                                 </div>
                             </div>`;
                     });
