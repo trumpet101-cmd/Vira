@@ -4,15 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Víra Tahlwyn - D&D Notes</title>
-    
-    <!-- Load Tailwind and Lucide -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- Firebase SDK Compat Core, Auth, and Firestore (CORS and File Protocol Safe) -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
     
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 8px; }
@@ -37,11 +30,6 @@
         }
         .chevron { transition: transform 0.3s ease; }
         .chevron.collapsed { transform: rotate(-90deg); }
-        
-        /* Bypass transition properties temporarily during deep-linking to ensure scroll accuracy */
-        .no-transition {
-            transition: none !important;
-        }
         
         /* Seamless Input Styling */
         .seamless-input { transition: all 0.2s ease; }
@@ -293,10 +281,10 @@
         <ul id="mention-dropdown" class="hidden absolute z-50 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-2xl max-h-64 overflow-y-auto w-72 text-sm flex flex-col"></ul>
     </main>
 
-    <!-- Standard Script Tag to execute on local filesystem (file:// protocol) -->
-    <script>
+    <!-- Use Type Module for Firebase Imports -->
+    <script type="module">
         // Apply Dark Mode directly at the very top of script run-time to prevent any white flashes!
-        var isCurrentlyDark = localStorage.getItem('dark_mode_active') === 'true';
+        const isCurrentlyDark = localStorage.getItem('dark_mode_active') === 'true';
         if (isCurrentlyDark) {
             document.documentElement.classList.add('dark');
         } else {
@@ -307,6 +295,10 @@
         tailwind.config = {
             darkMode: 'class'
         };
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- UTILS ---
         function escapeHtml(unsafe) {
@@ -322,7 +314,7 @@
         }
 
         // --- INITIAL DATA (MODULAR TEMPLATE) ---
-        var initialCharacterData = {
+        const initialCharacterData = {
             name: "Víra Tahlwyn",
             basics: { race: "Wood Elf", class: "Barbarian (World Tree)", age: 27, background: "Nomadic Tribesman (Custom)", tribe: "Eryndral Tribe (Orroyen)", familiar: "Tato (Squirrel)" },
             backstory: [
@@ -464,18 +456,18 @@
         }
 
         // --- APP STATE ---
-        var activeTab = 'campaignNotes';
-        var isMobileMenuOpen = false;
-        var questSectionsState = { inProgressCollapsed: false, completedCollapsed: false };
-        var currentSearchQueries = { sessionNotes: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
+        let activeTab = 'campaignNotes';
+        let isMobileMenuOpen = false;
+        let questSectionsState = { inProgressCollapsed: false, completedCollapsed: false };
+        let currentSearchQueries = { sessionNotes: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
         
         // Deep copy clean data patterns to avoid leaky reference mutations
-        var characterData = JSON.parse(JSON.stringify(initialCharacterData));
-        var currentCharacterId = localStorage.getItem('current_character_id') || 'default';
-        var characterList = JSON.parse(localStorage.getItem('character_list')) || [];
+        let characterData = JSON.parse(JSON.stringify(initialCharacterData));
+        let currentCharacterId = localStorage.getItem('current_character_id') || 'default';
+        let characterList = JSON.parse(localStorage.getItem('character_list')) || [];
 
         // --- ARMOR GLOBAL REFERENCE ---
-        var ARMOR_OPTIONS = {
+        const ARMOR_OPTIONS = {
             unarmored: { name: "Unarmored Barbarian", type: "Unarmored", stealth: "Normal", isDisadv: false, formula: "10 + Dex Mod + Con Mod" },
             unarmored_monk: { name: "Unarmored Monk", type: "Unarmored", stealth: "Normal", isDisadv: false, formula: "10 + Dex Mod + Wis Mod" },
             studded: { name: "Studded Leather (Light)", type: "Light", stealth: "Normal", isDisadv: false, formula: "12 + Dex Mod" },
@@ -523,13 +515,10 @@
                 data.campaignNotes.npcs = [];
             }
             
-            // Ensure factions and npcs have stable IDs and collapse states
+            // Ensure factions and npcs have stable IDs
             data.campaignNotes.npcs.forEach((fac, facIdx) => {
                 if (!fac.id) {
                     fac.id = 'fac_migrated_' + facIdx + '_' + Date.now();
-                }
-                if (fac.isCollapsed === undefined) {
-                    fac.isCollapsed = false;
                 }
                 if (!Array.isArray(fac.members)) {
                     fac.members = [];
@@ -655,7 +644,7 @@
         }
 
         // --- LOCAL STORAGE FIRST LOAD BOOTSTRAP ---
-        var loadedData = JSON.parse(localStorage.getItem('character_data_' + currentCharacterId));
+        let loadedData = JSON.parse(localStorage.getItem('character_data_' + currentCharacterId));
         if (!loadedData && currentCharacterId === 'default') {
             // Check legacy key for existing users upgrade path
             let legacyData = JSON.parse(localStorage.getItem('viraDndNotes'));
@@ -681,7 +670,7 @@
         migrateData(characterData);
 
         // --- NAVIGATION CONFIGURATION ---
-        var navItems = [
+        const navItems = [
             { id: 'campaignNotes', label: 'Campaign Notes', icon: 'map' },
             { id: 'campaign_sessionNotes', label: 'Session Notes', icon: 'scroll-text', isSubItem: true },
             { id: 'campaign_quests', label: 'Quests', icon: 'swords', isSubItem: true },
@@ -694,15 +683,15 @@
         ];
 
         // --- HYBRID CLOUD LOGIC ---
-        var db = null;
-        var cloudUser = null;
-        var isCloudReady = false;
-        var saveTimeout = null;
-        var isLocalSaving = false;
-        var unsubscribeCharacters = null;
-        var unsubscribeActiveCharacter = null;
+        let db = null;
+        let cloudUser = null;
+        let isCloudReady = false;
+        let saveTimeout = null;
+        let isLocalSaving = false;
+        let unsubscribeCharacters = null;
+        let unsubscribeActiveCharacter = null;
 
-        var firebaseConfig = {
+        const firebaseConfig = {
 		  apiKey: "AIzaSyBbmh-jibUxCwbqVvzEDHX78YEweb_ld04",
 		  authDomain: "vira-dnd.firebaseapp.com",
 		  projectId: "vira-dnd",
@@ -711,15 +700,14 @@
 		  appId: "1:464258497921:web:b2ab64f9507ba6775dbc80",
 		  measurementId: "G-VXZHJNQD1S"
         };
-        var appId = 'vira-dnd-notes';
+        const appId = 'vira-dnd-notes';
 
-        // Initialize Firebase with UMD Compat API
-        var appInstance = firebase.initializeApp(firebaseConfig);
-        var auth = firebase.auth();
-        db = firebase.firestore();
+        const appInstance = initializeApp(firebaseConfig);
+        const auth = getAuth(appInstance);
+        db = getFirestore(appInstance);
 
         // Track Auth State changes
-        auth.onAuthStateChanged(async (u) => {
+        onAuthStateChanged(auth, async (u) => {
             try {
                 const authOverlay = document.getElementById('auth-overlay');
                 
@@ -733,7 +721,7 @@
                     listenToCharactersList();
                 } else {
                     if (u && u.isAnonymous) {
-                        await auth.signOut();
+                        await signOut(auth);
                     }
                     if (unsubscribeActiveCharacter) {
                         unsubscribeActiveCharacter();
@@ -757,9 +745,9 @@
         function listenToCharactersList() {
             try {
                 if (!cloudUser || !db) return;
-                const colRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters');
+                const colRef = collection(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters');
                 
-                unsubscribeCharacters = colRef.onSnapshot(async (querySnap) => {
+                unsubscribeCharacters = onSnapshot(colRef, async (querySnap) => {
                     const list = [];
                     querySnap.forEach(docSnap => {
                         const data = docSnap.data();
@@ -779,27 +767,27 @@
 
                     // If collection is empty, check for legacy document to migrate
                     if (list.length === 0) {
-                        const legacyDocRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('character_data').doc('sheet');
+                        const legacyDocRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data', 'sheet');
                         try {
                             updateCloudUIStatus("Checking Legacy Notes...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
-                            const legacySnap = await legacyDocRef.get();
-                            if (legacySnap.exists) {
+                            const legacySnap = await getDoc(legacyDocRef);
+                            if (legacySnap.exists()) {
                                 updateCloudUIStatus("Migrating Legacy Notes...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
                                 const legacyData = legacySnap.data();
                                 
                                 const newCharId = 'char_' + Date.now();
-                                const newCharRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId);
-                                await newCharRef.set(legacyData);
+                                const newCharRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', newCharId);
+                                await setDoc(newCharRef, legacyData);
                                 
                                 currentCharacterId = newCharId;
                                 localStorage.setItem('current_character_id', currentCharacterId);
                                 
-                                await legacyDocRef.delete();
+                                await deleteDoc(legacyDocRef);
                             } else {
                                 // Empty account, create first clean default
                                 const defaultId = 'char_' + Date.now();
-                                const defaultRef = db.doc(`artifacts/${appId}/users/${cloudUser.uid}/characters/${defaultId}`);
-                                await defaultRef.set(JSON.parse(JSON.stringify(initialCharacterData)));
+                                const defaultRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', defaultId);
+                                await setDoc(defaultRef, JSON.parse(JSON.stringify(initialCharacterData)));
                                 
                                 currentCharacterId = defaultId;
                                 localStorage.setItem('current_character_id', currentCharacterId);
@@ -834,12 +822,12 @@
             }
 
             if (!cloudUser || !db || !currentCharacterId) return;
-            const docRef = db.doc(`artifacts/${appId}/users/${cloudUser.uid}/characters/${currentCharacterId}`);
+            const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', currentCharacterId);
 
-            unsubscribeActiveCharacter = docRef.onSnapshot((docSnap) => {
+            unsubscribeActiveCharacter = onSnapshot(docRef, (docSnap) => {
                 if (isLocalSaving) return;
 
-                if (docSnap.exists) {
+                if (docSnap.exists()) {
                     characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...docSnap.data() };
                     migrateData(characterData);
                     
@@ -1024,9 +1012,9 @@
                 try {
                     // Pull absolute live, up-to-date document data directly from Firestore collections
                     for (const char of characterList) {
-                        const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(char.id);
-                        const docSnap = await docRef.get();
-                        if (docSnap.exists) {
+                        const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', char.id);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
                             backupPayload.characters[char.id] = docSnap.data();
                         } else {
                             // Fallback to local storage cache if specific document is missing
@@ -1115,9 +1103,9 @@
                                 if (isCloudReady && cloudUser && db) {
                                     for (const oldChar of oldList) {
                                         if (!newIds.has(oldChar.id)) {
-                                            const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(oldChar.id);
+                                            const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', oldChar.id);
                                             try {
-                                                await docRef.delete();
+                                                await deleteDoc(docRef);
                                             } catch (e) {
                                                 console.error("Clean-up purge failed for ID: " + oldChar.id, e);
                                             }
@@ -1132,8 +1120,8 @@
                                     
                                     // Sync with firestore document trees if online
                                     if (isCloudReady && cloudUser && db) {
-                                        const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(charId);
-                                        await docRef.set(charData);
+                                        const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', charId);
+                                        await setDoc(docRef, charData);
                                     }
                                 }
                                 
@@ -1169,8 +1157,8 @@
                                 
                                 // Sync with Firestore if online
                                 if (isCloudReady && cloudUser && db) {
-                                    const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId);
-                                    await docRef.set(newCharData);
+                                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', newCharId);
+                                    await setDoc(docRef, newCharData);
                                 }
                                 
                                 // Switch directly to newly imported character
@@ -1193,13 +1181,13 @@
         };
 
         // Sign-In/Register Flow Controllers
-        var isSignUpMode = false;
-        var authForm = document.getElementById('auth-form');
-        var authToggleBtn = document.getElementById('auth-btn-toggle');
-        var authTitle = document.getElementById('auth-title');
-        var authSubtitle = document.getElementById('auth-subtitle');
-        var authBtnText = document.getElementById('auth-btn-text');
-        var authError = document.getElementById('auth-error');
+        let isSignUpMode = false;
+        const authForm = document.getElementById('auth-form');
+        const authToggleBtn = document.getElementById('auth-btn-toggle');
+        const authTitle = document.getElementById('auth-title');
+        const authSubtitle = document.getElementById('auth-subtitle');
+        const authBtnText = document.getElementById('auth-btn-text');
+        const authError = document.getElementById('auth-error');
 
         authToggleBtn.addEventListener('click', () => {
             isSignUpMode = !isSignUpMode;
@@ -1231,9 +1219,9 @@
 
             try {
                 if (isSignUpMode) {
-                    await auth.createUserWithEmailAndPassword(email, password);
+                    await createUserWithEmailAndPassword(auth, email, password);
                 } else {
-                    await auth.signInWithEmailAndPassword(email, password);
+                    await signInWithEmailAndPassword(auth, email, password);
                 }
             } catch (error) {
                 console.error("Authentication Error: ", error);
@@ -1249,7 +1237,7 @@
                 '🚪',
                 async () => {
                     try {
-                        await auth.signOut();
+                        await signOut(auth);
                     } catch(e) {
                         console.error("Sign out failed: ", e);
                     }
@@ -1307,10 +1295,10 @@
             
             saveTimeout = setTimeout(async () => {
                 if (isCloudReady && cloudUser && db && currentCharacterId) {
-                    const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(currentCharacterId);
+                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', currentCharacterId);
                     try {
                         isLocalSaving = true;
-                        await docRef.set(characterData);
+                        await setDoc(docRef, characterData);
                         triggerSaveIndicator();
                         
                         setTimeout(() => {
@@ -1428,9 +1416,9 @@
 
             if (isCloudReady && cloudUser && db) {
                 updateCloudUIStatus("Creating Character...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
-                const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId);
+                const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', newCharId);
                 try {
-                    await docRef.set(newCharData);
+                    await setDoc(docRef, newCharData);
                     window.switchCharacter(newCharId);
                 } catch (e) {
                     console.error("Failed to write new character to cloud: ", e);
@@ -1498,9 +1486,9 @@
                                 localStorage.removeItem('character_data_' + charId);
 
                                 if (isCloudReady && cloudUser && db) {
-                                    const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(charId);
+                                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', charId);
                                     try {
-                                        await docRef.delete();
+                                        await deleteDoc(docRef);
                                     } catch (e) {
                                         console.error("Failed to delete character on cloud: ", e);
                                         handleSyncError(e);
@@ -1891,7 +1879,7 @@
         };
 
         // --- THE MENTION SYSTEM ---
-        var mentionContext = null;
+        let mentionContext = null;
 
         function getMentionSuggestions(query) {
             const q = query.toLowerCase();
@@ -2272,7 +2260,7 @@
         window.toggleAllLocations = function(collapse) { characterData.campaignNotes.locations.forEach(l => l.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.filterLocations = function(query) { currentSearchQueries.locations = query; const q = query.toLowerCase(); document.querySelectorAll('.location-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
-        window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: 'New Faction', isCollapsed: false, members: [] }); window.saveData(); window.renderContent(); lucide.createIcons(); }
+        window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: 'New Faction', members: [] }); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.updateFaction = function(facId, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.name = val; window.saveData(); }
         window.deleteFaction = function(facId) { 
             window.showCustomConfirm(
@@ -2303,24 +2291,6 @@
                 }
             ); 
         }
-        
-        window.toggleFactionCollapse = function(facId) {
-            const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
-            if (fac) {
-                fac.isCollapsed = !fac.isCollapsed;
-                window.saveData();
-                window.renderContent();
-                lucide.createIcons();
-            }
-        };
-
-        window.toggleAllFactions = function(collapse) {
-            characterData.campaignNotes.npcs.forEach(f => f.isCollapsed = collapse);
-            window.saveData();
-            window.renderContent();
-            lucide.createIcons();
-        };
-
         window.filterNPCs = function(query) {
             currentSearchQueries.npcs = query;
             const q = query.toLowerCase();
@@ -2331,28 +2301,6 @@
                     if (npc.dataset.searchable.toLowerCase().includes(q) || factionHasMatch) { npc.classList.remove('hidden'); visibleNpcs++; } 
                     else { npc.classList.add('hidden'); }
                 });
-                
-                // Auto expand if search active and there is a match
-                const contentDiv = faction.querySelector('.collapsible-content');
-                const chevron = faction.querySelector('.chevron');
-                if (q.length > 0 && (visibleNpcs > 0 || factionHasMatch)) {
-                    if (contentDiv) contentDiv.classList.remove('collapsed');
-                    if (chevron) chevron.classList.remove('collapsed');
-                } else if (q.length === 0) {
-                    // Restore original toggle state
-                    const facId = faction.id;
-                    const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
-                    if (fac) {
-                        if (fac.isCollapsed) {
-                            if (contentDiv) contentDiv.classList.add('collapsed');
-                            if (chevron) chevron.classList.add('collapsed');
-                        } else {
-                            if (contentDiv) contentDiv.classList.remove('collapsed');
-                            if (chevron) chevron.classList.remove('collapsed');
-                        }
-                    }
-                }
-
                 if (visibleNpcs > 0 || factionHasMatch) faction.classList.remove('hidden');
                 else faction.classList.add('hidden');
             });
@@ -2418,12 +2366,6 @@
         window.setTab = function(tabId, itemId = '') {
             activeTab = tabId;
             if (isMobileMenuOpen) window.toggleMobileMenu();
-            
-            if (itemId) {
-                // Set deep linking layout bypass flag to instantly expand accordions without delay
-                window.isDeepLinking = true;
-            }
-            
             renderNavigation(); 
             window.renderContent(); 
             lucide.createIcons();
@@ -2436,24 +2378,14 @@
                 setTimeout(() => {
                     const element = document.getElementById(itemId);
                     if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         flashElement(element);
-                        
-                        // Turn off deep-linking layout bypass flag so subsequent manual clicks are smooth again
-                        window.isDeepLinking = false;
-                        
-                        // Second precise corrective scroll adjustment after first sweep completes
-                        setTimeout(() => {
-                            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 250);
                     } else {
-                        window.isDeepLinking = false;
                         const scrollArea = document.getElementById('scroll-area');
                         if (scrollArea) scrollArea.scrollTop = 0;
                     }
                 }, 80);
             } else {
-                window.isDeepLinking = false;
                 const scrollArea = document.getElementById('scroll-area');
                 if (scrollArea) scrollArea.scrollTop = 0;
             }
@@ -2502,23 +2434,6 @@
             const locationEntry = characterData.campaignNotes.locations.find(l => l.id === itemId);
             if (locationEntry && locationEntry.isCollapsed) {
                 locationEntry.isCollapsed = false;
-                triggeredReRender = true;
-            }
-            
-            // Auto expand factions accordions (NPC page)
-            let factionToExpand = null;
-            const factionEntry = characterData.campaignNotes.npcs.find(f => f.id === itemId);
-            if (factionEntry) {
-                factionToExpand = factionEntry;
-            } else {
-                characterData.campaignNotes.npcs.forEach(f => {
-                    if (f.members && f.members.some(npc => npc.id === itemId)) {
-                        factionToExpand = f;
-                    }
-                });
-            }
-            if (factionToExpand && factionToExpand.isCollapsed) {
-                factionToExpand.isCollapsed = false;
                 triggeredReRender = true;
             }
             
@@ -2652,7 +2567,7 @@
                     const isFirst = idx === 0;
                     const isLast = idx === characterData.backstory.length - 1;
                     contentHtml += `
-                        <div id="${b.id}" class="backstory-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(b.title)} ${escapeHtml(b.notes)}">
+                        <div id="${b.id}" class="backstory-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${b.title} ${b.notes}`)}">
                             <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                 <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                     <button onclick="window.toggleBackstoryCollapse('${b.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -2672,7 +2587,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
+                            <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
                                 <div class="p-5">${getMentionableDiv('backstory', b.id, b.notes, 'min-h-[150px]')}</div>
                             </div>
                         </div>`;
@@ -2715,7 +2630,7 @@
                     const hoverTheme = 'hover:bg-stone-100/30 dark:hover:bg-stone-800/40';
                     
                     contentHtml += `
-                        <div id="${p.id}" class="personality-block mb-4 border rounded-xl shadow-sm overflow-hidden ${cardBg}" data-searchable="${escapeHtml(p.title)} ${escapeHtml(p.subtitle)} ${escapeHtml(p.notes)}">
+                        <div id="${p.id}" class="personality-block mb-4 border rounded-xl shadow-sm overflow-hidden ${cardBg}" data-searchable="${escapeHtml(`${p.title} ${p.subtitle} ${p.notes}`)}">
                             <div class="bg-stone-50/40 dark:bg-stone-800/40 border-b border-stone-200/50 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                 <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                     <button onclick="window.togglePersonalityCollapse('${p.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -2736,7 +2651,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="collapsible-content ${p.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
+                            <div class="collapsible-content ${p.isCollapsed ? 'collapsed' : ''}">
                                 <div class="p-5">${getOutlineNotesEditor('personality', p.id, p.notes, `min-h-[100px] ${hoverTheme}`, 'Start typing traits... Enter starts a bullet, Tab indents, Shift+Tab outdents. Type @ to link notes.')}</div>
                             </div>
                         </div>`;
@@ -3016,7 +2931,7 @@
                         const isFirst = idx === 0;
                         const isLast = idx === characterData.campaignNotes.sessionNotes.length - 1;
                         contentHtml += `
-                            <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(sess.title)} ${escapeHtml(sess.date)} ${escapeHtml(sess.notes)}">
+                            <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${sess.title} ${sess.date} ${sess.notes}`)}">
                                 <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                     <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                         <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -3037,7 +2952,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
+                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
                                     <div class="p-5">${getOutlineNotesEditor('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]', 'Start typing your session notes... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.')}</div>
                                 </div>
                             </div>`;
@@ -3058,14 +2973,14 @@
 
                     const renderQuestCategory = (title, quests, categoryKey) => {
                         const isCollapsed = questSectionsState[categoryKey];
-                        let sectionHtml = `<div class="quest-section mb-8" data-section-type="${categoryKey}"><div class="flex items-center justify-between mb-4 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/30 p-2 rounded -mx-2 transition-colors" onclick="window.toggleQuestSectionCollapse('${categoryKey}')"><h4 class="text-lg font-bold text-stone-700 dark:text-stone-300 flex items-center space-x-2"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i><span>${title} (${quests.length})</span></h4></div><div class="collapsible-content space-y-4 ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">`;
+                        let sectionHtml = `<div class="quest-section mb-8" data-section-type="${categoryKey}"><div class="flex items-center justify-between mb-4 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/30 p-2 rounded -mx-2 transition-colors" onclick="window.toggleQuestSectionCollapse('${categoryKey}')"><h4 class="text-lg font-bold text-stone-700 dark:text-stone-300 flex items-center space-x-2"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i><span>${title} (${quests.length})</span></h4></div><div class="collapsible-content space-y-4 ${isCollapsed ? 'collapsed' : ''}">`;
                         if (quests.length === 0) sectionHtml += `<p class="text-stone-400 italic px-8 py-2">No quests in this category.</p>`;
 
                         quests.forEach((quest, qIdx) => {
                             const isFirst = qIdx === 0;
                             const isLast = qIdx === quests.length - 1;
                             sectionHtml += `
-                                <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(quest.title)} ${escapeHtml(quest.subtitle)} ${escapeHtml(quest.notes)}">
+                                <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(`${quest.title} ${quest.subtitle} ${quest.notes}`)}">
                                     <div class="bg-stone-50 dark:bg-stone-950 px-4 py-5 flex flex-col items-center justify-start border-r border-stone-100 dark:border-stone-800">
                                         <button onclick="window.toggleQuestCompletion('${quest.id}')" class="text-stone-300 dark:text-stone-600 hover:text-emerald-500 transition-colors focus:outline-none">
                                             ${quest.isCompleted ? `<i data-lucide="check-square" class="w-6 h-6 text-emerald-500"></i>` : `<i data-lucide="square" class="w-6 h-6 hover:text-emerald-400"></i>`}
@@ -3123,7 +3038,7 @@
                         const isFirst = idx === 0;
                         const isLast = idx === characterData.campaignNotes.locations.length - 1;
                         contentHtml += `
-                            <div id="${loc.id}" class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(loc.title)} ${escapeHtml(loc.subtitle)} ${escapeHtml(loc.notes)}">
+                            <div id="${loc.id}" class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${loc.title} ${loc.subtitle} ${loc.notes}`)}">
                                 <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                     <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                         <button onclick="window.toggleLocationCollapse('${loc.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -3144,7 +3059,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
+                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
                                     <div class="p-5">${getOutlineNotesEditor('campaignNotes_location', loc.id, loc.notes, 'min-h-[100px]', 'Location details, points of interest, or resident lists... Enter starts a bullet, Tab indents, @ to link.')}</div>
                                 </div>
                             </div>`;
@@ -3152,34 +3067,24 @@
                 }
                 else if (subSection === 'npcs') {
                     contentHtml = `
-                        <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-                            <div class="relative w-full sm:w-2/3">
+                        <div class="mb-6 flex gap-4">
+                            <div class="relative flex-1">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
                                 <input type="text" id="npc-search" oninput="window.filterNPCs(this.value)" placeholder="Search NPCs..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 dark:text-stone-100 shadow-sm">
                             </div>
-                            <div class="flex space-x-2 w-full sm:w-auto">
-                                <button onclick="window.toggleAllFactions(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Expand All</button>
-                                <button onclick="window.toggleAllFactions(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Collapse All</button>
-                                <button onclick="window.addFaction()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
-                            </div>
+                            <button onclick="window.addFaction()" class="flex items-center space-x-2 px-4 py-3 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-xl hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i><span class="hidden sm:inline">Add Faction</span></button>
                         </div>`;
                         
                     if (characterData.campaignNotes.npcs.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No NPCs added yet.</p>`;
                     
                     characterData.campaignNotes.npcs.forEach((faction, fIdx) => {
-                        const isCollapsed = faction.isCollapsed;
                         const isFirstFaction = fIdx === 0;
                         const isLastFaction = fIdx === characterData.campaignNotes.npcs.length - 1;
                         contentHtml += `
                             <div id="${faction.id}" class="npc-faction-block mb-8 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden bg-stone-50 dark:bg-stone-950" data-faction-name="${escapeHtml(faction.name)}">
                                 <div class="bg-stone-200/50 dark:bg-stone-800/50 px-4 py-3 border-b border-stone-200 dark:border-stone-800 flex justify-between items-center">
-                                    <div class="flex items-center space-x-2 flex-1 min-w-0">
-                                        <button onclick="window.toggleFactionCollapse('${faction.id}')" class="p-1 hover:bg-stone-300/50 dark:hover:bg-stone-700/50 rounded transition-colors focus:outline-none">
-                                            <i data-lucide="chevron-down" class="w-5 h-5 text-stone-500 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
-                                        </button>
-                                        <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-full rounded px-2 py-0.5">
-                                    </div>
-                                    <div class="flex items-center space-x-1 ml-2">
+                                    <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-2/3 rounded px-2 -ml-2 py-0.5">
+                                    <div class="flex items-center space-x-1">
                                         <button onclick="window.moveFaction('${faction.id}', -1)" ${isFirstFaction ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-300/50 dark:hover:bg-stone-800"'} title="Move Faction Up">
                                             <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                         </button>
@@ -3191,56 +3096,54 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
-                                    <div class="p-4 space-y-4">
-                                        ${faction.members.map((npc, nIdx) => {
-                                            const isFirstNPC = nIdx === 0;
-                                            const isLastNPC = nIdx === faction.members.length - 1;
-                                            return `
-                                            <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.notes)}">
-                                                
-                                                <!-- Circular Interactive Avatar Circle Slot -->
-                                                <div class="flex-shrink-0 flex items-start mt-1">
-                                                    <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all animate-fade-in" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
-                                                        ${npc.avatar ? 
-                                                            `<img src="${npc.avatar}" class="w-full h-full object-cover">` : 
-                                                            `<i data-lucide="user" class="w-6 h-6 text-stone-400"></i>`
-                                                        }
-                                                        <!-- Slick Camera Overlay on Hover -->
-                                                        <div class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                                                            <i data-lucide="camera" class="w-4 h-4 text-white"></i>
-                                                        </div>
-                                                        <!-- Quick Delete Avatar Button overlay -->
-                                                        ${npc.avatar ? `
-                                                            <button onclick="window.deleteNPCAvatar(event, '${faction.id}', '${npc.id}')" class="absolute top-0 right-0 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-bl shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="Remove character avatar">
-                                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                                            </button>
-                                                        ` : ''}
+                                <div class="p-4 space-y-4">
+                                    ${faction.members.map((npc, nIdx) => {
+                                        const isFirstNPC = nIdx === 0;
+                                        const isLastNPC = nIdx === faction.members.length - 1;
+                                        return `
+                                        <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.notes)}">
+                                            
+                                            <!-- Circular Interactive Avatar Circle Slot -->
+                                            <div class="flex-shrink-0 flex items-start mt-1">
+                                                <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all animate-fade-in" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
+                                                    ${npc.avatar ? 
+                                                        `<img src="${npc.avatar}" class="w-full h-full object-cover">` : 
+                                                        `<i data-lucide="user" class="w-6 h-6 text-stone-400"></i>`
+                                                    }
+                                                    <!-- Slick Camera Overlay on Hover -->
+                                                    <div class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                                        <i data-lucide="camera" class="w-4 h-4 text-white"></i>
                                                     </div>
-                                                    <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
+                                                    <!-- Quick Delete Avatar Button overlay -->
+                                                    ${npc.avatar ? `
+                                                        <button onclick="window.deleteNPCAvatar(event, '${faction.id}', '${npc.id}')" class="absolute top-0 right-0 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-bl shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="Remove character avatar">
+                                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                        </button>
+                                                    ` : ''}
                                                 </div>
+                                                <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
+                                            </div>
 
-                                                <div class="flex-1 min-w-0">
-                                                    <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5" placeholder="Character Name">
-                                                    ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
-                                                </div>
-                                                <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
-                                                    <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete NPC">
-                                                        <i data-lucide="x" class="w-4 h-4"></i>
+                                            <div class="flex-1 min-w-0">
+                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5" placeholder="Character Name">
+                                                ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
+                                            </div>
+                                            <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
+                                                <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete NPC">
+                                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                                </button>
+                                                <div class="flex space-x-0.5 mt-2">
+                                                    <button onclick="window.moveNPC('${faction.id}', '${npc.id}', -1)" ${isFirstNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Up">
+                                                        <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
                                                     </button>
-                                                    <div class="flex space-x-0.5 mt-2">
-                                                        <button onclick="window.moveNPC('${faction.id}', '${npc.id}', -1)" ${isFirstNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Up">
-                                                            <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
-                                                        </button>
-                                                        <button onclick="window.moveNPC('${faction.id}', '${npc.id}', 1)" ${isLastNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Down">
-                                                            <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
-                                                        </button>
-                                                    </div>
+                                                    <button onclick="window.moveNPC('${faction.id}', '${npc.id}', 1)" ${isLastNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Down">
+                                                        <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
+                                                    </button>
                                                 </div>
-                                            </div>`;
-                                        }).join('')}
-                                        <button onclick="window.addNPC('${faction.id}')" class="w-full py-2 mt-2 border-2 border-dashed border-stone-300 dark:border-stone-800 text-stone-500 dark:text-stone-400 rounded-lg hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors flex items-center justify-center space-x-2"><i data-lucide="user-plus" class="w-4 h-4"></i><span>Add Character to Faction</span></button>
-                                    </div>
+                                            </div>
+                                        </div>`;
+                                    }).join('')}
+                                    <button onclick="window.addNPC('${faction.id}')" class="w-full py-2 mt-2 border-2 border-dashed border-stone-300 dark:border-stone-800 text-stone-500 dark:text-stone-400 rounded-lg hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors flex items-center justify-center space-x-2"><i data-lucide="user-plus" class="w-4 h-4"></i><span>Add Character to Faction</span></button>
                                 </div>
                             </div>`;
                     });
