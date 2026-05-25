@@ -42,7 +42,7 @@ var navItems = [
     { id: 'campaign_npcs', label: 'NPCs', icon: 'users', isSubItem: true },
     { id: 'campaign_locations', label: 'Locations', icon: 'map-pin', isSubItem: true },
     { id: 'campaign_misc', label: 'Misc & Loot', icon: 'package', isSubItem: true },
-    { id: 'backstory', label: 'Backstory', icon: 'book-open' },
     { id: 'personality', label: 'Personality & Traits', icon: 'brain' },
     { id: 'build', label: 'Character Build', icon: 'shield' },
+    { id: 'backstory', label: 'Backstory', icon: 'book-open' },
 ];
