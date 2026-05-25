@@ -50,6 +50,14 @@ window.renderContent = function() {
     let html = '';
     window.updateDarkModeUI();
 
+    // Update dynamic header character portrait
+    const headerAvatar = document.getElementById('header-avatar-container');
+    if (headerAvatar) {
+        headerAvatar.innerHTML = characterData.avatar 
+            ? `<img src="${characterData.avatar}" class="w-full h-full object-cover">` 
+            : `<span class="text-sm">🧝‍♀️</span>`;
+    }
+
     function getMentionableDiv(section, field, value, extraClasses = "") {
         const sectionArg = section ? `'${section}'` : 'null';
         return `<div contenteditable="true" oninput="window.handleInput(event, ${sectionArg}, '${field}')" onkeydown="window.handleKeyDown(event)" onpaste="window.handlePaste(event)" class="w-full seamless-input rounded-lg p-3 -mx-3 min-h-[40px] cursor-text focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none whitespace-pre-wrap font-sans leading-relaxed text-stone-700 dark:text-stone-300 bg-transparent ${extraClasses}" data-placeholder="Click to type... Type @ to link notes.">${renderHTML(value)}</div>`;
