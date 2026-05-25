@@ -1,0 +1,419 @@
+// --- ARMORED/SHIELD STATE ---
+window.updateAcSelection = function(index, value) {
+    if (!characterData.build) characterData.build = {};
+    if (!characterData.build.acSelection) characterData.build.acSelection = [];
+    characterData.build.acSelection[index] = value;
+    characterData.build.acSelection = characterData.build.acSelection.filter(item => item !== "");
+    window.saveData(); window.renderContent();
+};
+window.toggleShieldActive = function(checked) {
+    if (!characterData.build) characterData.build = {};
+    characterData.build.shieldActive = checked;
+    window.saveData(); window.recalculateBuildScores();
+};
+window.updateAbilityPoint = function(index, field, val) {
+    const intVal = parseInt(val) || 0;
+    characterData.build.abilities[index][field] = intVal;
+    window.saveData(); window.recalculateBuildScores();
+};
+window.updateFeatName = function(key, val) {
+    if (!characterData.build.feats) characterData.build.feats = {};
+    characterData.build.feats[key] = val; window.saveData();
+};
+
+window.recalculateBuildScores = function() {
+    const abilities = characterData.build.abilities;
+    const keys = ['starting', 'species', 'lvl1', 'lvl4', 'lvl8', 'lvl12', 'lvl16', 'lvl19', 'lvl20'];
+    const cumulativeScores = { starting: {}, species: {}, lvl1: {}, lvl4: {}, lvl8: {}, lvl12: {}, lvl16: {}, lvl19: {}, lvl20: {} };
+
+    abilities.forEach((ability, aIdx) => {
+        let currentVal = 0;
+        keys.forEach((key) => {
+            const cellVal = parseInt(ability[key]) || 0;
+            currentVal += cellVal;
+            cumulativeScores[key][ability.name] = currentVal;
+            const scoreCell = document.getElementById(`score-cell-${aIdx}-${key}`);
+            if (scoreCell) {
+                const mod = Math.floor((currentVal - 10) / 2);
+                const modStr = (mod >= 0 ? '+' : '') + mod;
+                scoreCell.innerHTML = `<span class="font-extrabold text-stone-800 dark:text-stone-200 text-sm">${currentVal}</span><span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold ml-1">(${modStr})</span>`;
+            }
+        });
+    });
+
+    const selectedArmors = (characterData.build.acSelection || []).filter(item => item !== "");
+    const showBlank = selectedArmors.length < 5;
+    const totalRows = selectedArmors.length + (showBlank ? 1 : 0);
+    const shieldBonus = (characterData.build.shieldActive) ? 2 : 0;
+    const levelKeys = keys.slice(2);
+
+    for (let rIdx = 0; rIdx < totalRows; rIdx++) {
+        const armorKey = selectedArmors[rIdx] || "";
+        levelKeys.forEach(colKey => {
+            const dex = cumulativeScores[colKey]["Dexterity"] || 10;
+            const con = cumulativeScores[colKey]["Constitution"] || 10;
+            const wis = cumulativeScores[colKey]["Wisdom"] || 10;
+            const dexMod = Math.floor((dex - 10) / 2);
+            const conMod = Math.floor((con - 10) / 2);
+            const wisMod = Math.floor((wis - 10) / 2);
+
+            let acVal = "-";
+            if (armorKey !== "") {
+                let baseAc = 10, dexContribution = dexMod, conContribution = 0, wisContribution = 0;
+                if (armorKey === "unarmored") { conContribution = conMod; } 
+                else if (armorKey === "unarmored_monk") { wisContribution = wisMod; } 
+                else if (armorKey === "studded") { baseAc = 12; } 
+                else if (armorKey === "chainshirt") { baseAc = 13; dexContribution = Math.min(2, dexMod); } 
+                else if (armorKey === "scalemail") { baseAc = 14; dexContribution = Math.min(2, dexMod); } 
+                else if (armorKey === "breastplate") { baseAc = 14; dexContribution = Math.min(2, dexMod); } 
+                else if (armorKey === "halfplate") { baseAc = 15; dexContribution = Math.min(2, dexMod); } 
+                else if (armorKey === "chainmail") { baseAc = 16; dexContribution = 0; } 
+                else if (armorKey === "splint") { baseAc = 17; dexContribution = 0; } 
+                else if (armorKey === "plate") { baseAc = 18; dexContribution = 0; }
+                acVal = baseAc + dexContribution + conContribution + wisContribution + shieldBonus;
+            }
+
+            const valEl = document.getElementById(`ac-val-${rIdx}-${colKey}`);
+            if (valEl) valEl.innerText = acVal;
+        });
+    }
+};
+
+// --- DYNAMIC LIST MANAGEMENT ---
+window.addBackstory = function() { currentSearchQueries.backstory = ''; characterData.backstory.unshift({ id: 'b_' + Date.now(), title: 'New Lore Section', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); lucide.createIcons(); }
+window.updateBackstory = function(bId, field, val) { const entry = characterData.backstory.find(b => b.id === bId); if(entry) entry[field] = val; window.saveData(); }
+window.deleteBackstory = function(bId) { window.showCustomConfirm('Delete Backstory Section?', 'Are you sure you want to permanently delete this backstory section?', '📜', () => { characterData.backstory = characterData.backstory.filter(b => b.id !== bId); window.saveData(); window.renderContent(); lucide.createIcons(); }); }
+window.toggleBackstoryCollapse = function(bId) { const entry = characterData.backstory.find(b => b.id === bId); if(entry) { entry.isCollapsed = !entry.isCollapsed; window.saveData(); window.renderContent(); lucide.createIcons(); } }
+window.toggleAllBackstory = function(collapse) { characterData.backstory.forEach(b => b.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); }
+window.moveBackstory = function(bId, direction) { const arr = characterData.backstory; const index = arr.findIndex(b => b.id === bId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); lucide.createIcons(); } } }
+window.filterBackstory = function(query) { currentSearchQueries.backstory = query; const q = query.toLowerCase(); document.querySelectorAll('.backstory-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
+
+window.addPersonality = function() { currentSearchQueries.personality = ''; characterData.personality.unshift({ id: 'p_' + Date.now(), title: 'New Trait / Code', subtitle: 'A brief state description', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); lucide.createIcons(); }
+window.updatePersonality = function(pId, field, val) { const entry = characterData.personality.find(p => p.id === pId); if(entry) entry[field] = val; window.saveData(); }
+window.deletePersonality = function(pId) { window.showCustomConfirm('Delete Personality Trait?', 'Are you sure you want to permanently delete this personality section?', '🧠', () => { characterData.personality = characterData.personality.filter(p => p.id !== pId); window.saveData(); window.renderContent(); lucide.createIcons(); }); }
+window.togglePersonalityCollapse = function(pId) { const entry = characterData.personality.find(p => p.id === pId); if(entry) { entry.isCollapsed = !entry.isCollapsed; window.saveData(); window.renderContent(); lucide.createIcons(); } }
+window.toggleAllPersonality = function(collapse) { characterData.personality.forEach(p => p.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); }
+window.movePersonality = function(pId, direction) { const arr = characterData.personality; const index = arr.findIndex(p => p.id === pId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); lucide.createIcons(); } } }
+window.filterPersonality = function(query) { currentSearchQueries.personality = query; const q = query.toLowerCase(); document.querySelectorAll('.personality-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
+
+window.addSession = function() { currentSearchQueries.sessionNotes = ''; characterData.campaignNotes.sessionNotes.unshift({ id: 'sess_' + Date.now(), title: '', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); lucide.createIcons(); }
+window.updateSession = function(sessId, field, val) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) sess[field] = val; window.saveData(); }
+window.deleteSession = function(sessId) { window.showCustomConfirm('Delete Session Log?', 'Are you sure you want to permanently delete this session log entry?', '🗑️', () => { characterData.campaignNotes.sessionNotes = characterData.campaignNotes.sessionNotes.filter(s => s.id !== sessId); window.saveData(); window.renderContent(); lucide.createIcons(); }); }
+window.toggleSessionCollapse = function(sessId) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) { sess.isCollapsed = !sess.isCollapsed; window.saveData(); window.renderContent(); lucide.createIcons(); } }
+window.toggleAllSessions = function(collapse) { characterData.campaignNotes.sessionNotes.forEach(s => s.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); }
+window.moveSession = function(sessId, direction) { const arr = characterData.campaignNotes.sessionNotes; const index = arr.findIndex(s => s.id === sessId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); lucide.createIcons(); } } };
+window.filterSessions = function(query) { currentSearchQueries.sessionNotes = query; const q = query.toLowerCase(); document.querySelectorAll('.session-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
+
+window.addQuest = function() { currentSearchQueries.quests = ''; characterData.campaignNotes.quests.unshift({ id: 'quest_' + Date.now(), title: 'New Quest', subtitle: '', notes: '', isCompleted: false }); window.saveData(); window.renderContent(); lucide.createIcons(); }
+window.updateQuest = function(questId, field, val) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) quest[field] = val; window.saveData(); }
+window.deleteQuest = function(questId) { window.showCustomConfirm('Delete Quest?', 'Are you sure you want to permanently remove this quest objective?', '⚔️', () => { characterData.campaignNotes.quests = characterData.campaignNotes.quests.filter(q => q.id !== questId); window.saveData(); window.renderContent(); lucide.createIcons(); }); }
+window.toggleQuestCompletion = function(questId) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) { quest.isCompleted = !quest.isCompleted; window.saveData(); window.renderContent(); lucide.createIcons(); } }
+window.toggleQuestSectionCollapse = function(section) { questSectionsState[section] = !questSectionsState[section]; window.renderContent(); lucide.createIcons(); }
+window.moveQuest = function(questId, direction) { const arr = characterData.campaignNotes.quests; const index = arr.findIndex(q => q.id === questId); if (index === -1) return; const isCompleted = arr[index].isCompleted; let targetIdx = -1; if (direction === -1) { for (let i = index - 1; i >= 0; i--) if (arr[i].isCompleted === isCompleted) { targetIdx = i; break; } } else { for (let i = index + 1; i < arr.length; i++) if (arr[i].isCompleted === isCompleted) { targetIdx = i; break; } } if (targetIdx !== -1) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); lucide.createIcons(); } };
+window.filterQuests = function(query) { currentSearchQueries.quests = query; const q = query.toLowerCase(); document.querySelectorAll('.quest-section').forEach(section => { let visibleQuests = 0; section.querySelectorAll('.quest-card').forEach(quest => { if (quest.dataset.searchable.toLowerCase().includes(q)) { quest.classList.remove('hidden'); visibleQuests++; } else { quest.classList.add('hidden'); } }); const contentDiv = section.querySelector('.collapsible-content'); const chevron = section.querySelector('.chevron'); if (q.length > 0 && visibleQuests > 0) { contentDiv.classList.remove('collapsed'); if(chevron) chevron.classList.remove('collapsed'); } else if (q.length === 0) { const isCollapsed = section.dataset.sectionType === 'inProgress' ? questSectionsState.inProgressCollapsed : questSectionsState.completedCollapsed; if(isCollapsed) { contentDiv.classList.add('collapsed'); if(chevron) chevron.classList.add('collapsed'); } } }); }
+
+window.addLocation = function() { currentSearchQueries.locations = ''; characterData.campaignNotes.locations.unshift({ id: 'loc_' + Date.now(), title: 'New Location', subtitle: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); lucide.createIcons(); }
+window.updateLocation = function(locId, field, val) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) loc[field] = val; window.saveData(); }
+window.deleteLocation = function(locId) { window.showCustomConfirm('Delete Location?', 'Are you sure you want to permanently remove this location?', '📍', () => { characterData.campaignNotes.locations = characterData.campaignNotes.locations.filter(l => l.id !== locId); window.saveData(); window.renderContent(); lucide.createIcons(); }); }
+window.toggleLocationCollapse = function(locId) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) { loc.isCollapsed = !loc.isCollapsed; window.saveData(); window.renderContent(); lucide.createIcons(); } }
+window.toggleAllLocations = function(collapse) { characterData.campaignNotes.locations.forEach(l => l.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); }
+window.moveLocation = function(locId, direction) { const arr = characterData.campaignNotes.locations; const index = arr.findIndex(l => l.id === locId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); lucide.createIcons(); } } };
+window.filterLocations = function(query) { currentSearchQueries.locations = query; const q = query.toLowerCase(); document.querySelectorAll('.location-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
+
+window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: 'New Faction', isCollapsed: false, members: [] }); window.saveData(); window.renderContent(); lucide.createIcons(); }
+window.updateFaction = function(facId, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.name = val; window.saveData(); }
+window.deleteFaction = function(facId) { window.showCustomConfirm('Delete Faction?', 'Are you sure you want to delete this faction, its members, and all related logs?', '🛡️', () => { characterData.campaignNotes.npcs = characterData.campaignNotes.npcs.filter(f => f.id !== facId); window.saveData(); window.renderContent(); lucide.createIcons(); }); }
+window.toggleFactionCollapse = function(facId) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if (fac) { fac.isCollapsed = !fac.isCollapsed; window.saveData(); window.renderContent(); lucide.createIcons(); } };
+window.toggleAllFactions = function(collapse) { characterData.campaignNotes.npcs.forEach(f => f.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); };
+window.moveFaction = function(facId, direction) { const arr = characterData.campaignNotes.npcs; const index = arr.findIndex(f => f.id === facId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); lucide.createIcons(); } } };
+
+window.addNPC = function(facId) { currentSearchQueries.npcs = ''; const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { fac.members.push({ id: 'npc_' + Date.now(), name: 'New NPC', notes: '' }); window.saveData(); window.renderContent(); lucide.createIcons(); } }
+window.updateNPC = function(facId, npcId, field, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { const npc = fac.members.find(n => n.id === npcId); if(npc) npc[field] = val; } window.saveData(); }
+window.deleteNPC = function(facId, npcId) { window.showCustomConfirm('Delete Character?', 'Are you sure you want to permanently remove this NPC?', '👤', () => { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.members = fac.members.filter(n => n.id !== npcId); window.saveData(); window.renderContent(); lucide.createIcons(); }); }
+window.moveNPC = function(facId, npcId, direction) { const faction = characterData.campaignNotes.npcs.find(f => f.id === facId); if (!faction) return; const arr = faction.members; const index = arr.findIndex(n => n.id === npcId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); lucide.createIcons(); } } };
+
+window.filterNPCs = function(query) {
+    currentSearchQueries.npcs = query;
+    const q = query.toLowerCase();
+    document.querySelectorAll('.npc-faction-block').forEach(faction => {
+        const facName = faction.dataset.factionName.toLowerCase();
+        let factionHasMatch = facName.includes(q), visibleNpcs = 0;
+        faction.querySelectorAll('.npc-card').forEach(npc => {
+            if (npc.dataset.searchable.toLowerCase().includes(q) || factionHasMatch) { npc.classList.remove('hidden'); visibleNpcs++; } 
+            else { npc.classList.add('hidden'); }
+        });
+        
+        const contentDiv = faction.querySelector('.collapsible-content');
+        const chevron = faction.querySelector('.chevron');
+        if (q.length > 0 && (visibleNpcs > 0 || factionHasMatch)) {
+            if (contentDiv) contentDiv.classList.remove('collapsed');
+            if (chevron) chevron.classList.remove('collapsed');
+        } else if (q.length === 0) {
+            const facId = faction.id;
+            const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+            if (fac) {
+                if (fac.isCollapsed) {
+                    if (contentDiv) contentDiv.classList.add('collapsed');
+                    if (chevron) chevron.classList.add('collapsed');
+                } else {
+                    if (contentDiv) contentDiv.classList.remove('collapsed');
+                    if (chevron) chevron.classList.remove('collapsed');
+                }
+            }
+        }
+        if (visibleNpcs > 0 || factionHasMatch) faction.classList.remove('hidden');
+        else faction.classList.add('hidden');
+    });
+}
+
+// --- SPECIFIC KEYBOARD OUTLINE HANDLERS ---
+window.handleOutlineKeyDown = function(event) {
+    const div = event.currentTarget;
+    const dropdown = document.getElementById('mention-dropdown');
+    if (dropdown && !dropdown.classList.contains('hidden') && mentionContext) {
+        if (event.key === 'Tab' || event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
+            window.handleKeyDown(event);
+            return;
+        }
+    }
+    if (event.key === 'Tab') {
+        event.preventDefault();
+        if (event.shiftKey) document.execCommand('outdent', false, null);
+        else document.execCommand('indent', false, null);
+        div.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+    }
+    window.handleKeyDown(event);
+};
+
+window.handleOutlineFocus = function(event) {
+    const div = event.currentTarget;
+    const html = div.innerHTML.trim();
+    if (html === "" || html === "<br>" || html === "<div><br></div>" || !div.querySelector('ul')) {
+        div.innerHTML = "<ul><li><br></li></ul>";
+        setTimeout(() => {
+            const range = document.createRange();
+            const sel = window.getSelection();
+            const li = div.querySelector('li');
+            if (li) { range.setStart(li, 0); range.collapse(true); sel.removeAllRanges(); sel.addRange(range); }
+        }, 0);
+        div.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+};
+
+window.handleOutlineBlur = function(event) {
+    const div = event.currentTarget;
+    if (div.innerText.trim() === "") { div.innerHTML = ""; div.dispatchEvent(new Event('input', { bubbles: true })); }
+};
+
+window.handlePaste = function(e) {
+    e.preventDefault();
+    const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+    document.execCommand('insertText', false, text);
+};
+
+// --- THE MENTION SYSTEM ---
+var mentionContext = null;
+
+function getMentionSuggestions(query) {
+    const q = query.toLowerCase();
+    let results = [];
+    characterData.campaignNotes.sessionNotes.forEach(s => { if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Session', id: 'campaign_sessionNotes', itemId: s.id, label: s.title }); });
+    characterData.campaignNotes.quests.forEach(qItem => { if (qItem.title && qItem.title.toLowerCase().includes(q)) results.push({ type: 'Quest', id: 'campaign_quests', itemId: qItem.id, label: qItem.title }); });
+    characterData.campaignNotes.npcs.forEach(fac => {
+        if (fac.name && fac.name.toLowerCase().includes(q)) results.push({ type: 'Faction', id: 'campaign_npcs', itemId: fac.id, label: fac.name });
+        fac.members.forEach(npc => { if (npc.name && npc.name.toLowerCase().includes(q)) results.push({ type: 'NPC', id: 'campaign_npcs', itemId: npc.id, label: npc.name }); });
+    });
+    characterData.campaignNotes.locations.forEach(loc => { if (loc.title && loc.title.toLowerCase().includes(q)) results.push({ type: 'Location', id: 'campaign_locations', itemId: loc.id, label: loc.title }); });
+    characterData.backstory.forEach(b => { if (b.title && b.title.toLowerCase().includes(q)) results.push({ type: 'Backstory', id: 'backstory', itemId: b.id, label: b.title }); });
+    characterData.personality.forEach(p => { if (p.title && p.title.toLowerCase().includes(q)) results.push({ type: 'Personality', id: 'personality', itemId: p.id, label: p.title }); });
+    return results;
+}
+
+window.handleKeyDown = function(event) {
+    const dropdown = document.getElementById('mention-dropdown');
+    if (dropdown.classList.contains('hidden') || !mentionContext) return;
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        mentionContext.selectedIndex = Math.min(mentionContext.selectedIndex + 1, mentionContext.results.length - 1);
+        renderMentionDropdownItems();
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        mentionContext.selectedIndex = Math.max(mentionContext.selectedIndex - 1, 0);
+        renderMentionDropdownItems();
+    } else if (event.key === 'Tab' || event.key === 'Enter') {
+        event.preventDefault();
+        const selected = mentionContext.results[mentionContext.selectedIndex];
+        if (selected) window.insertMention(selected.id, selected.label, selected.itemId);
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+        hideMentionDropdown();
+    }
+};
+
+window.handleInput = function(event, section, field) {
+    const div = event.target;
+    
+    if (section === 'backstory') { const bEntry = characterData.backstory.find(b => b.id === field); if(bEntry) bEntry.notes = div.innerHTML; } 
+    else if (section === 'personality') { const pEntry = characterData.personality.find(p => p.id === field); if(pEntry) pEntry.notes = div.innerHTML; } 
+    else if (section === 'campaignNotes_session') { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === field); if(sess) sess.notes = div.innerHTML; } 
+    else if (section === 'campaignNotes_quest') { const quest = characterData.campaignNotes.quests.find(q => q.id === field); if(quest) quest.notes = div.innerHTML; } 
+    else if (section === 'campaignNotes_location') { const loc = characterData.campaignNotes.locations.find(l => l.id === field); if(loc) loc.notes = div.innerHTML; } 
+    else if (section === 'campaignNotes_npc') {
+        const [facId, npcId] = field.split('_npc_');
+        const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+        if(fac) { const npc = fac.members.find(n => n.id === 'npc_' + npcId); if(npc) npc.notes = div.innerHTML; }
+    } else { window.updateField(section, field, div.innerHTML); }
+    window.saveData();
+
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+    
+    if (node.nodeType === Node.TEXT_NODE) {
+        const textUpToCursor = node.textContent.substring(0, range.startOffset);
+        const match = textUpToCursor.match(/(?:\s|^)(@[a-zA-Z0-9_\-\' ]{0,40})$/);
+        
+        if (match) {
+            const matchString = match[1];
+            const query = matchString.substring(1);
+            const endOffset = range.startOffset;
+            const startOffset = endOffset - matchString.length;
+            showMentionDropdown(div, query, node, startOffset, endOffset);
+        } else { hideMentionDropdown(); }
+    } else { hideMentionDropdown(); }
+};
+
+function showMentionDropdown(div, query, textNode, startOffset, endOffset) {
+    const results = getMentionSuggestions(query);
+    const dropdown = document.getElementById('mention-dropdown');
+    if (results.length === 0) { hideMentionDropdown(); return; }
+
+    mentionContext = { div, textNode, startOffset, endOffset, results, selectedIndex: 0 };
+    const rect = div.getBoundingClientRect();
+    dropdown.style.top = (rect.bottom + 5) + 'px'; 
+    dropdown.style.left = rect.left + 'px';
+    dropdown.style.width = Math.min(rect.width, 350) + 'px';
+    dropdown.classList.remove('hidden');
+    renderMentionDropdownItems();
+}
+
+function renderMentionDropdownItems() {
+    const dropdown = document.getElementById('mention-dropdown');
+    if (!mentionContext) return;
+    dropdown.innerHTML = mentionContext.results.map((res, i) => {
+        const isActive = i === mentionContext.selectedIndex;
+        const activeClasses = isActive ? 'bg-emerald-100 border-l-4 border-emerald-500 dark:bg-emerald-950/40 pl-3' : 'bg-white dark:bg-stone-900 border-l-4 border-transparent pl-4';
+        return `<li onmousedown="event.preventDefault(); window.insertMention('${res.id}', '${escapeHtml(res.label).replace(/'/g, "\\'")}', '${res.itemId}')" class="py-3 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}"><span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span><span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">${res.type}</span></li>`;
+    }).join('');
+    const activeEl = dropdown.children[mentionContext.selectedIndex];
+    if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+}
+
+function hideMentionDropdown() { document.getElementById('mention-dropdown').classList.add('hidden'); mentionContext = null; }
+
+window.insertMention = function(targetTabId, label, itemId = '') {
+    if (!mentionContext) return;
+    const { div, textNode, startOffset, endOffset } = mentionContext;
+    const selection = window.getSelection();
+    const range = document.createRange();
+    
+    try {
+        range.setStart(textNode, startOffset);
+        range.setEnd(textNode, endOffset);
+        range.deleteContents();
+        
+        const a = document.createElement('a');
+        a.href = "#";
+        a.className = "text-emerald-700 bg-emerald-100/80 dark:text-emerald-300 dark:bg-emerald-950/60 font-bold px-1.5 py-0.5 mx-0.5 rounded shadow-sm hover:bg-emerald-200 hover:text-emerald-800 dark:hover:bg-emerald-900 dark:hover:text-emerald-200 transition-colors inline-flex items-center no-underline cursor-pointer";
+        a.contentEditable = "false";
+        a.setAttribute('onclick', `window.setTab('${targetTabId}', '${itemId}'); return false;`);
+        a.innerText = "@" + label;
+        
+        range.insertNode(a);
+        const space = document.createTextNode('\u00A0'); 
+        a.parentNode.insertBefore(space, a.nextSibling);
+        range.setStartAfter(space);
+        range.setEndAfter(space);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    } catch (e) { console.error("Mention insert failed: ", e); }
+    
+    hideMentionDropdown();
+    div.dispatchEvent(new Event('input', { bubbles: true }));
+};
+
+document.addEventListener('mousedown', (e) => { if (!e.target.closest('#mention-dropdown')) hideMentionDropdown(); });
+
+// --- DEEP LINK SCROLL ENGINE ---
+window.setTab = function(tabId, itemId = '') {
+    activeTab = tabId;
+    if (isMobileMenuOpen) window.toggleMobileMenu();
+    if (itemId) window.isDeepLinking = true;
+    
+    renderNavigation(); 
+    window.renderContent(); 
+    lucide.createIcons();
+    
+    if (itemId) {
+        expandElementIfNeeded(itemId);
+        setTimeout(() => {
+            const element = document.getElementById(itemId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                flashElement(element);
+                window.isDeepLinking = false;
+                setTimeout(() => { element.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 250);
+            } else {
+                window.isDeepLinking = false;
+                const scrollArea = document.getElementById('scroll-area');
+                if (scrollArea) scrollArea.scrollTop = 0;
+            }
+        }, 80);
+    } else {
+        window.isDeepLinking = false;
+        const scrollArea = document.getElementById('scroll-area');
+        if (scrollArea) scrollArea.scrollTop = 0;
+    }
+}
+
+function expandElementIfNeeded(itemId) {
+    let triggeredReRender = false;
+    const subSection = activeTab.replace('campaign_', '');
+    if (currentSearchQueries[subSection]) { currentSearchQueries[subSection] = ''; triggeredReRender = true; }
+    if (activeTab === 'backstory' && currentSearchQueries.backstory) { currentSearchQueries.backstory = ''; triggeredReRender = true; }
+    if (activeTab === 'personality' && currentSearchQueries.personality) { currentSearchQueries.personality = ''; triggeredReRender = true; }
+    
+    const backstoryEntry = characterData.backstory.find(b => b.id === itemId);
+    if (backstoryEntry && backstoryEntry.isCollapsed) { backstoryEntry.isCollapsed = false; triggeredReRender = true; }
+    
+    const personalityEntry = characterData.personality.find(p => p.id === itemId);
+    if (personalityEntry && personalityEntry.isCollapsed) { personalityEntry.isCollapsed = false; triggeredReRender = true; }
+    
+    const sessionEntry = characterData.campaignNotes.sessionNotes.find(s => s.id === itemId);
+    if (sessionEntry && sessionEntry.isCollapsed) { sessionEntry.isCollapsed = false; triggeredReRender = true; }
+    
+    const locationEntry = characterData.campaignNotes.locations.find(l => l.id === itemId);
+    if (locationEntry && locationEntry.isCollapsed) { locationEntry.isCollapsed = false; triggeredReRender = true; }
+    
+    let factionToExpand = null;
+    const factionEntry = characterData.campaignNotes.npcs.find(f => f.id === itemId);
+    if (factionEntry) { factionToExpand = factionEntry; } 
+    else { characterData.campaignNotes.npcs.forEach(f => { if (f.members && f.members.some(npc => npc.id === itemId)) factionToExpand = f; }); }
+    if (factionToExpand && factionToExpand.isCollapsed) { factionToExpand.isCollapsed = false; triggeredReRender = true; }
+    
+    const questEntry = characterData.campaignNotes.quests.find(q => q.id === itemId);
+    if (questEntry) {
+        if (!questEntry.isCompleted && questSectionsState.inProgressCollapsed) { questSectionsState.inProgressCollapsed = false; triggeredReRender = true; }
+        if (questEntry.isCompleted && questSectionsState.completedCollapsed) { questSectionsState.completedCollapsed = false; triggeredReRender = true; }
+    }
+    
+    if (triggeredReRender) { window.saveData(); window.renderContent(); lucide.createIcons(); }
+}
+
+function flashElement(element) {
+    element.classList.add('ring-4', 'ring-emerald-500/50', 'ring-offset-2', 'dark:ring-offset-stone-900', 'transition-all', 'duration-500');
+    setTimeout(() => { element.classList.remove('ring-4', 'ring-emerald-500/50', 'ring-offset-2', 'dark:ring-offset-stone-900'); }, 2000);
+}
