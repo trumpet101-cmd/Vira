@@ -1,0 +1,64 @@
+.custom-scrollbar::-webkit-scrollbar { width: 8px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #d6d3d1; border-radius: 20px; border: 3px solid transparent; background-clip: content-box; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #a8a29e; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+
+/* Smooth collapsing transitions */
+.collapsible-content {
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out, margin 0.3s ease-out;
+    max-height: 2000px;
+    opacity: 1;
+    overflow: hidden;
+}
+.collapsible-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+.chevron { transition: transform 0.3s ease; }
+.chevron.collapsed { transform: rotate(-90deg); }
+
+/* Bypass transition properties temporarily during deep-linking to ensure scroll accuracy */
+.no-transition {
+    transition: none !important;
+}
+
+/* Seamless Input Styling */
+.seamless-input { transition: all 0.2s ease; }
+.seamless-input:hover { background-color: rgba(28, 25, 23, 0.05); } 
+.seamless-input:focus { background-color: #ffffff; outline: none; box-shadow: 0 0 0 2px #10b981; }
+.dark .seamless-input:focus { background-color: #1c1917; box-shadow: 0 0 0 2px #10b981; }
+
+/* Content Editable Placeholder Hack */
+[contenteditable="true"]:empty:before {
+    content: attr(data-placeholder);
+    color: #a8a29e;
+    pointer-events: none;
+    display: block;
+}
+
+/* Stop focus outline on internal links */
+[contenteditable="true"] a { user-select: none; }
+
+/* Outline List Styling for Session Notes & Campaign Sections */
+.seamless-input ul {
+    list-style-type: disc !important;
+    margin-left: 1.5rem !important;
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+}
+.seamless-input ul ul {
+    list-style-type: circle !important;
+    margin-left: 1.5rem !important;
+}
+.seamless-input ul ul ul {
+    list-style-type: square !important;
+    margin-left: 1.5rem !important;
+}
+.seamless-input li {
+    margin-bottom: 0.25rem !important;
+    padding-left: 0.25rem !important;
+}
