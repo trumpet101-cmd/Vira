@@ -221,10 +221,10 @@
                 <button class="md:hidden text-stone-600 dark:text-stone-400 hover:text-emerald-600" onclick="toggleMobileMenu()">
                     <i data-lucide="menu"></i>
                 </button>
-                <h2 class="text-2xl font-bold text-stone-800 dark:text-stone-100 tracking-tight flex items-center space-x-2">
-                    <span class="text-emerald-600">🌿</span>
-                    <input type="text" id="header-name-input" oninput="updateField(null, 'name', this.value)" class="font-bold text-stone-800 dark:text-stone-100 bg-transparent border-none focus:outline-none focus:ring-0 w-full max-w-[250px] p-0 m-0">
-                </h2>
+<h2 class="text-2xl font-bold text-stone-800 dark:text-stone-100 tracking-tight flex items-center space-x-2">
+    <div id="header-avatar-container" class="w-8 h-8 rounded-full border border-stone-200 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 flex items-center justify-center overflow-hidden flex-shrink-0"></div>
+    <input type="text" id="header-name-input" oninput="updateField(null, 'name', this.value)" class="font-bold text-stone-800 dark:text-stone-100 bg-transparent border-none focus:outline-none focus:ring-0 w-full max-w-[250px] p-0 m-0">
+</h2>
             </div>
             
             <div class="flex items-center space-x-2 text-stone-400 dark:text-stone-500 bg-stone-50 dark:bg-stone-800/60 px-3 py-1.5 rounded-full border border-stone-200 dark:border-stone-800 transition-all duration-300" id="save-indicator">
