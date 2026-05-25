@@ -31,6 +31,11 @@
         .chevron { transition: transform 0.3s ease; }
         .chevron.collapsed { transform: rotate(-90deg); }
         
+        /* Bypass transition properties temporarily during deep-linking to ensure scroll accuracy */
+        .no-transition {
+            transition: none !important;
+        }
+        
         /* Seamless Input Styling */
         .seamless-input { transition: all 0.2s ease; }
         .seamless-input:hover { background-color: rgba(28, 25, 23, 0.05); } 
@@ -210,7 +215,7 @@
         <div class="p-4 border-t border-stone-800 space-y-3">
             
             <!-- Dark Mode Toggle Button -->
-            <button onclick="window.toggleDarkMode()" class="w-full flex items-center justify-between px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold rounded-xl transition-all border border-stone-700/50 text-sm">
+            <button onclick="window.toggleDarkMode()" class="w-full flex items-center justify-between px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-stone-300 font-bold rounded-xl transition-all border border-stone-700/50 text-sm">
                 <div class="flex items-center space-x-2">
                     <i data-lucide="moon" class="w-4.5 h-4.5 text-amber-400" id="dark-mode-moon-icon"></i>
                     <i data-lucide="sun" class="w-4.5 h-4.5 text-amber-400 hidden" id="dark-mode-sun-icon"></i>
@@ -515,6 +520,46 @@
                 data.campaignNotes.npcs = [];
             }
             
+            // Ensure factions and npcs have stable IDs and collapse states
+            data.campaignNotes.npcs.forEach((fac, facIdx) => {
+                if (!fac.id) {
+                    fac.id = 'fac_migrated_' + facIdx + '_' + Date.now();
+                }
+                if (fac.isCollapsed === undefined) {
+                    fac.isCollapsed = false;
+                }
+                if (!Array.isArray(fac.members)) {
+                    fac.members = [];
+                } else {
+                    fac.members.forEach((npc, npcIdx) => {
+                        if (!npc.id) {
+                            npc.id = 'npc_migrated_' + facIdx + '_' + npcIdx + '_' + Date.now();
+                        }
+                    });
+                }
+            });
+
+            // Ensure sessions have stable IDs
+            data.campaignNotes.sessionNotes.forEach((s, sIdx) => {
+                if (!s.id) {
+                    s.id = 'sess_migrated_' + sIdx + '_' + Date.now();
+                }
+            });
+
+            // Ensure quests have stable IDs
+            data.campaignNotes.quests.forEach((q, qIdx) => {
+                if (!q.id) {
+                    q.id = 'quest_migrated_' + qIdx + '_' + Date.now();
+                }
+            });
+
+            // Ensure locations have stable IDs
+            data.campaignNotes.locations.forEach((l, lIdx) => {
+                if (!l.id) {
+                    l.id = 'loc_migrated_' + lIdx + '_' + Date.now();
+                }
+            });
+            
             // Migrate backstory - safeguard clean references
             if (!data.backstory || !Array.isArray(data.backstory)) {
                 data.backstory = [
@@ -524,8 +569,11 @@
                     { id: 'b_4', title: "The Journey", notes: "", isCollapsed: false }
                 ];
             } else {
-                data.backstory.forEach(b => {
+                data.backstory.forEach((b, bIdx) => {
                     if (b.isCollapsed === undefined) b.isCollapsed = false;
+                    if (!b.id) {
+                        b.id = 'b_migrated_' + bIdx + '_' + Date.now();
+                    }
                 });
             }
 
@@ -538,9 +586,12 @@
                     { id: 'p_4', title: "Dislikes", subtitle: "Fears & Aversions", notes: "", isCollapsed: false }
                 ];
             } else {
-                data.personality.forEach(p => { 
+                data.personality.forEach((p, pIdx) => { 
                     if ('isRed' in p) delete p.isRed; 
                     if (p.isCollapsed === undefined) p.isCollapsed = false;
+                    if (!p.id) {
+                        p.id = 'p_migrated_' + pIdx + '_' + Date.now();
+                    }
                 });
             }
 
@@ -1843,25 +1894,25 @@
             let results = [];
             
             characterData.campaignNotes.sessionNotes.forEach(s => {
-                if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Session', id: 'campaign_sessionNotes', label: s.title });
+                if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Session', id: 'campaign_sessionNotes', itemId: s.id, label: s.title });
             });
             characterData.campaignNotes.quests.forEach(qItem => {
-                if (qItem.title && qItem.title.toLowerCase().includes(q)) results.push({ type: 'Quest', id: 'campaign_quests', label: qItem.title });
+                if (qItem.title && qItem.title.toLowerCase().includes(q)) results.push({ type: 'Quest', id: 'campaign_quests', itemId: qItem.id, label: qItem.title });
             });
             characterData.campaignNotes.npcs.forEach(fac => {
-                if (fac.name && fac.name.toLowerCase().includes(q)) results.push({ type: 'Faction', id: 'campaign_npcs', label: fac.name });
+                if (fac.name && fac.name.toLowerCase().includes(q)) results.push({ type: 'Faction', id: 'campaign_npcs', itemId: fac.id, label: fac.name });
                 fac.members.forEach(npc => {
-                    if (npc.name && npc.name.toLowerCase().includes(q)) results.push({ type: 'NPC', id: 'campaign_npcs', label: npc.name });
+                    if (npc.name && npc.name.toLowerCase().includes(q)) results.push({ type: 'NPC', id: 'campaign_npcs', itemId: npc.id, label: npc.name });
                 });
             });
             characterData.campaignNotes.locations.forEach(loc => {
-                if (loc.title && loc.title.toLowerCase().includes(q)) results.push({ type: 'Location', id: 'campaign_locations', label: loc.title });
+                if (loc.title && loc.title.toLowerCase().includes(q)) results.push({ type: 'Location', id: 'campaign_locations', itemId: loc.id, label: loc.title });
             });
             characterData.backstory.forEach(b => {
-                if (b.title && b.title.toLowerCase().includes(q)) results.push({ type: 'Backstory', id: 'backstory', label: b.title });
+                if (b.title && b.title.toLowerCase().includes(q)) results.push({ type: 'Backstory', id: 'backstory', itemId: b.id, label: b.title });
             });
             characterData.personality.forEach(p => {
-                if (p.title && p.title.toLowerCase().includes(q)) results.push({ type: 'Personality', id: 'personality', label: p.title });
+                if (p.title && p.title.toLowerCase().includes(q)) results.push({ type: 'Personality', id: 'personality', itemId: p.id, label: p.title });
             });
             
             return results;
@@ -1883,7 +1934,7 @@
                 event.preventDefault();
                 const selected = mentionContext.results[mentionContext.selectedIndex];
                 if (selected) {
-                    window.insertMention(selected.id, selected.label);
+                    window.insertMention(selected.id, selected.label, selected.itemId);
                 }
             } else if (event.key === 'Escape') {
                 event.preventDefault();
@@ -1976,7 +2027,7 @@
                     : 'bg-white dark:bg-stone-900 border-l-4 border-transparent pl-4';
                 
                 return `
-                    <li onmousedown="event.preventDefault(); window.insertMention('${res.id}', '${escapeHtml(res.label).replace(/'/g, "\\'")}')" 
+                    <li onmousedown="event.preventDefault(); window.insertMention('${res.id}', '${escapeHtml(res.label).replace(/'/g, "\\'")}', '${res.itemId}')" 
                         class="py-3 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}">
                         <span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span>
                         <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">${res.type}</span>
@@ -1993,7 +2044,7 @@
             mentionContext = null;
         }
 
-        window.insertMention = function(targetTabId, label) {
+        window.insertMention = function(targetTabId, label, itemId = '') {
             if (!mentionContext) return;
             const { div, textNode, startOffset, endOffset } = mentionContext;
             
@@ -2009,7 +2060,7 @@
                 a.href = "#";
                 a.className = "text-emerald-700 bg-emerald-100/80 dark:text-emerald-300 dark:bg-emerald-950/60 font-bold px-1.5 py-0.5 mx-0.5 rounded shadow-sm hover:bg-emerald-200 hover:text-emerald-800 dark:hover:bg-emerald-900 dark:hover:text-emerald-200 transition-colors inline-flex items-center no-underline cursor-pointer";
                 a.contentEditable = "false";
-                a.setAttribute('onclick', `window.setTab('${targetTabId}'); return false;`);
+                a.setAttribute('onclick', `window.setTab('${targetTabId}', '${itemId}'); return false;`);
                 a.innerText = "@" + label;
                 
                 range.insertNode(a);
@@ -2217,7 +2268,7 @@
         window.toggleAllLocations = function(collapse) { characterData.campaignNotes.locations.forEach(l => l.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.filterLocations = function(query) { currentSearchQueries.locations = query; const q = query.toLowerCase(); document.querySelectorAll('.location-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
-        window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: 'New Faction', members: [] }); window.saveData(); window.renderContent(); lucide.createIcons(); }
+        window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: 'New Faction', isCollapsed: false, members: [] }); window.saveData(); window.renderContent(); lucide.createIcons(); }
         window.updateFaction = function(facId, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.name = val; window.saveData(); }
         window.deleteFaction = function(facId) { 
             window.showCustomConfirm(
@@ -2248,6 +2299,24 @@
                 }
             ); 
         }
+        
+        window.toggleFactionCollapse = function(facId) {
+            const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+            if (fac) {
+                fac.isCollapsed = !fac.isCollapsed;
+                window.saveData();
+                window.renderContent();
+                lucide.createIcons();
+            }
+        };
+
+        window.toggleAllFactions = function(collapse) {
+            characterData.campaignNotes.npcs.forEach(f => f.isCollapsed = collapse);
+            window.saveData();
+            window.renderContent();
+            lucide.createIcons();
+        };
+
         window.filterNPCs = function(query) {
             currentSearchQueries.npcs = query;
             const q = query.toLowerCase();
@@ -2258,6 +2327,28 @@
                     if (npc.dataset.searchable.toLowerCase().includes(q) || factionHasMatch) { npc.classList.remove('hidden'); visibleNpcs++; } 
                     else { npc.classList.add('hidden'); }
                 });
+                
+                // Auto expand if search active and there is a match
+                const contentDiv = faction.querySelector('.collapsible-content');
+                const chevron = faction.querySelector('.chevron');
+                if (q.length > 0 && (visibleNpcs > 0 || factionHasMatch)) {
+                    if (contentDiv) contentDiv.classList.remove('collapsed');
+                    if (chevron) chevron.classList.remove('collapsed');
+                } else if (q.length === 0) {
+                    // Restore original toggle state
+                    const facId = faction.id;
+                    const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+                    if (fac) {
+                        if (fac.isCollapsed) {
+                            if (contentDiv) contentDiv.classList.add('collapsed');
+                            if (chevron) chevron.classList.add('collapsed');
+                        } else {
+                            if (contentDiv) contentDiv.classList.remove('collapsed');
+                            if (chevron) chevron.classList.remove('collapsed');
+                        }
+                    }
+                }
+
                 if (visibleNpcs > 0 || factionHasMatch) faction.classList.remove('hidden');
                 else faction.classList.add('hidden');
             });
@@ -2319,14 +2410,140 @@
             }
         };
 
-        // --- NAVIGATION & UTILS ---
-        window.setTab = function(tabId) {
+        // --- NAVIGATION & DEEP-LINK SCROLL ENGINE ---
+        window.setTab = function(tabId, itemId = '') {
             activeTab = tabId;
             if (isMobileMenuOpen) window.toggleMobileMenu();
+            
+            if (itemId) {
+                // Set deep linking layout bypass flag to instantly expand accordions without delay
+                window.isDeepLinking = true;
+            }
+            
             renderNavigation(); 
             window.renderContent(); 
             lucide.createIcons();
-            document.getElementById('scroll-area').scrollTop = 0;
+            
+            if (itemId) {
+                // Instantly clear filters & expand parent accordions if targeted item is hidden
+                expandElementIfNeeded(itemId);
+                
+                // Allow browser layout context mounting before trigger scroll animation
+                setTimeout(() => {
+                    const element = document.getElementById(itemId);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        flashElement(element);
+                        
+                        // Turn off deep-linking layout bypass flag so subsequent manual clicks are smooth again
+                        window.isDeepLinking = false;
+                        
+                        // Second precise corrective scroll adjustment after first sweep completes
+                        setTimeout(() => {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 250);
+                    } else {
+                        window.isDeepLinking = false;
+                        const scrollArea = document.getElementById('scroll-area');
+                        if (scrollArea) scrollArea.scrollTop = 0;
+                    }
+                }, 80);
+            } else {
+                window.isDeepLinking = false;
+                const scrollArea = document.getElementById('scroll-area');
+                if (scrollArea) scrollArea.scrollTop = 0;
+            }
+        }
+
+        function expandElementIfNeeded(itemId) {
+            let triggeredReRender = false;
+            
+            // Clear current active page search filters that would otherwise hide targeted card
+            const subSection = activeTab.replace('campaign_', '');
+            if (currentSearchQueries[subSection]) {
+                currentSearchQueries[subSection] = '';
+                triggeredReRender = true;
+            }
+            if (activeTab === 'backstory' && currentSearchQueries.backstory) {
+                currentSearchQueries.backstory = '';
+                triggeredReRender = true;
+            }
+            if (activeTab === 'personality' && currentSearchQueries.personality) {
+                currentSearchQueries.personality = '';
+                triggeredReRender = true;
+            }
+            
+            // Auto expand backstory accordions
+            const backstoryEntry = characterData.backstory.find(b => b.id === itemId);
+            if (backstoryEntry && backstoryEntry.isCollapsed) {
+                backstoryEntry.isCollapsed = false;
+                triggeredReRender = true;
+            }
+            
+            // Auto expand personality accordions
+            const personalityEntry = characterData.personality.find(p => p.id === itemId);
+            if (personalityEntry && personalityEntry.isCollapsed) {
+                personalityEntry.isCollapsed = false;
+                triggeredReRender = true;
+            }
+            
+            // Auto expand sessions accordions
+            const sessionEntry = characterData.campaignNotes.sessionNotes.find(s => s.id === itemId);
+            if (sessionEntry && sessionEntry.isCollapsed) {
+                sessionEntry.isCollapsed = false;
+                triggeredReRender = true;
+            }
+            
+            // Auto expand locations accordions
+            const locationEntry = characterData.campaignNotes.locations.find(l => l.id === itemId);
+            if (locationEntry && locationEntry.isCollapsed) {
+                locationEntry.isCollapsed = false;
+                triggeredReRender = true;
+            }
+            
+            // Auto expand factions accordions (NPC page)
+            let factionToExpand = null;
+            const factionEntry = characterData.campaignNotes.npcs.find(f => f.id === itemId);
+            if (factionEntry) {
+                factionToExpand = factionEntry;
+            } else {
+                characterData.campaignNotes.npcs.forEach(f => {
+                    if (f.members.some(npc => npc.id === itemId)) {
+                        factionToExpand = f;
+                    }
+                });
+            }
+            if (factionToExpand && factionToExpand.isCollapsed) {
+                factionToExpand.isCollapsed = false;
+                triggeredReRender = true;
+            }
+            
+            // Auto expand quest lists
+            const questEntry = characterData.campaignNotes.quests.find(q => q.id === itemId);
+            if (questEntry) {
+                if (!questEntry.isCompleted && questSectionsState.inProgressCollapsed) {
+                    questSectionsState.inProgressCollapsed = false;
+                    triggeredReRender = true;
+                }
+                if (questEntry.isCompleted && questSectionsState.completedCollapsed) {
+                    questSectionsState.completedCollapsed = false;
+                    triggeredReRender = true;
+                }
+            }
+            
+            if (triggeredReRender) {
+                window.saveData();
+                window.renderContent();
+                lucide.createIcons();
+            }
+        }
+
+        function flashElement(element) {
+            // Apply high-contrast emerald visual pulse ring
+            element.classList.add('ring-4', 'ring-emerald-500/50', 'ring-offset-2', 'dark:ring-offset-stone-900', 'transition-all', 'duration-500');
+            setTimeout(() => {
+                element.classList.remove('ring-4', 'ring-emerald-500/50', 'ring-offset-2', 'dark:ring-offset-stone-900');
+            }, 2000);
         }
 
         window.toggleMobileMenu = function() {
@@ -2431,7 +2648,7 @@
                     const isFirst = idx === 0;
                     const isLast = idx === characterData.backstory.length - 1;
                     contentHtml += `
-                        <div class="backstory-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${b.title} ${b.notes}`)}">
+                        <div id="${b.id}" class="backstory-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${b.title} ${b.notes}`)}">
                             <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                 <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                     <button onclick="window.toggleBackstoryCollapse('${b.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -2451,7 +2668,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
+                            <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                                 <div class="p-5">${getMentionableDiv('backstory', b.id, b.notes, 'min-h-[150px]')}</div>
                             </div>
                         </div>`;
@@ -2494,7 +2711,7 @@
                     const hoverTheme = 'hover:bg-stone-100/30 dark:hover:bg-stone-800/40';
                     
                     contentHtml += `
-                        <div class="personality-block mb-4 border rounded-xl shadow-sm overflow-hidden ${cardBg}" data-searchable="${escapeHtml(`${p.title} ${p.subtitle} ${p.notes}`)}">
+                        <div id="${p.id}" class="personality-block mb-4 border rounded-xl shadow-sm overflow-hidden ${cardBg}" data-searchable="${escapeHtml(`${p.title} ${p.subtitle} ${p.notes}`)}">
                             <div class="bg-stone-50/40 dark:bg-stone-800/40 border-b border-stone-200/50 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                 <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                     <button onclick="window.togglePersonalityCollapse('${p.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -2515,7 +2732,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="collapsible-content ${p.isCollapsed ? 'collapsed' : ''}">
+                            <div class="collapsible-content ${p.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                                 <div class="p-5">${getOutlineNotesEditor('personality', p.id, p.notes, `min-h-[100px] ${hoverTheme}`, 'Start typing traits... Enter starts a bullet, Tab indents, Shift+Tab outdents. Type @ to link notes.')}</div>
                             </div>
                         </div>`;
@@ -2795,7 +3012,7 @@
                         const isFirst = idx === 0;
                         const isLast = idx === characterData.campaignNotes.sessionNotes.length - 1;
                         contentHtml += `
-                            <div class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${sess.title} ${sess.date} ${sess.notes}`)}">
+                            <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${sess.title} ${sess.date} ${sess.notes}`)}">
                                 <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                     <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                         <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -2816,7 +3033,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
+                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                                     <div class="p-5">${getOutlineNotesEditor('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]', 'Start typing your session notes... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.')}</div>
                                 </div>
                             </div>`;
@@ -2837,14 +3054,14 @@
 
                     const renderQuestCategory = (title, quests, categoryKey) => {
                         const isCollapsed = questSectionsState[categoryKey];
-                        let sectionHtml = `<div class="quest-section mb-8" data-section-type="${categoryKey}"><div class="flex items-center justify-between mb-4 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/30 p-2 rounded -mx-2 transition-colors" onclick="window.toggleQuestSectionCollapse('${categoryKey}')"><h4 class="text-lg font-bold text-stone-700 dark:text-stone-300 flex items-center space-x-2"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i><span>${title} (${quests.length})</span></h4></div><div class="collapsible-content space-y-4 ${isCollapsed ? 'collapsed' : ''}">`;
+                        let sectionHtml = `<div class="quest-section mb-8" data-section-type="${categoryKey}"><div class="flex items-center justify-between mb-4 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/30 p-2 rounded -mx-2 transition-colors" onclick="window.toggleQuestSectionCollapse('${categoryKey}')"><h4 class="text-lg font-bold text-stone-700 dark:text-stone-300 flex items-center space-x-2"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i><span>${title} (${quests.length})</span></h4></div><div class="collapsible-content space-y-4 ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">`;
                         if (quests.length === 0) sectionHtml += `<p class="text-stone-400 italic px-8 py-2">No quests in this category.</p>`;
 
                         quests.forEach((quest, qIdx) => {
                             const isFirst = qIdx === 0;
                             const isLast = qIdx === quests.length - 1;
                             sectionHtml += `
-                                <div class="quest-card bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(`${quest.title} ${quest.subtitle} ${quest.notes}`)}">
+                                <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(`${quest.title} ${quest.subtitle} ${quest.notes}`)}">
                                     <div class="bg-stone-50 dark:bg-stone-950 px-4 py-5 flex flex-col items-center justify-start border-r border-stone-100 dark:border-stone-800">
                                         <button onclick="window.toggleQuestCompletion('${quest.id}')" class="text-stone-300 dark:text-stone-600 hover:text-emerald-500 transition-colors focus:outline-none">
                                             ${quest.isCompleted ? `<i data-lucide="check-square" class="w-6 h-6 text-emerald-500"></i>` : `<i data-lucide="square" class="w-6 h-6 hover:text-emerald-400"></i>`}
@@ -2902,7 +3119,7 @@
                         const isFirst = idx === 0;
                         const isLast = idx === characterData.campaignNotes.locations.length - 1;
                         contentHtml += `
-                            <div class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${loc.title} ${loc.subtitle} ${loc.notes}`)}">
+                            <div id="${loc.id}" class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${loc.title} ${loc.subtitle} ${loc.notes}`)}">
                                 <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                     <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                         <button onclick="window.toggleLocationCollapse('${loc.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -2923,7 +3140,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}">
+                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                                     <div class="p-5">${getOutlineNotesEditor('campaignNotes_location', loc.id, loc.notes, 'min-h-[100px]', 'Location details, points of interest, or resident lists... Enter starts a bullet, Tab indents, @ to link.')}</div>
                                 </div>
                             </div>`;
@@ -2931,24 +3148,34 @@
                 }
                 else if (subSection === 'npcs') {
                     contentHtml = `
-                        <div class="mb-6 flex gap-4">
-                            <div class="relative flex-1">
+                        <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                            <div class="relative w-full sm:w-2/3">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i data-lucide="search" class="w-5 h-5 text-stone-400"></i></div>
                                 <input type="text" id="npc-search" oninput="window.filterNPCs(this.value)" placeholder="Search NPCs..." class="seamless-input w-full pl-10 pr-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 dark:text-stone-100 shadow-sm">
                             </div>
-                            <button onclick="window.addFaction()" class="flex items-center space-x-2 px-4 py-3 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-xl hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i><span class="hidden sm:inline">Add Faction</span></button>
+                            <div class="flex space-x-2 w-full sm:w-auto">
+                                <button onclick="window.toggleAllFactions(false)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Expand All</button>
+                                <button onclick="window.toggleAllFactions(true)" class="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-sm font-medium transition-colors border border-stone-200 dark:border-stone-800">Collapse All</button>
+                                <button onclick="window.addFaction()" class="flex-1 sm:flex-none flex justify-center items-center px-3 py-2 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-medium rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-colors shadow-sm"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                            </div>
                         </div>`;
                         
                     if (characterData.campaignNotes.npcs.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No NPCs added yet.</p>`;
                     
                     characterData.campaignNotes.npcs.forEach((faction, fIdx) => {
+                        const isCollapsed = faction.isCollapsed;
                         const isFirstFaction = fIdx === 0;
                         const isLastFaction = fIdx === characterData.campaignNotes.npcs.length - 1;
                         contentHtml += `
-                            <div class="npc-faction-block mb-8 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden bg-stone-50 dark:bg-stone-950" data-faction-name="${escapeHtml(faction.name)}">
+                            <div id="${faction.id}" class="npc-faction-block mb-8 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden bg-stone-50 dark:bg-stone-950" data-faction-name="${escapeHtml(faction.name)}">
                                 <div class="bg-stone-200/50 dark:bg-stone-800/50 px-4 py-3 border-b border-stone-200 dark:border-stone-800 flex justify-between items-center">
-                                    <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-2/3 rounded px-2 -ml-2 py-0.5">
-                                    <div class="flex items-center space-x-1">
+                                    <div class="flex items-center space-x-2 flex-1 min-w-0">
+                                        <button onclick="window.toggleFactionCollapse('${faction.id}')" class="p-1 hover:bg-stone-300/50 dark:hover:bg-stone-700/50 rounded transition-colors focus:outline-none">
+                                            <i data-lucide="chevron-down" class="w-5 h-5 text-stone-500 chevron ${isCollapsed ? 'collapsed' : ''}"></i>
+                                        </button>
+                                        <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-full rounded px-2 py-0.5">
+                                    </div>
+                                    <div class="flex items-center space-x-1 ml-2">
                                         <button onclick="window.moveFaction('${faction.id}', -1)" ${isFirstFaction ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-300/50 dark:hover:bg-stone-800"'} title="Move Faction Up">
                                             <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                         </button>
@@ -2960,54 +3187,56 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="p-4 space-y-4">
-                                    ${faction.members.map((npc, nIdx) => {
-                                        const isFirstNPC = nIdx === 0;
-                                        const isLastNPC = nIdx === faction.members.length - 1;
-                                        return `
-                                        <div class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.notes)}">
-                                            
-                                            <!-- Circular Interactive Avatar Circle Slot -->
-                                            <div class="flex-shrink-0 flex items-start mt-1">
-                                                <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all animate-fade-in" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
-                                                    ${npc.avatar ? 
-                                                        `<img src="${npc.avatar}" class="w-full h-full object-cover">` : 
-                                                        `<i data-lucide="user" class="w-6 h-6 text-stone-400"></i>`
-                                                    }
-                                                    <!-- Slick Camera Overlay on Hover -->
-                                                    <div class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                                                        <i data-lucide="camera" class="w-4 h-4 text-white"></i>
+                                <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
+                                    <div class="p-4 space-y-4">
+                                        ${faction.members.map((npc, nIdx) => {
+                                            const isFirstNPC = nIdx === 0;
+                                            const isLastNPC = nIdx === faction.members.length - 1;
+                                            return `
+                                            <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.notes)}">
+                                                
+                                                <!-- Circular Interactive Avatar Circle Slot -->
+                                                <div class="flex-shrink-0 flex items-start mt-1">
+                                                    <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all animate-fade-in" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
+                                                        ${npc.avatar ? 
+                                                            `<img src="${npc.avatar}" class="w-full h-full object-cover">` : 
+                                                            `<i data-lucide="user" class="w-6 h-6 text-stone-400"></i>`
+                                                        }
+                                                        <!-- Slick Camera Overlay on Hover -->
+                                                        <div class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                                            <i data-lucide="camera" class="w-4 h-4 text-white"></i>
+                                                        </div>
+                                                        <!-- Quick Delete Avatar Button overlay -->
+                                                        ${npc.avatar ? `
+                                                            <button onclick="window.deleteNPCAvatar(event, '${faction.id}', '${npc.id}')" class="absolute top-0 right-0 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-bl shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="Remove character avatar">
+                                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                            </button>
+                                                        ` : ''}
                                                     </div>
-                                                    <!-- Quick Delete Avatar Button overlay -->
-                                                    ${npc.avatar ? `
-                                                        <button onclick="window.deleteNPCAvatar(event, '${faction.id}', '${npc.id}')" class="absolute top-0 right-0 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-bl shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="Remove character avatar">
-                                                            <i data-lucide="trash-2" class="w-3 h-3"></i>
-                                                        </button>
-                                                    ` : ''}
+                                                    <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
                                                 </div>
-                                                <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
-                                            </div>
 
-                                            <div class="flex-1 min-w-0">
-                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5" placeholder="Character Name">
-                                                ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
-                                            </div>
-                                            <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
-                                                <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete NPC">
-                                                    <i data-lucide="x" class="w-4 h-4"></i>
-                                                </button>
-                                                <div class="flex space-x-0.5 mt-2">
-                                                    <button onclick="window.moveNPC('${faction.id}', '${npc.id}', -1)" ${isFirstNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Up">
-                                                        <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
-                                                    </button>
-                                                    <button onclick="window.moveNPC('${faction.id}', '${npc.id}', 1)" ${isLastNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Down">
-                                                        <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
-                                                    </button>
+                                                <div class="flex-1 min-w-0">
+                                                    <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5" placeholder="Character Name">
+                                                    ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
                                                 </div>
-                                            </div>
-                                        </div>`;
-                                    }).join('')}
-                                    <button onclick="window.addNPC('${faction.id}')" class="w-full py-2 mt-2 border-2 border-dashed border-stone-300 dark:border-stone-800 text-stone-500 dark:text-stone-400 rounded-lg hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors flex items-center justify-center space-x-2"><i data-lucide="user-plus" class="w-4 h-4"></i><span>Add Character to Faction</span></button>
+                                                <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
+                                                    <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete NPC">
+                                                        <i data-lucide="x" class="w-4 h-4"></i>
+                                                    </button>
+                                                    <div class="flex space-x-0.5 mt-2">
+                                                        <button onclick="window.moveNPC('${faction.id}', '${npc.id}', -1)" ${isFirstNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Up">
+                                                            <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
+                                                        </button>
+                                                        <button onclick="window.moveNPC('${faction.id}', '${npc.id}', 1)" ${isLastNPC ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Down">
+                                                            <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>`;
+                                        }).join('')}
+                                        <button onclick="window.addNPC('${faction.id}')" class="w-full py-2 mt-2 border-2 border-dashed border-stone-300 dark:border-stone-800 text-stone-500 dark:text-stone-400 rounded-lg hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors flex items-center justify-center space-x-2"><i data-lucide="user-plus" class="w-4 h-4"></i><span>Add Character to Faction</span></button>
+                                    </div>
                                 </div>
                             </div>`;
                     });
