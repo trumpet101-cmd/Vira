@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Víra Tahlwyn - D&D Notes</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        // Define configuration AFTER loading the script
+        tailwind.config = {
+            darkMode: 'class'
+        };
+
+        // Synchronously check local storage active theme state
+        // (Must stay inline to run before paint — prevents flash of light theme.)
+        var isCurrentlyDark = localStorage.getItem('dark_mode_active') === 'true';
+        if (isCurrentlyDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Firebase SDK Compat Core, Auth, and Firestore (CORS and File Protocol Safe) -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+    
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-stone-100 text-stone-800 dark:bg-stone-950 dark:text-stone-100 font-sans h-screen flex overflow-hidden">
+
+    <!-- Auth Lock Screen Overlay -->
+    <div id="auth-overlay" class="fixed inset-0 bg-stone-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-stone-900 dark:border-stone-800 rounded-2xl shadow-2xl border border-stone-200 w-full max-w-md p-8 animate-fade-in">
+            <div class="text-center mb-8">
+                <span class="text-4xl">🌿</span>
+                <h2 class="text-2xl font-black text-stone-800 dark:text-stone-100 mt-2 tracking-tight" id="auth-title">D&D Vault Authentication</h2>
+                <p class="text-sm text-stone-500 mt-1" id="auth-subtitle">Log in to sync your character sheets and notes</p>
+            </div>
+            
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Email Address</label>
+                    <input type="email" id="auth-email" required class="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="dm_or_player@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Password</label>
+                    <input type="password" id="auth-password" required class="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="••••••••">
+                </div>
+                <div id="auth-error" class="text-red-600 text-sm hidden bg-red-50 p-3 rounded-lg border border-red-100 leading-relaxed font-medium"></div>
+                
+                <button type="submit" id="auth-btn-primary" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2">
+                    <span id="auth-btn-text">Sign In</span>
+                </button>
+                
+                <div class="text-center pt-2">
+                    <button type="button" id="auth-btn-toggle" class="text-sm text-emerald-600 hover:text-emerald-700 font-semibold focus:outline-none">
+                        Need an account? Register Here
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reusable Custom Dialog/Alert Modal -->
+    <div id="custom-dialog" class="fixed inset-0 bg-stone-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-stone-900 dark:border-stone-800 rounded-2xl shadow-2xl border border-stone-200 w-full max-w-sm p-6 text-center animate-fade-in">
+            <div class="text-4xl mb-3" id="dialog-icon">⚠️</div>
+            <h3 class="text-xl font-bold text-stone-800 dark:text-stone-100 tracking-tight" id="dialog-title">Are you sure?</h3>
+            <p class="text-sm text-stone-500 mt-2 leading-relaxed" id="dialog-message">This action cannot be undone.</p>
+            
+            <!-- Type-To-Confirm Double-Verification Input -->
+            <div id="dialog-input-container" class="mt-4 hidden text-left animate-fade-in">
+                <label class="block text-xs font-bold text-stone-500 tracking-wider mb-1" id="dialog-input-label">Type "Delete" to confirm</label>
+                <input type="text" id="dialog-input" class="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-red-500 focus:outline-none transition-all font-semibold" placeholder="">
+            </div>
+
+            <div class="flex space-x-3 mt-6">
+                <button id="dialog-cancel-btn" class="flex-1 py-2.5 border border-stone-200 dark:border-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 hover:bg-stone-50 text-stone-600 font-semibold rounded-xl transition-all">Cancel</button>
+                <button id="dialog-confirm-btn" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Manager Modal -->
+    <div id="character-modal" class="fixed inset-0 bg-stone-950/80 backdrop-blur-md z-[90] flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-stone-900 dark:border-stone-800 rounded-2xl shadow-2xl border border-stone-200 w-full max-w-xl p-6 sm:p-8 flex flex-col max-h-[85vh] animate-fade-in">
+            
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center pb-4 border-b border-stone-200 dark:border-stone-800">
+                <div class="flex items-center space-x-3">
+                    <span class="text-3xl">👥</span>
+                    <div>
+                        <h3 class="text-2xl font-black text-stone-800 dark:text-stone-100 tracking-tight">Character Vault</h3>
+                        <p class="text-xs text-stone-500 font-medium">Manage and switch between your active campaign sheets</p>
+                    </div>
+                </div>
+                <button onclick="window.hideCharacterModal()" class="text-stone-400 hover:text-stone-600 p-2 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Content Area split in two parts: list & creation -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar my-6 pr-1 space-y-6">
+                
+                <!-- Active Characters Section -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest">Active Sheets</h4>
+                        <!-- Simple local filter bar -->
+                        <div class="relative w-44">
+                            <input type="text" id="character-modal-search" oninput="window.filterCharacterModalList(this.value)" placeholder="Search sheets..." class="seamless-input text-xs w-full pl-7 pr-2.5 py-1.5 border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-lg bg-white shadow-sm focus:ring-1 focus:ring-emerald-500">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+                        </div>
+                    </div>
+                    <div id="character-modal-list" class="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                        <!-- Dynamic list items injected here -->
+                    </div>
+                </div>
+
+                <!-- Add New Character Section -->
+                <div class="bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 p-5 rounded-2xl">
+                    <h4 class="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-widest mb-4 flex items-center space-x-2">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Create New Character</span>
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="sm:col-span-1">
+                            <label class="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Name</label>
+                            <input type="text" id="new-char-name" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all font-semibold" placeholder="e.g. Orin Starfall">
+                        </div>
+                        <div class="sm:col-span-1">
+                            <label class="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Race</label>
+                            <input type="text" id="new-char-race" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="e.g. Tiefling">
+                        </div>
+                        <div class="sm:col-span-1">
+                            <label class="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Class</label>
+                            <input type="text" id="new-char-class" class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all" placeholder="e.g. Wizard (Evocation)">
+                        </div>
+                    </div>
+                    <button onclick="window.createNewCharacter()" class="w-full mt-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md shadow-emerald-600/10 flex items-center justify-center space-x-2 text-sm">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        <span>Add to Vault</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden" onclick="toggleMobileMenu()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out w-64 bg-stone-900 text-stone-200 flex flex-col z-30 shadow-xl">
+        <div class="p-6 flex items-center justify-between border-b border-stone-800">
+            <div>
+                <h1 class="text-xl font-bold text-emerald-500 tracking-wider">D&D VAULT</h1>
+                <p class="text-xs text-stone-400 mt-1">Hybrid Cloud Edition</p>
+            </div>
+            <button class="md:hidden text-stone-400" onclick="toggleMobileMenu()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto" id="nav-container"></nav>
+
+        <div class="p-4 border-t border-stone-800 space-y-3">
+            
+            <!-- Dark Mode Toggle Button -->
+            <button onclick="window.toggleDarkMode()" class="w-full flex items-center justify-between px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold rounded-xl transition-all border border-stone-700/50 text-sm">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="moon" class="w-4.5 h-4.5 text-amber-400" id="dark-mode-moon-icon"></i>
+                    <i data-lucide="sun" class="w-4.5 h-4.5 text-amber-400 hidden" id="dark-mode-sun-icon"></i>
+                    <span id="dark-mode-text">Dark Mode</span>
+                </div>
+                <!-- Sliding toggle visual marker -->
+                <div class="w-8 h-4 bg-stone-600 rounded-full relative transition-all duration-200 border border-stone-500">
+                    <div id="dark-mode-switch-dot" class="w-3 h-3 bg-stone-100 rounded-full absolute top-[1px] left-[1px] transition-all duration-200"></div>
+                </div>
+            </button>
+
+            <!-- Character Switcher Button -->
+            <button onclick="window.openCharacterModal()" class="w-full flex items-center justify-center space-x-2 py-2.5 bg-emerald-900/50 hover:bg-emerald-800 text-emerald-100 font-bold rounded-xl transition-all shadow-md shadow-emerald-950/40 border border-emerald-700/50 text-sm">
+                <i data-lucide="users" class="w-4.5 h-4.5"></i>
+                <span>Switch Character</span>
+            </button>
+
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="window.exportJSON()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export entire vault data as a single backup file">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Backup All</span>
+                </button>
+                <button onclick="document.getElementById('import-json-input').click()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Import a vault backup or a single character sheet">
+                    <i data-lucide="upload" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Import</span>
+                </button>
+                <input type="file" id="import-json-input" accept=".json" class="hidden" onchange="window.importJSON(event)">
+            </div>
+            <button onclick="window.handleSignOut()" class="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-950/40 hover:bg-red-900 rounded text-sm text-red-300 transition-colors">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                <span>Sign Out</span>
+            </button>
+            <div id="cloud-status-btn" class="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-stone-800 rounded text-sm text-stone-400">
+                <i data-lucide="hard-drive" class="w-4 h-4"></i>
+                <span>Local Storage Active</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-stone-50 dark:bg-stone-950 relative">
+        
+        <header class="bg-white dark:bg-stone-900 border-b dark:border-stone-800/80 shadow-sm dark:shadow-none px-6 py-4 flex items-center justify-between z-10">
+            <div class="flex items-center space-x-4">
+                <button class="md:hidden text-stone-600 dark:text-stone-400 hover:text-emerald-600" onclick="toggleMobileMenu()">
+                    <i data-lucide="menu"></i>
+                </button>
+                <h2 class="text-2xl font-bold text-stone-800 dark:text-stone-100 tracking-tight flex items-center space-x-2">
+                    <span class="text-emerald-600">🌿</span>
+                    <input type="text" id="header-name-input" oninput="updateField(null, 'name', this.value)" class="font-bold text-stone-800 dark:text-stone-100 bg-transparent border-none focus:outline-none focus:ring-0 w-full max-w-[250px] p-0 m-0">
+                </h2>
+            </div>
+            
+            <div class="flex items-center space-x-2 text-stone-400 dark:text-stone-500 bg-stone-50 dark:bg-stone-800/60 px-3 py-1.5 rounded-full border border-stone-200 dark:border-stone-800 transition-all duration-300" id="save-indicator">
+                <span id="save-icon-wrapper" class="flex items-center justify-center">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                </span>
+                <span class="text-sm font-medium" id="save-text">Saved automatically</span>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar" id="scroll-area">
+            <div class="max-w-4xl mx-auto" id="content-area"></div>
+            <div class="h-24 md:h-12"></div>
+        </div>
+
+        <!-- Global Mention Dropdown -->
+        <ul id="mention-dropdown" class="hidden absolute z-50 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-2xl max-h-64 overflow-y-auto w-72 text-sm flex flex-col"></ul>
+    </main>
+
+    <!-- App scripts. Load order matters: state/data must load before code that uses them. -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/cloud.js"></script>
+    <script src="js/ui-core.js"></script>
+    <script src="js/characters.js"></script>
+    <script src="js/editors.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/init.js"></script>
+</body>
+</html>
