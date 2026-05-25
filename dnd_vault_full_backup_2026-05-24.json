@@ -1,0 +1,1005 @@
+{
+  "vira_vault_backup": true,
+  "version": "2.0",
+  "currentCharacterId": "char_1779643983669",
+  "characterList": [
+    {
+      "id": "char_1779643983669",
+      "name": "Víra Tahlwyn",
+      "race": "Wood Elf",
+      "class": "Barbarian (World Tree)"
+    },
+    {
+      "id": "char_1779649467413",
+      "name": "tester 1",
+      "race": "Unknown Race",
+      "class": "Unknown Class"
+    },
+    {
+      "id": "char_1779649472153",
+      "name": "tester 2",
+      "race": "Unknown Race",
+      "class": "Unknown Class"
+    },
+    {
+      "id": "char_1779649475648",
+      "name": "tester 3",
+      "race": "Unknown Race",
+      "class": "Unknown Class"
+    },
+    {
+      "id": "char_1779649478879",
+      "name": "tester 4",
+      "race": "Unknown Race",
+      "class": "Unknown Class"
+    }
+  ],
+  "characters": {
+    "char_1779643983669": {
+      "personality": [
+        {
+          "subtitle": "Default State",
+          "isCollapsed": false,
+          "id": "p_1",
+          "notes": "Has a very similar personality to her mother. 'Every stranger met is a seed of friendship planted'. A typically positive and upbeat personality. Excited for new opportunities.<div><a href=\"#\" class=\"text-emerald-700 bg-emerald-100/80 font-bold px-1.5 py-0.5 mx-0.5 rounded shadow-sm hover:bg-emerald-200 hover:text-emerald-800 transition-colors inline-flex items-center no-underline cursor-pointer\" contenteditable=\"false\" onclick=\"window.setTab('campaign_npcs'); return false;\">@Tato</a>&nbsp;</div>",
+          "title": "Normal Personality"
+        },
+        {
+          "notes": "Eye Color turns from a vibrant green to a dark oak brown. Ties up her hair into a ponytail. Adopts a personality closer to her father; stern, stoic and intensely focused.",
+          "title": "Raging Personality",
+          "subtitle": "Combat State",
+          "isCollapsed": false,
+          "id": "p_2"
+        },
+        {
+          "title": "Likes",
+          "notes": "Trees, Jungle life, Flora. Her Halberd. Her nomadic lifestyle. Respects animals as a means of hunting for survival.<div><br></div><div>asdf</div><div>asdf</div><div><br></div><div>adsf</div>",
+          "id": "p_3",
+          "isCollapsed": false,
+          "subtitle": "Interests & Preference"
+        },
+        {
+          "notes": "Hobgoblins & Goblins of The Iron Authority. Closed spaces (sealed stone structures, caverns, deep caves).",
+          "title": "Dislikes",
+          "subtitle": "Fears & Aversions",
+          "id": "p_4",
+          "isCollapsed": false
+        }
+      ],
+      "campaignNotes": {
+        "quests": [
+          {
+            "notes": "",
+            "title": "test 3",
+            "subtitle": "",
+            "id": "quest_1779649517530",
+            "isCompleted": false
+          },
+          {
+            "id": "quest_1779647252094",
+            "isCompleted": false,
+            "subtitle": "",
+            "title": "New Quest",
+            "notes": "<ul><li>asdf</li><li>lets go to <a href=\"#\" class=\"text-emerald-700 bg-emerald-100/80 font-bold px-1.5 py-0.5 mx-0.5 rounded shadow-sm hover:bg-emerald-200 hover:text-emerald-800 transition-colors inline-flex items-center no-underline cursor-pointer\" contenteditable=\"false\" onclick=\"window.setTab('campaign_npcs'); return false;\">@PC Test</a>&nbsp;</li></ul>"
+          },
+          {
+            "notes": "<ul><li>ok perfect, we have the bullet point!</li><li>this is great!</li><li>yay here we go <a href=\"#\" class=\"text-emerald-700 bg-emerald-100/80 font-bold px-1.5 py-0.5 mx-0.5 rounded shadow-sm hover:bg-emerald-200 hover:text-emerald-800 transition-colors inline-flex items-center no-underline cursor-pointer\" contenteditable=\"false\" onclick=\"window.setTab('campaign_npcs'); return false;\">@Brax</a>&nbsp;</li></ul><div>asdf</div><div>asdf</div>",
+            "title": "PC Test",
+            "subtitle": "",
+            "isCompleted": false,
+            "id": "quest_1779606402671"
+          },
+          {
+            "subtitle": "Main Quest",
+            "id": "quest_1",
+            "isCompleted": true,
+            "notes": "I must follow the visions to restore balance to the forest.",
+            "title": "Find the lost Gau Drashari tree"
+          },
+          {
+            "subtitle": "Side Quest",
+            "id": "quest_2",
+            "isCompleted": true,
+            "notes": "Traveling with Witchlight Carnival for 8 days.",
+            "title": "Travel to Emon"
+          }
+        ],
+        "npcs": [
+          {
+            "name": "New Faction",
+            "id": "fac_1779647255168",
+            "members": [
+              {
+                "id": "npc_1779647255947",
+                "notes": "<ul><li>asdf</li></ul>",
+                "name": "New NPC"
+              }
+            ]
+          },
+          {
+            "members": [
+              {
+                "id": "npc_1779612872143",
+                "name": "Tato",
+                "notes": "",
+                "avatar": "data:image/jpeg;base64,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"
+              },
+              {
+                "avatar": "data:image/jpeg;base64,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",
+                "notes": "<ul><li>It's me!</li></ul>",
+                "name": "Vira",
+                "id": "npc_1779612884533"
+              }
+            ],
+            "id": "fac_1779612865576",
+            "name": "The Party"
+          },
+          {
+            "id": "fac_1",
+            "members": [
+              {
+                "id": "npc_1",
+                "notes": "Shadar-Kai, Carnival Owner.",
+                "name": "Mister Witch"
+              },
+              {
+                "id": "npc_1779606420892",
+                "name": "PC Test",
+                "notes": ""
+              }
+            ],
+            "name": "Witchlight Carnival"
+          }
+        ],
+        "sessionNotes": [
+          {
+            "isCollapsed": false,
+            "id": "sess_1779649510815",
+            "title": "",
+            "date": "May 24, 2026",
+            "notes": ""
+          },
+          {
+            "id": "sess_1779649508485",
+            "isCollapsed": false,
+            "date": "May 24, 2026",
+            "title": "test 2",
+            "notes": ""
+          },
+          {
+            "id": "sess_1779649503899",
+            "isCollapsed": false,
+            "title": "test 1",
+            "date": "May 24, 2026",
+            "notes": ""
+          }
+        ],
+        "misc": "",
+        "locations": [
+          {
+            "subtitle": "The Eternal Canopy (Jungle)",
+            "id": "loc_1",
+            "isCollapsed": false,
+            "notes": "<ul><li>latest test</li></ul>",
+            "title": "Yrm’Saldr"
+          },
+          {
+            "title": "Emon",
+            "notes": "<ul><li>latest test yay</li><li><br></li></ul>",
+            "id": "loc_2",
+            "isCollapsed": false,
+            "subtitle": "The capital city"
+          }
+        ]
+      },
+      "backstory": [
+        {
+          "isCollapsed": false,
+          "title": "New Lore Section",
+          "id": "b_1779647264531",
+          "notes": "asdf"
+        },
+        {
+          "notes": "",
+          "title": "New Lore Section",
+          "isCollapsed": false,
+          "id": "b_1779608062084"
+        },
+        {
+          "isCollapsed": false,
+          "title": "Early Life",
+          "id": "b_1",
+          "notes": "Growing up, Vira had a very traditional nomadic life within the Orroyen tribe...\n\nFrom her mother she learned to be upbeat, friendly and open - always seeing meeting others as a chance to “plant new seeds of friendship”.\n\nHer father was the careful balance to that - he taught her discipline, patience, vigilance."
+        },
+        {
+          "notes": "As with all members of the Orroyen tribes, Vira was well aware of the Iron Authority; the Hobgoblin nation who would see the destruction and conquest of the Jungle and all those who dwell within it.",
+          "title": "The Threat",
+          "isCollapsed": false,
+          "id": "b_2"
+        },
+        {
+          "notes": "Many years later, Vira now 27, was led by a playful squirrel (Tato) to a clearing void of the thick dense jungle...",
+          "id": "b_3",
+          "isCollapsed": false,
+          "title": "The Vision"
+        },
+        {
+          "id": "b_4",
+          "isCollapsed": false,
+          "title": "The Journey",
+          "notes": "After waking, she sought guidance. Syngorn was unhelpful; the elves were xenophobic and dismissive of her visions..."
+        }
+      ],
+      "name": "Víra Tahlwyn",
+      "basics": {
+        "age": 27,
+        "background": "Nomadic Tribesman (Custom)",
+        "familiar": "Tato (Squirrel)",
+        "race": "Wood Elf",
+        "tribe": "Eryndral Tribe (Orroyen)",
+        "class": "Barbarian (World Tree)"
+      },
+      "build": {
+        "stats": [
+          {
+            "value": 15,
+            "name": "Strength"
+          },
+          {
+            "name": "Dexterity",
+            "value": 14
+          },
+          {
+            "name": "Constitution",
+            "value": 13
+          },
+          {
+            "name": "Intelligence",
+            "value": 12
+          },
+          {
+            "value": 12,
+            "name": "Wisdom"
+          },
+          {
+            "value": 6,
+            "name": "Charisma"
+          }
+        ],
+        "equipment": "Halberd\nHandaxe (x4)\nFind Familiar Herbs\nExplorer's Pack\nGold: 125g remaining",
+        "abilities": [
+          {
+            "lvl20": 4,
+            "lvl16": 0,
+            "species": 2,
+            "starting": 15,
+            "lvl19": 0,
+            "name": "Strength",
+            "lvl4": 1,
+            "lvl12": 1,
+            "lvl8": 1,
+            "lvl1": 0
+          },
+          {
+            "lvl16": 0,
+            "species": 0,
+            "lvl20": 0,
+            "lvl12": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "lvl19": 0,
+            "starting": 14,
+            "lvl4": 0,
+            "name": "Dexterity"
+          },
+          {
+            "name": "Constitution",
+            "lvl4": 0,
+            "lvl19": 0,
+            "starting": 13,
+            "lvl8": 0,
+            "lvl1": 0,
+            "lvl12": 0,
+            "lvl20": 4,
+            "species": 1,
+            "lvl16": 0
+          },
+          {
+            "lvl20": 0,
+            "species": 0,
+            "lvl16": 0,
+            "name": "Intelligence",
+            "lvl4": 0,
+            "starting": 12,
+            "lvl19": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "lvl12": 0
+          },
+          {
+            "species": 0,
+            "lvl16": 0,
+            "lvl20": 0,
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl12": 0,
+            "name": "Wisdom",
+            "lvl4": 0,
+            "starting": 12,
+            "lvl19": 0
+          },
+          {
+            "species": 0,
+            "lvl16": 0,
+            "lvl20": 0,
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl12": 0,
+            "name": "Charisma",
+            "lvl4": 0,
+            "lvl19": 0,
+            "starting": 6
+          }
+        ],
+        "features": "Barbarian (World Tree)\nSpeed: 35 feet\nDarkvision: 60 feet\nFey Ancestry: Advantage on Charm saves\nTrance: 4 hour long rest\nOrigin Feat: Magic Initiate (Wizard) - Find Familiar, Message, Mending",
+        "feats": {
+          "lvl16": "ASI",
+          "lvl12": "Great Weapon Master",
+          "lvl8": "Mage Slayer",
+          "lvl1": "Magic Initiate",
+          "lvl19": "Epic Boon",
+          "lvl20": "Combat Prowess",
+          "lvl4": "Charger"
+        }
+      }
+    },
+    "char_1779649467413": {
+      "avatar": "",
+      "personality": [
+        {
+          "id": "p_1",
+          "isCollapsed": false,
+          "subtitle": "Default State",
+          "title": "Normal Personality",
+          "notes": ""
+        },
+        {
+          "subtitle": "Combat State",
+          "isCollapsed": false,
+          "id": "p_2",
+          "notes": "",
+          "title": "Raging Personality"
+        },
+        {
+          "id": "p_3",
+          "isCollapsed": false,
+          "subtitle": "Interests & Preference",
+          "title": "Likes",
+          "notes": ""
+        },
+        {
+          "subtitle": "Fears & Aversions",
+          "id": "p_4",
+          "isCollapsed": false,
+          "notes": "",
+          "title": "Dislikes"
+        }
+      ],
+      "campaignNotes": {
+        "misc": "",
+        "sessionNotes": [],
+        "quests": [],
+        "npcs": [],
+        "locations": []
+      },
+      "backstory": [
+        {
+          "title": "Early Life",
+          "isCollapsed": false,
+          "id": "b_1",
+          "notes": ""
+        },
+        {
+          "notes": "",
+          "id": "b_2",
+          "isCollapsed": false,
+          "title": "The Threat"
+        },
+        {
+          "isCollapsed": false,
+          "title": "The Vision",
+          "id": "b_3",
+          "notes": ""
+        },
+        {
+          "notes": "",
+          "isCollapsed": false,
+          "id": "b_4",
+          "title": "The Journey"
+        }
+      ],
+      "name": "tester 1",
+      "basics": {
+        "race": "Unknown Race",
+        "tribe": "",
+        "class": "Unknown Class",
+        "background": "",
+        "familiar": "",
+        "age": ""
+      },
+      "build": {
+        "abilities": [
+          {
+            "lvl20": 0,
+            "lvl16": 0,
+            "species": 0,
+            "lvl19": 0,
+            "starting": 10,
+            "lvl4": 0,
+            "name": "Strength",
+            "lvl12": 0,
+            "lvl8": 0,
+            "lvl1": 0
+          },
+          {
+            "lvl16": 0,
+            "species": 0,
+            "lvl20": 0,
+            "lvl12": 0,
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl19": 0,
+            "starting": 10,
+            "name": "Dexterity",
+            "lvl4": 0
+          },
+          {
+            "starting": 10,
+            "lvl19": 0,
+            "lvl4": 0,
+            "name": "Constitution",
+            "lvl12": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "lvl20": 0,
+            "lvl16": 0,
+            "species": 0
+          },
+          {
+            "lvl20": 0,
+            "species": 0,
+            "lvl16": 0,
+            "lvl4": 0,
+            "name": "Intelligence",
+            "starting": 10,
+            "lvl19": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "lvl12": 0
+          },
+          {
+            "lvl20": 0,
+            "species": 0,
+            "lvl16": 0,
+            "lvl4": 0,
+            "name": "Wisdom",
+            "starting": 10,
+            "lvl19": 0,
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl12": 0
+          },
+          {
+            "lvl12": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "starting": 10,
+            "lvl19": 0,
+            "lvl4": 0,
+            "name": "Charisma",
+            "lvl16": 0,
+            "species": 0,
+            "lvl20": 0
+          }
+        ],
+        "feats": {
+          "lvl20": "",
+          "lvl4": "",
+          "lvl19": "",
+          "lvl1": "",
+          "lvl8": "",
+          "lvl12": "",
+          "lvl16": ""
+        },
+        "features": "",
+        "equipment": ""
+      }
+    },
+    "char_1779649472153": {
+      "build": {
+        "feats": {
+          "lvl8": "",
+          "lvl1": "",
+          "lvl16": "",
+          "lvl12": "",
+          "lvl4": "",
+          "lvl20": "",
+          "lvl19": ""
+        },
+        "features": "",
+        "equipment": "",
+        "abilities": [
+          {
+            "lvl12": 0,
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl19": 0,
+            "starting": 10,
+            "lvl4": 0,
+            "name": "Strength",
+            "lvl16": 0,
+            "species": 0,
+            "lvl20": 0
+          },
+          {
+            "species": 0,
+            "lvl16": 0,
+            "lvl20": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "lvl12": 0,
+            "lvl4": 0,
+            "name": "Dexterity",
+            "lvl19": 0,
+            "starting": 10
+          },
+          {
+            "lvl4": 0,
+            "name": "Constitution",
+            "lvl19": 0,
+            "starting": 10,
+            "lvl8": 0,
+            "lvl1": 0,
+            "lvl12": 0,
+            "lvl20": 0,
+            "species": 0,
+            "lvl16": 0
+          },
+          {
+            "lvl20": 0,
+            "lvl16": 0,
+            "species": 0,
+            "starting": 10,
+            "lvl19": 0,
+            "lvl4": 0,
+            "name": "Intelligence",
+            "lvl12": 0,
+            "lvl8": 0,
+            "lvl1": 0
+          },
+          {
+            "lvl12": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "starting": 10,
+            "lvl19": 0,
+            "name": "Wisdom",
+            "lvl4": 0,
+            "lvl16": 0,
+            "species": 0,
+            "lvl20": 0
+          },
+          {
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl12": 0,
+            "lvl4": 0,
+            "name": "Charisma",
+            "starting": 10,
+            "lvl19": 0,
+            "species": 0,
+            "lvl16": 0,
+            "lvl20": 0
+          }
+        ]
+      },
+      "basics": {
+        "age": "",
+        "familiar": "",
+        "background": "",
+        "race": "Unknown Race",
+        "class": "Unknown Class",
+        "tribe": ""
+      },
+      "name": "tester 2",
+      "backstory": [
+        {
+          "id": "b_1",
+          "isCollapsed": false,
+          "title": "Early Life",
+          "notes": ""
+        },
+        {
+          "id": "b_2",
+          "title": "The Threat",
+          "isCollapsed": false,
+          "notes": ""
+        },
+        {
+          "notes": "",
+          "title": "The Vision",
+          "id": "b_3",
+          "isCollapsed": false
+        },
+        {
+          "title": "The Journey",
+          "isCollapsed": false,
+          "id": "b_4",
+          "notes": ""
+        }
+      ],
+      "campaignNotes": {
+        "locations": [],
+        "quests": [],
+        "npcs": [],
+        "misc": "",
+        "sessionNotes": []
+      },
+      "personality": [
+        {
+          "isCollapsed": false,
+          "id": "p_1",
+          "subtitle": "Default State",
+          "title": "Normal Personality",
+          "notes": ""
+        },
+        {
+          "notes": "",
+          "title": "Raging Personality",
+          "subtitle": "Combat State",
+          "id": "p_2",
+          "isCollapsed": false
+        },
+        {
+          "subtitle": "Interests & Preference",
+          "isCollapsed": false,
+          "id": "p_3",
+          "notes": "",
+          "title": "Likes"
+        },
+        {
+          "id": "p_4",
+          "isCollapsed": false,
+          "subtitle": "Fears & Aversions",
+          "title": "Dislikes",
+          "notes": ""
+        }
+      ],
+      "avatar": ""
+    },
+    "char_1779649475648": {
+      "build": {
+        "equipment": "",
+        "features": "",
+        "feats": {
+          "lvl8": "",
+          "lvl1": "",
+          "lvl16": "",
+          "lvl12": "",
+          "lvl4": "",
+          "lvl20": "",
+          "lvl19": ""
+        },
+        "abilities": [
+          {
+            "lvl12": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "starting": 10,
+            "lvl19": 0,
+            "lvl4": 0,
+            "name": "Strength",
+            "lvl16": 0,
+            "species": 0,
+            "lvl20": 0
+          },
+          {
+            "lvl12": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "lvl19": 0,
+            "starting": 10,
+            "lvl4": 0,
+            "name": "Dexterity",
+            "lvl16": 0,
+            "species": 0,
+            "lvl20": 0
+          },
+          {
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl12": 0,
+            "lvl4": 0,
+            "name": "Constitution",
+            "starting": 10,
+            "lvl19": 0,
+            "species": 0,
+            "lvl16": 0,
+            "lvl20": 0
+          },
+          {
+            "lvl20": 0,
+            "lvl16": 0,
+            "species": 0,
+            "lvl19": 0,
+            "starting": 10,
+            "name": "Intelligence",
+            "lvl4": 0,
+            "lvl12": 0,
+            "lvl1": 0,
+            "lvl8": 0
+          },
+          {
+            "name": "Wisdom",
+            "lvl4": 0,
+            "starting": 10,
+            "lvl19": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "lvl12": 0,
+            "lvl20": 0,
+            "species": 0,
+            "lvl16": 0
+          },
+          {
+            "lvl16": 0,
+            "species": 0,
+            "lvl20": 0,
+            "lvl12": 0,
+            "lvl1": 0,
+            "lvl8": 0,
+            "starting": 10,
+            "lvl19": 0,
+            "name": "Charisma",
+            "lvl4": 0
+          }
+        ]
+      },
+      "name": "tester 3",
+      "basics": {
+        "age": "",
+        "familiar": "",
+        "background": "",
+        "class": "Unknown Class",
+        "tribe": "",
+        "race": "Unknown Race"
+      },
+      "backstory": [
+        {
+          "id": "b_1",
+          "title": "Early Life",
+          "isCollapsed": false,
+          "notes": ""
+        },
+        {
+          "notes": "",
+          "isCollapsed": false,
+          "id": "b_2",
+          "title": "The Threat"
+        },
+        {
+          "isCollapsed": false,
+          "id": "b_3",
+          "title": "The Vision",
+          "notes": ""
+        },
+        {
+          "id": "b_4",
+          "isCollapsed": false,
+          "title": "The Journey",
+          "notes": ""
+        }
+      ],
+      "campaignNotes": {
+        "locations": [],
+        "quests": [],
+        "npcs": [],
+        "sessionNotes": [],
+        "misc": ""
+      },
+      "personality": [
+        {
+          "title": "Normal Personality",
+          "notes": "",
+          "id": "p_1",
+          "isCollapsed": false,
+          "subtitle": "Default State"
+        },
+        {
+          "isCollapsed": false,
+          "id": "p_2",
+          "subtitle": "Combat State",
+          "title": "Raging Personality",
+          "notes": ""
+        },
+        {
+          "subtitle": "Interests & Preference",
+          "isCollapsed": false,
+          "id": "p_3",
+          "notes": "",
+          "title": "Likes"
+        },
+        {
+          "notes": "",
+          "title": "Dislikes",
+          "subtitle": "Fears & Aversions",
+          "isCollapsed": false,
+          "id": "p_4"
+        }
+      ],
+      "avatar": ""
+    },
+    "char_1779649478879": {
+      "campaignNotes": {
+        "locations": [],
+        "misc": "",
+        "sessionNotes": [],
+        "quests": [],
+        "npcs": []
+      },
+      "personality": [
+        {
+          "notes": "",
+          "title": "Normal Personality",
+          "subtitle": "Default State",
+          "id": "p_1",
+          "isCollapsed": false
+        },
+        {
+          "subtitle": "Combat State",
+          "isCollapsed": false,
+          "id": "p_2",
+          "notes": "",
+          "title": "Raging Personality"
+        },
+        {
+          "id": "p_3",
+          "isCollapsed": false,
+          "subtitle": "Interests & Preference",
+          "title": "Likes",
+          "notes": ""
+        },
+        {
+          "title": "Dislikes",
+          "notes": "",
+          "id": "p_4",
+          "isCollapsed": false,
+          "subtitle": "Fears & Aversions"
+        }
+      ],
+      "avatar": "",
+      "build": {
+        "equipment": "",
+        "feats": {
+          "lvl4": "",
+          "lvl20": "",
+          "lvl19": "",
+          "lvl1": "",
+          "lvl8": "",
+          "lvl12": "",
+          "lvl16": ""
+        },
+        "features": "",
+        "abilities": [
+          {
+            "starting": 10,
+            "lvl19": 0,
+            "name": "Strength",
+            "lvl4": 0,
+            "lvl12": 0,
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl20": 0,
+            "lvl16": 0,
+            "species": 0
+          },
+          {
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl12": 0,
+            "lvl4": 0,
+            "name": "Dexterity",
+            "starting": 10,
+            "lvl19": 0,
+            "species": 0,
+            "lvl16": 0,
+            "lvl20": 0
+          },
+          {
+            "starting": 10,
+            "lvl19": 0,
+            "name": "Constitution",
+            "lvl4": 0,
+            "lvl12": 0,
+            "lvl8": 0,
+            "lvl1": 0,
+            "lvl20": 0,
+            "lvl16": 0,
+            "species": 0
+          },
+          {
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl12": 0,
+            "name": "Intelligence",
+            "lvl4": 0,
+            "starting": 10,
+            "lvl19": 0,
+            "species": 0,
+            "lvl16": 0,
+            "lvl20": 0
+          },
+          {
+            "lvl16": 0,
+            "species": 0,
+            "lvl20": 0,
+            "lvl12": 0,
+            "lvl1": 0,
+            "lvl8": 0,
+            "starting": 10,
+            "lvl19": 0,
+            "lvl4": 0,
+            "name": "Wisdom"
+          },
+          {
+            "lvl20": 0,
+            "species": 0,
+            "lvl16": 0,
+            "lvl4": 0,
+            "name": "Charisma",
+            "starting": 10,
+            "lvl19": 0,
+            "lvl1": 0,
+            "lvl8": 0,
+            "lvl12": 0
+          }
+        ]
+      },
+      "basics": {
+        "age": "",
+        "familiar": "",
+        "background": "",
+        "class": "Unknown Class",
+        "tribe": "",
+        "race": "Unknown Race"
+      },
+      "name": "tester 4",
+      "backstory": [
+        {
+          "isCollapsed": false,
+          "id": "b_1",
+          "title": "Early Life",
+          "notes": ""
+        },
+        {
+          "notes": "",
+          "isCollapsed": false,
+          "id": "b_2",
+          "title": "The Threat"
+        },
+        {
+          "notes": "",
+          "id": "b_3",
+          "isCollapsed": false,
+          "title": "The Vision"
+        },
+        {
+          "notes": "",
+          "id": "b_4",
+          "title": "The Journey",
+          "isCollapsed": false
+        }
+      ]
+    }
+  }
+}
