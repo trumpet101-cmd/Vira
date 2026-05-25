@@ -296,7 +296,7 @@
     <!-- Standard Script Tag to execute on local filesystem (file:// protocol) -->
     <script>
         // Apply Dark Mode directly at the very top of script run-time to prevent any white flashes!
-        const isCurrentlyDark = localStorage.getItem('dark_mode_active') === 'true';
+        var isCurrentlyDark = localStorage.getItem('dark_mode_active') === 'true';
         if (isCurrentlyDark) {
             document.documentElement.classList.add('dark');
         } else {
@@ -322,7 +322,7 @@
         }
 
         // --- INITIAL DATA (MODULAR TEMPLATE) ---
-        const initialCharacterData = {
+        var initialCharacterData = {
             name: "Víra Tahlwyn",
             basics: { race: "Wood Elf", class: "Barbarian (World Tree)", age: 27, background: "Nomadic Tribesman (Custom)", tribe: "Eryndral Tribe (Orroyen)", familiar: "Tato (Squirrel)" },
             backstory: [
@@ -464,15 +464,29 @@
         }
 
         // --- APP STATE ---
-        let activeTab = 'campaignNotes';
-        let isMobileMenuOpen = false;
-        let questSectionsState = { inProgressCollapsed: false, completedCollapsed: false };
-        let currentSearchQueries = { sessionNotes: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
+        var activeTab = 'campaignNotes';
+        var isMobileMenuOpen = false;
+        var questSectionsState = { inProgressCollapsed: false, completedCollapsed: false };
+        var currentSearchQueries = { sessionNotes: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
         
         // Deep copy clean data patterns to avoid leaky reference mutations
-        let characterData = JSON.parse(JSON.stringify(initialCharacterData));
-        let currentCharacterId = localStorage.getItem('current_character_id') || 'default';
-        let characterList = JSON.parse(localStorage.getItem('character_list')) || [];
+        var characterData = JSON.parse(JSON.stringify(initialCharacterData));
+        var currentCharacterId = localStorage.getItem('current_character_id') || 'default';
+        var characterList = JSON.parse(localStorage.getItem('character_list')) || [];
+
+        // --- ARMOR GLOBAL REFERENCE ---
+        var ARMOR_OPTIONS = {
+            unarmored: { name: "Unarmored Barbarian", type: "Unarmored", stealth: "Normal", isDisadv: false, formula: "10 + Dex Mod + Con Mod" },
+            unarmored_monk: { name: "Unarmored Monk", type: "Unarmored", stealth: "Normal", isDisadv: false, formula: "10 + Dex Mod + Wis Mod" },
+            studded: { name: "Studded Leather (Light)", type: "Light", stealth: "Normal", isDisadv: false, formula: "12 + Dex Mod" },
+            chainshirt: { name: "Chain Shirt (Medium)", type: "Medium", stealth: "Normal", isDisadv: false, formula: "13 + Dex Mod (Max 2)" },
+            scalemail: { name: "Scale Mail (Medium)", type: "Medium", stealth: "Disadv.", isDisadv: true, formula: "14 + Dex Mod (Max 2)" },
+            breastplate: { name: "Breastplate (Medium)", type: "Medium", stealth: "Normal", isDisadv: false, formula: "14 + Dex Mod (Max 2)" },
+            halfplate: { name: "Halfplate (Medium)", type: "Medium", stealth: "Disadv.", isDisadv: true, formula: "15 + Dex Mod (Max 2)" },
+            chainmail: { name: "Chain Mail (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true, formula: "16" },
+            splint: { name: "Splint (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true, formula: "17" },
+            plate: { name: "Plate (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true, formula: "18" }
+        };
 
         // --- ROBUST LORE & DATA MIGRATION ENGINE (DEEP GUARDIAN UPGRADE) ---
         function migrateData(data) {
@@ -641,7 +655,7 @@
         }
 
         // --- LOCAL STORAGE FIRST LOAD BOOTSTRAP ---
-        let loadedData = JSON.parse(localStorage.getItem('character_data_' + currentCharacterId));
+        var loadedData = JSON.parse(localStorage.getItem('character_data_' + currentCharacterId));
         if (!loadedData && currentCharacterId === 'default') {
             // Check legacy key for existing users upgrade path
             let legacyData = JSON.parse(localStorage.getItem('viraDndNotes'));
@@ -667,7 +681,7 @@
         migrateData(characterData);
 
         // --- NAVIGATION CONFIGURATION ---
-        const navItems = [
+        var navItems = [
             { id: 'campaignNotes', label: 'Campaign Notes', icon: 'map' },
             { id: 'campaign_sessionNotes', label: 'Session Notes', icon: 'scroll-text', isSubItem: true },
             { id: 'campaign_quests', label: 'Quests', icon: 'swords', isSubItem: true },
@@ -680,15 +694,15 @@
         ];
 
         // --- HYBRID CLOUD LOGIC ---
-        let db = null;
-        let cloudUser = null;
-        let isCloudReady = false;
-        let saveTimeout = null;
-        let isLocalSaving = false;
-        let unsubscribeCharacters = null;
-        let unsubscribeActiveCharacter = null;
+        var db = null;
+        var cloudUser = null;
+        var isCloudReady = false;
+        var saveTimeout = null;
+        var isLocalSaving = false;
+        var unsubscribeCharacters = null;
+        var unsubscribeActiveCharacter = null;
 
-        const firebaseConfig = {
+        var firebaseConfig = {
 		  apiKey: "AIzaSyBbmh-jibUxCwbqVvzEDHX78YEweb_ld04",
 		  authDomain: "vira-dnd.firebaseapp.com",
 		  projectId: "vira-dnd",
@@ -697,11 +711,11 @@
 		  appId: "1:464258497921:web:b2ab64f9507ba6775dbc80",
 		  measurementId: "G-VXZHJNQD1S"
         };
-        const appId = 'vira-dnd-notes';
+        var appId = 'vira-dnd-notes';
 
         // Initialize Firebase with UMD Compat API
-        const appInstance = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+        var appInstance = firebase.initializeApp(firebaseConfig);
+        var auth = firebase.auth();
         db = firebase.firestore();
 
         // Track Auth State changes
@@ -1179,13 +1193,13 @@
         };
 
         // Sign-In/Register Flow Controllers
-        let isSignUpMode = false;
-        const authForm = document.getElementById('auth-form');
-        const authToggleBtn = document.getElementById('auth-btn-toggle');
-        const authTitle = document.getElementById('auth-title');
-        const authSubtitle = document.getElementById('auth-subtitle');
-        const authBtnText = document.getElementById('auth-btn-text');
-        const authError = document.getElementById('auth-error');
+        var isSignUpMode = false;
+        var authForm = document.getElementById('auth-form');
+        var authToggleBtn = document.getElementById('auth-btn-toggle');
+        var authTitle = document.getElementById('auth-title');
+        var authSubtitle = document.getElementById('auth-subtitle');
+        var authBtnText = document.getElementById('auth-btn-text');
+        var authError = document.getElementById('auth-error');
 
         authToggleBtn.addEventListener('click', () => {
             isSignUpMode = !isSignUpMode;
@@ -1877,7 +1891,7 @@
         };
 
         // --- THE MENTION SYSTEM ---
-        let mentionContext = null;
+        var mentionContext = null;
 
         function getMentionSuggestions(query) {
             const q = query.toLowerCase();
