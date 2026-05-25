@@ -7,7 +7,8 @@
     
     <!-- 1. Synchronously set the dark class before rendering to prevent white flashes -->
     <script>
-        if (localStorage.getItem('dark_mode_active') === 'true') {
+        var isCurrentlyDark = localStorage.getItem('dark_mode_active') === 'true';
+        if (isCurrentlyDark) {
             document.documentElement.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark');
@@ -809,6 +810,7 @@
                     });
                 }
             } else {
+                // Offline fallback - read from local cache
                 characterList.forEach(char => {
                     const data = localStorage.getItem('character_data_' + char.id);
                     if (data) backupPayload.characters[char.id] = JSON.parse(data);
@@ -1946,6 +1948,39 @@
         renderNavigation();
         window.renderContent();
         lucide.createIcons();
+        
+        // Focus Handlers for Outline Elements
+        window.handleOutlineFocus = function(event) {
+            const div = event.currentTarget;
+            const html = div.innerHTML.trim();
+            
+            // Only inject the bullet point if the field is genuinely empty or just contains a default blank line.
+            if (html === "" || html === "<br>" || html === "<div><br></div>" || html === "<p><br></p>") {
+                div.innerHTML = "<ul><li><br></li></ul>";
+                
+                // Use a microscopic timeout to allow DOM to render before targeting the li with the cursor
+                setTimeout(() => {
+                    const range = document.createRange();
+                    const sel = window.getSelection();
+                    const li = div.querySelector('li');
+                    if (li) { 
+                        range.setStart(li, 0); 
+                        range.collapse(true); 
+                        sel.removeAllRanges(); 
+                        sel.addRange(range); 
+                    }
+                }, 0);
+                div.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        };
+
+        window.handleOutlineBlur = function(event) {
+            const div = event.currentTarget;
+            if (div.innerText.trim() === "") { 
+                div.innerHTML = ""; 
+                div.dispatchEvent(new Event('input', { bubbles: true })); 
+            }
+        };
     </script>
 </body>
 </html>
