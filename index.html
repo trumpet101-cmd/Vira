@@ -4,8 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Víra Tahlwyn - D&D Notes</title>
+    
+    <!-- Load Tailwind and Lucide -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Firebase SDK Compat Core, Auth, and Firestore (CORS and File Protocol Safe) -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
     
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 8px; }
@@ -286,8 +293,8 @@
         <ul id="mention-dropdown" class="hidden absolute z-50 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-2xl max-h-64 overflow-y-auto w-72 text-sm flex flex-col"></ul>
     </main>
 
-    <!-- Use Type Module for Firebase Imports -->
-    <script type="module">
+    <!-- Standard Script Tag to execute on local filesystem (file:// protocol) -->
+    <script>
         // Apply Dark Mode directly at the very top of script run-time to prevent any white flashes!
         const isCurrentlyDark = localStorage.getItem('dark_mode_active') === 'true';
         if (isCurrentlyDark) {
@@ -300,10 +307,6 @@
         tailwind.config = {
             darkMode: 'class'
         };
-
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- UTILS ---
         function escapeHtml(unsafe) {
@@ -470,20 +473,6 @@
         let characterData = JSON.parse(JSON.stringify(initialCharacterData));
         let currentCharacterId = localStorage.getItem('current_character_id') || 'default';
         let characterList = JSON.parse(localStorage.getItem('character_list')) || [];
-
-        // --- ARMOR GLOBAL REFERENCE ---
-        const ARMOR_OPTIONS = {
-            unarmored: { name: "Unarmored Barbarian", type: "Unarmored", stealth: "Normal", isDisadv: false, formula: "10 + Dex Mod + Con Mod" },
-            unarmored_monk: { name: "Unarmored Monk", type: "Unarmored", stealth: "Normal", isDisadv: false, formula: "10 + Dex Mod + Wis Mod" },
-            studded: { name: "Studded Leather (Light)", type: "Light", stealth: "Normal", isDisadv: false, formula: "12 + Dex Mod" },
-            chainshirt: { name: "Chain Shirt (Medium)", type: "Medium", stealth: "Normal", isDisadv: false, formula: "13 + Dex Mod (Max 2)" },
-            scalemail: { name: "Scale Mail (Medium)", type: "Medium", stealth: "Disadv.", isDisadv: true, formula: "14 + Dex Mod (Max 2)" },
-            breastplate: { name: "Breastplate (Medium)", type: "Medium", stealth: "Normal", isDisadv: false, formula: "14 + Dex Mod (Max 2)" },
-            halfplate: { name: "Halfplate (Medium)", type: "Medium", stealth: "Disadv.", isDisadv: true, formula: "15 + Dex Mod (Max 2)" },
-            chainmail: { name: "Chain Mail (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true, formula: "16" },
-            splint: { name: "Splint (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true, formula: "17" },
-            plate: { name: "Plate (Heavy)", type: "Heavy", stealth: "Disadv.", isDisadv: true, formula: "18" }
-        };
 
         // --- ROBUST LORE & DATA MIGRATION ENGINE (DEEP GUARDIAN UPGRADE) ---
         function migrateData(data) {
@@ -710,12 +699,13 @@
         };
         const appId = 'vira-dnd-notes';
 
-        const appInstance = initializeApp(firebaseConfig);
-        const auth = getAuth(appInstance);
-        db = getFirestore(appInstance);
+        // Initialize Firebase with UMD Compat API
+        const appInstance = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        db = firebase.firestore();
 
         // Track Auth State changes
-        onAuthStateChanged(auth, async (u) => {
+        auth.onAuthStateChanged(async (u) => {
             try {
                 const authOverlay = document.getElementById('auth-overlay');
                 
@@ -729,7 +719,7 @@
                     listenToCharactersList();
                 } else {
                     if (u && u.isAnonymous) {
-                        await signOut(auth);
+                        await auth.signOut();
                     }
                     if (unsubscribeActiveCharacter) {
                         unsubscribeActiveCharacter();
@@ -753,9 +743,9 @@
         function listenToCharactersList() {
             try {
                 if (!cloudUser || !db) return;
-                const colRef = collection(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters');
+                const colRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters');
                 
-                unsubscribeCharacters = onSnapshot(colRef, async (querySnap) => {
+                unsubscribeCharacters = colRef.onSnapshot(async (querySnap) => {
                     const list = [];
                     querySnap.forEach(docSnap => {
                         const data = docSnap.data();
@@ -775,27 +765,27 @@
 
                     // If collection is empty, check for legacy document to migrate
                     if (list.length === 0) {
-                        const legacyDocRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'character_data', 'sheet');
+                        const legacyDocRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('character_data').doc('sheet');
                         try {
                             updateCloudUIStatus("Checking Legacy Notes...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
-                            const legacySnap = await getDoc(legacyDocRef);
-                            if (legacySnap.exists()) {
+                            const legacySnap = await legacyDocRef.get();
+                            if (legacySnap.exists) {
                                 updateCloudUIStatus("Migrating Legacy Notes...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
                                 const legacyData = legacySnap.data();
                                 
                                 const newCharId = 'char_' + Date.now();
-                                const newCharRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', newCharId);
-                                await setDoc(newCharRef, legacyData);
+                                const newCharRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId);
+                                await newCharRef.set(legacyData);
                                 
                                 currentCharacterId = newCharId;
                                 localStorage.setItem('current_character_id', currentCharacterId);
                                 
-                                await deleteDoc(legacyDocRef);
+                                await legacyDocRef.delete();
                             } else {
                                 // Empty account, create first clean default
                                 const defaultId = 'char_' + Date.now();
-                                const defaultRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', defaultId);
-                                await setDoc(defaultRef, JSON.parse(JSON.stringify(initialCharacterData)));
+                                const defaultRef = db.doc(`artifacts/${appId}/users/${cloudUser.uid}/characters/${defaultId}`);
+                                await defaultRef.set(JSON.parse(JSON.stringify(initialCharacterData)));
                                 
                                 currentCharacterId = defaultId;
                                 localStorage.setItem('current_character_id', currentCharacterId);
@@ -830,12 +820,12 @@
             }
 
             if (!cloudUser || !db || !currentCharacterId) return;
-            const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', currentCharacterId);
+            const docRef = db.doc(`artifacts/${appId}/users/${cloudUser.uid}/characters/${currentCharacterId}`);
 
-            unsubscribeActiveCharacter = onSnapshot(docRef, (docSnap) => {
+            unsubscribeActiveCharacter = docRef.onSnapshot((docSnap) => {
                 if (isLocalSaving) return;
 
-                if (docSnap.exists()) {
+                if (docSnap.exists) {
                     characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...docSnap.data() };
                     migrateData(characterData);
                     
@@ -1020,9 +1010,9 @@
                 try {
                     // Pull absolute live, up-to-date document data directly from Firestore collections
                     for (const char of characterList) {
-                        const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', char.id);
-                        const docSnap = await getDoc(docRef);
-                        if (docSnap.exists()) {
+                        const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(char.id);
+                        const docSnap = await docRef.get();
+                        if (docSnap.exists) {
                             backupPayload.characters[char.id] = docSnap.data();
                         } else {
                             // Fallback to local storage cache if specific document is missing
@@ -1111,9 +1101,9 @@
                                 if (isCloudReady && cloudUser && db) {
                                     for (const oldChar of oldList) {
                                         if (!newIds.has(oldChar.id)) {
-                                            const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', oldChar.id);
+                                            const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(oldChar.id);
                                             try {
-                                                await deleteDoc(docRef);
+                                                await docRef.delete();
                                             } catch (e) {
                                                 console.error("Clean-up purge failed for ID: " + oldChar.id, e);
                                             }
@@ -1128,8 +1118,8 @@
                                     
                                     // Sync with firestore document trees if online
                                     if (isCloudReady && cloudUser && db) {
-                                        const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', charId);
-                                        await setDoc(docRef, charData);
+                                        const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(charId);
+                                        await docRef.set(charData);
                                     }
                                 }
                                 
@@ -1165,8 +1155,8 @@
                                 
                                 // Sync with Firestore if online
                                 if (isCloudReady && cloudUser && db) {
-                                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', newCharId);
-                                    await setDoc(docRef, newCharData);
+                                    const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId);
+                                    await docRef.set(newCharData);
                                 }
                                 
                                 // Switch directly to newly imported character
@@ -1227,9 +1217,9 @@
 
             try {
                 if (isSignUpMode) {
-                    await createUserWithEmailAndPassword(auth, email, password);
+                    await auth.createUserWithEmailAndPassword(email, password);
                 } else {
-                    await signInWithEmailAndPassword(auth, email, password);
+                    await auth.signInWithEmailAndPassword(email, password);
                 }
             } catch (error) {
                 console.error("Authentication Error: ", error);
@@ -1245,7 +1235,7 @@
                 '🚪',
                 async () => {
                     try {
-                        await signOut(auth);
+                        await auth.signOut();
                     } catch(e) {
                         console.error("Sign out failed: ", e);
                     }
@@ -1303,10 +1293,10 @@
             
             saveTimeout = setTimeout(async () => {
                 if (isCloudReady && cloudUser && db && currentCharacterId) {
-                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', currentCharacterId);
+                    const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(currentCharacterId);
                     try {
                         isLocalSaving = true;
-                        await setDoc(docRef, characterData);
+                        await docRef.set(characterData);
                         triggerSaveIndicator();
                         
                         setTimeout(() => {
@@ -1424,9 +1414,9 @@
 
             if (isCloudReady && cloudUser && db) {
                 updateCloudUIStatus("Creating Character...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
-                const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', newCharId);
+                const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId);
                 try {
-                    await setDoc(docRef, newCharData);
+                    await docRef.set(newCharData);
                     window.switchCharacter(newCharId);
                 } catch (e) {
                     console.error("Failed to write new character to cloud: ", e);
@@ -1494,9 +1484,9 @@
                                 localStorage.removeItem('character_data_' + charId);
 
                                 if (isCloudReady && cloudUser && db) {
-                                    const docRef = doc(db, 'artifacts', appId, 'users', cloudUser.uid, 'characters', charId);
+                                    const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(charId);
                                     try {
-                                        await deleteDoc(docRef);
+                                        await docRef.delete();
                                     } catch (e) {
                                         console.error("Failed to delete character on cloud: ", e);
                                         handleSyncError(e);
@@ -2508,7 +2498,7 @@
                 factionToExpand = factionEntry;
             } else {
                 characterData.campaignNotes.npcs.forEach(f => {
-                    if (f.members.some(npc => npc.id === itemId)) {
+                    if (f.members && f.members.some(npc => npc.id === itemId)) {
                         factionToExpand = f;
                     }
                 });
@@ -2648,7 +2638,7 @@
                     const isFirst = idx === 0;
                     const isLast = idx === characterData.backstory.length - 1;
                     contentHtml += `
-                        <div id="${b.id}" class="backstory-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${b.title} ${b.notes}`)}">
+                        <div id="${b.id}" class="backstory-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(b.title)} ${escapeHtml(b.notes)}">
                             <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                 <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                     <button onclick="window.toggleBackstoryCollapse('${b.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -2711,7 +2701,7 @@
                     const hoverTheme = 'hover:bg-stone-100/30 dark:hover:bg-stone-800/40';
                     
                     contentHtml += `
-                        <div id="${p.id}" class="personality-block mb-4 border rounded-xl shadow-sm overflow-hidden ${cardBg}" data-searchable="${escapeHtml(`${p.title} ${p.subtitle} ${p.notes}`)}">
+                        <div id="${p.id}" class="personality-block mb-4 border rounded-xl shadow-sm overflow-hidden ${cardBg}" data-searchable="${escapeHtml(p.title)} ${escapeHtml(p.subtitle)} ${escapeHtml(p.notes)}">
                             <div class="bg-stone-50/40 dark:bg-stone-800/40 border-b border-stone-200/50 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                 <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                     <button onclick="window.togglePersonalityCollapse('${p.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -3012,7 +3002,7 @@
                         const isFirst = idx === 0;
                         const isLast = idx === characterData.campaignNotes.sessionNotes.length - 1;
                         contentHtml += `
-                            <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${sess.title} ${sess.date} ${sess.notes}`)}">
+                            <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(sess.title)} ${escapeHtml(sess.date)} ${escapeHtml(sess.notes)}">
                                 <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                     <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                         <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
@@ -3061,7 +3051,7 @@
                             const isFirst = qIdx === 0;
                             const isLast = qIdx === quests.length - 1;
                             sectionHtml += `
-                                <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(`${quest.title} ${quest.subtitle} ${quest.notes}`)}">
+                                <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(quest.title)} ${escapeHtml(quest.subtitle)} ${escapeHtml(quest.notes)}">
                                     <div class="bg-stone-50 dark:bg-stone-950 px-4 py-5 flex flex-col items-center justify-start border-r border-stone-100 dark:border-stone-800">
                                         <button onclick="window.toggleQuestCompletion('${quest.id}')" class="text-stone-300 dark:text-stone-600 hover:text-emerald-500 transition-colors focus:outline-none">
                                             ${quest.isCompleted ? `<i data-lucide="check-square" class="w-6 h-6 text-emerald-500"></i>` : `<i data-lucide="square" class="w-6 h-6 hover:text-emerald-400"></i>`}
@@ -3119,7 +3109,7 @@
                         const isFirst = idx === 0;
                         const isLast = idx === characterData.campaignNotes.locations.length - 1;
                         contentHtml += `
-                            <div id="${loc.id}" class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(`${loc.title} ${loc.subtitle} ${loc.notes}`)}">
+                            <div id="${loc.id}" class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(loc.title)} ${escapeHtml(loc.subtitle)} ${escapeHtml(loc.notes)}">
                                 <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                                     <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                         <button onclick="window.toggleLocationCollapse('${loc.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block">
