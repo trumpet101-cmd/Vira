@@ -194,7 +194,7 @@ window.renderContent = function() {
                         ${armorKey !== "" && armorDef.formula ? `<div class="text-[10px] text-stone-400 dark:text-stone-500 mt-1 pl-1 font-medium italic animate-fade-in">${armorDef.formula}</div>` : ''}
                     </td>
                     <td class="px-3 py-3 text-center text-stone-600 dark:text-stone-400 text-sm font-semibold">${armorDef.type}</td><td class="px-3 py-3 text-center border-r border-stone-200 dark:border-stone-800 text-sm">${stealthHtml}</td>
-                    ${keys.slice(2).map(col => `<td class="px-3 py-3 text-center font-black text-emerald-700 dark:text-emerald-400 text-sm" id="ac-val-${rIdx}-${col.key}">-</td>`).join('')}
+                    ${keys.slice(2).map(col => `<td class="px-3 py-3 text-center font-black text-emerald-700 dark:text-emerald-400 text-sm" id="ac-val-${rIdx}-${colKey}">-</td>`).join('')}
                 </tr>`;
         }
 
@@ -341,8 +341,13 @@ window.renderContent = function() {
                                             <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
-                                            ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
+                                            <div class="flex items-center space-x-2 w-full mb-1">
+                                                <button onclick="window.toggleNpcCollapse('${faction.id}', '${npc.id}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
+                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full bg-transparent rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
+                                            </div>
+                                            <div class="collapsible-content ${npc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
+                                                ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm mt-1', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
+                                            </div>
                                         </div>
                                         <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
                                             <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete NPC"><i data-lucide="x" class="w-4 h-4"></i></button>

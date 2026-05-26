@@ -94,7 +94,10 @@ function migrateData(data) {
         if (!fac.id) fac.id = 'fac_migrated_' + facIdx + '_' + Date.now();
         if (fac.isCollapsed === undefined) fac.isCollapsed = false;
         if (!Array.isArray(fac.members)) fac.members = [];
-        else fac.members.forEach((npc, npcIdx) => { if (!npc.id) npc.id = 'npc_migrated_' + facIdx + '_' + npcIdx + '_' + Date.now(); });
+        else fac.members.forEach((npc, npcIdx) => { 
+            if (!npc.id) npc.id = 'npc_migrated_' + facIdx + '_' + npcIdx + '_' + Date.now();
+            if (npc.isCollapsed === undefined) npc.isCollapsed = false;
+        });
     });
 
     data.campaignNotes.sessionNotes.forEach((s, sIdx) => { if (!s.id) s.id = 'sess_migrated_' + sIdx + '_' + Date.now(); });

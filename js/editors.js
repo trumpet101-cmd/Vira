@@ -127,9 +127,10 @@ window.toggleFactionCollapse = function(facId) { const fac = characterData.campa
 window.toggleAllFactions = function(collapse) { characterData.campaignNotes.npcs.forEach(f => f.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); };
 window.moveFaction = function(facId, direction) { const arr = characterData.campaignNotes.npcs; const index = arr.findIndex(f => f.id === facId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); lucide.createIcons(); } } };
 
-window.addNPC = function(facId) { currentSearchQueries.npcs = ''; const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { fac.members.push({ id: 'npc_' + Date.now(), name: '', notes: '' }); window.saveData(); window.renderContent(); lucide.createIcons(); } }
+window.addNPC = function(facId) { currentSearchQueries.npcs = ''; const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { fac.members.push({ id: 'npc_' + Date.now(), name: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); lucide.createIcons(); } }
 window.updateNPC = function(facId, npcId, field, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { const npc = fac.members.find(n => n.id === npcId); if(npc) npc[field] = val; } window.saveData(); }
 window.deleteNPC = function(facId, npcId) { window.showCustomConfirm('Delete Character?', 'Are you sure you want to permanently remove this NPC?', '👤', () => { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.members = fac.members.filter(n => n.id !== npcId); window.saveData(); window.renderContent(); lucide.createIcons(); }); }
+window.toggleNpcCollapse = function(facId, npcId) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if (fac) { const npc = fac.members.find(n => n.id === npcId); if (npc) { npc.isCollapsed = !npc.isCollapsed; window.saveData(); window.renderContent(); lucide.createIcons(); } } };
 window.moveNPC = function(facId, npcId, direction) { const faction = characterData.campaignNotes.npcs.find(f => f.id === facId); if (!faction) return; const arr = faction.members; const index = arr.findIndex(n => n.id === npcId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); lucide.createIcons(); } } };
 
 window.filterNPCs = function(query) {
@@ -139,7 +140,28 @@ window.filterNPCs = function(query) {
         const facName = faction.dataset.factionName.toLowerCase();
         let factionHasMatch = facName.includes(q), visibleNpcs = 0;
         faction.querySelectorAll('.npc-card').forEach(npc => {
-            if (npc.dataset.searchable.toLowerCase().includes(q) || factionHasMatch) { npc.classList.remove('hidden'); visibleNpcs++; } 
+            const hasMatch = npc.dataset.searchable.toLowerCase().includes(q) || factionHasMatch;
+            if (hasMatch) { 
+                npc.classList.remove('hidden'); 
+                visibleNpcs++; 
+                const cardContent = npc.querySelector('.collapsible-content');
+                const cardChevron = npc.querySelector('.chevron');
+                if (q.length > 0 && cardContent) {
+                    cardContent.classList.remove('collapsed');
+                    if (cardChevron) cardChevron.classList.remove('collapsed');
+                } else if (q.length === 0 && cardContent) {
+                    const facId = faction.id;
+                    const npcId = npc.id;
+                    const fRef = characterData.campaignNotes.npcs.find(f => f.id === facId);
+                    if (fRef) {
+                        const nRef = fRef.members.find(n => n.id === npcId);
+                        if (nRef && nRef.isCollapsed) {
+                            cardContent.classList.add('collapsed');
+                            if (cardChevron) cardChevron.classList.add('collapsed');
+                        }
+                    }
+                }
+            } 
             else { npc.classList.add('hidden'); }
         });
         
@@ -399,10 +421,19 @@ function expandElementIfNeeded(itemId) {
     if (locationEntry && locationEntry.isCollapsed) { locationEntry.isCollapsed = false; triggeredReRender = true; }
     
     let factionToExpand = null;
+    let npcToExpand = null;
     const factionEntry = characterData.campaignNotes.npcs.find(f => f.id === itemId);
     if (factionEntry) { factionToExpand = factionEntry; } 
-    else { characterData.campaignNotes.npcs.forEach(f => { if (f.members && f.members.some(npc => npc.id === itemId)) factionToExpand = f; }); }
+    else { 
+        characterData.campaignNotes.npcs.forEach(f => { 
+            if (f.members) {
+                const foundNpc = f.members.find(npc => npc.id === itemId);
+                if (foundNpc) { factionToExpand = f; npcToExpand = foundNpc; }
+            }
+        }); 
+    }
     if (factionToExpand && factionToExpand.isCollapsed) { factionToExpand.isCollapsed = false; triggeredReRender = true; }
+    if (npcToExpand && npcToExpand.isCollapsed) { npcToExpand.isCollapsed = false; triggeredReRender = true; }
     
     const questEntry = characterData.campaignNotes.quests.find(q => q.id === itemId);
     if (questEntry) {
