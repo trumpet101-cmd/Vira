@@ -194,7 +194,7 @@ window.renderContent = function() {
                         ${armorKey !== "" && armorDef.formula ? `<div class="text-[10px] text-stone-400 dark:text-stone-500 mt-1 pl-1 font-medium italic animate-fade-in">${armorDef.formula}</div>` : ''}
                     </td>
                     <td class="px-3 py-3 text-center text-stone-600 dark:text-stone-400 text-sm font-semibold">${armorDef.type}</td><td class="px-3 py-3 text-center border-r border-stone-200 dark:border-stone-800 text-sm">${stealthHtml}</td>
-                    ${keys.slice(2).map(col => `<td class="px-3 py-3 text-center font-black text-emerald-700 dark:text-emerald-400 text-sm" id="ac-val-${rIdx}-${colKey}">-</td>`).join('')}
+                    ${keys.slice(2).map(col => `<td class="px-3 py-3 text-center font-black text-emerald-700 dark:text-emerald-400 text-sm" id="ac-val-${rIdx}-${col.key}">-</td>`).join('')}
                 </tr>`;
         }
 
@@ -331,7 +331,7 @@ window.renderContent = function() {
                         <div class="collapsible-content ${faction.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                             <div class="p-4 space-y-4">
                                 ${faction.members.map((npc, nIdx) => `
-                                    <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.notes)}">
+                                    <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.subtitle || '')} ${escapeHtml(npc.notes)}">
                                         <div class="flex-shrink-0 flex items-start mt-1">
                                             <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group cursor-pointer shadow-inner transition-all animate-fade-in" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" title="Click to upload character avatar">
                                                 ${npc.avatar ? `<img src="${npc.avatar}" class="w-full h-full object-cover">` : `<i data-lucide="user" class="w-6 h-6 text-stone-400"></i>`}
@@ -341,9 +341,12 @@ window.renderContent = function() {
                                             <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <div class="flex items-center space-x-2 w-full mb-1">
-                                                <button onclick="window.toggleNpcCollapse('${faction.id}', '${npc.id}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
+                                            <div class="flex items-center space-x-2 w-full">
+                                                <button onclick="window.toggleNpcCollapse('${faction.id}', '${npc.id}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none flex-shrink-0"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
                                                 <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full bg-transparent rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
+                                            </div>
+                                            <div class="ml-7 mt-0.5 mb-1">
+                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'subtitle', this.value)" value="${escapeHtml(npc.subtitle || '')}" class="seamless-input text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Role, Title, or Allegiance (e.g., Carnival Owner)">
                                             </div>
                                             <div class="collapsible-content ${npc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                                                 ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm mt-1', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}

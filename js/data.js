@@ -95,8 +95,9 @@ function migrateData(data) {
         if (fac.isCollapsed === undefined) fac.isCollapsed = false;
         if (!Array.isArray(fac.members)) fac.members = [];
         else fac.members.forEach((npc, npcIdx) => { 
-            if (!npc.id) npc.id = 'npc_migrated_' + facIdx + '_' + npcIdx + '_' + Date.now();
+            if (!npc.id) npc.id = 'npc_migrated_' + facIdx + '_' + npcIdx + '_' + Date.now(); 
             if (npc.isCollapsed === undefined) npc.isCollapsed = false;
+            if (npc.subtitle === undefined) npc.subtitle = "";
         });
     });
 
