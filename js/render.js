@@ -121,7 +121,7 @@ window.renderContent = function() {
                 </div>`;
         });
 
-        html = `<div class="space-y-6 animate-fade-in h-full flex flex-col"><section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 flex-grow flex flex-col"><h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800/80 pb-4"><i data-lucide="book-open" class="text-emerald-600"></i><span>Backstory & Overview</span></h3><div class="flex-grow flex flex-col">${contentHtml}</div></section></div>`;
+        html = `<div class="space-y-6 animate-fade-in"><section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800"><h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800/80 pb-4"><i data-lucide="book-open" class="text-emerald-600"></i><span>Backstory & Overview</span></h3><div>${contentHtml}</div></section></div>`;
     }
     else if (activeTab === 'personality') {
         let contentHtml = renderSectionHeader('personality-search', 'Search traits...', 'filterPersonality', 'toggleAllPersonality', 'addPersonality');
@@ -146,7 +146,7 @@ window.renderContent = function() {
                 </div>`;
         });
 
-        html = `<div class="space-y-6 animate-fade-in h-full flex flex-col"><section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 flex-grow flex flex-col"><h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800 pb-4"><i data-lucide="brain" class="text-emerald-600"></i><span>Personality & Traits</span></h3><div class="flex-grow flex flex-col">${contentHtml}</div></section></div>`;
+        html = `<div class="space-y-6 animate-fade-in"><section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800"><h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800 pb-4"><i data-lucide="brain" class="text-emerald-600"></i><span>Personality & Traits</span></h3><div>${contentHtml}</div></section></div>`;
     }
     else if (activeTab === 'build') {
         const abilities = characterData.build.abilities;
@@ -370,7 +370,7 @@ window.renderContent = function() {
             contentHtml = getOutlineNotesEditor('campaignNotes', subSection, characterData.campaignNotes[subSection], 'min-h-[250px]', 'Party inventory, loot lists, campaign rules, or general scratchpad... Enter starts a bullet, Tab indents, @ to link.');
         }
 
-        html = `<div class="space-y-6 animate-fade-in h-full flex flex-col"><section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 flex-grow flex flex-col"><h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800/80 pb-4"><i data-lucide="${titleMap[subSection].icon}" class="text-emerald-600"></i><span>${titleMap[subSection].title}</span></h3><div class="flex-grow flex flex-col">${contentHtml}</div></section></div>`;
+        html = `<div class="space-y-6 animate-fade-in"><section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800"><h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800/80 pb-4"><i data-lucide="${titleMap[subSection].icon}" class="text-emerald-600"></i><span>${titleMap[subSection].title}</span></h3><div>${contentHtml}</div></section></div>`;
     }
 
     container.innerHTML = html;
