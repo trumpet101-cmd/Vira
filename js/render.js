@@ -274,8 +274,8 @@ window.renderContent = function() {
                             <div class="p-5 flex-1 flex flex-col">
                                 <div class="flex justify-between items-start mb-2">
                                     <div class="flex-1">
-                                        <input type="text" oninput="window.updateQuest('${quest.id}', 'title', this.value)" value="${escapeHtml(quest.title)}" class="seamless-input font-bold text-lg ${quest.isCompleted ? 'text-stone-500 dark:text-stone-400 line-through' : 'text-stone-800 dark:text-stone-100'} bg-transparent w-full mb-1 rounded px-2 -ml-2 py-0.5" placeholder="Quest Title">
-                                        <input type="text" oninput="window.updateQuest('${quest.id}', 'subtitle', this.value)" value="${escapeHtml(quest.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 -ml-2 py-0.5" placeholder="Subtitle / Category">
+                                        <input type="text" oninput="window.updateQuest('${quest.id}', 'title', this.value)" value="${escapeHtml(quest.title)}" class="seamless-input font-bold text-lg ${quest.isCompleted ? 'text-stone-500 dark:text-stone-400 line-through' : 'text-stone-800 dark:text-stone-100'} bg-transparent w-full mb-1 rounded px-2 -ml-2 py-0.5 placeholder-stone-400/70" placeholder="Quest Title">
+                                        <input type="text" oninput="window.updateQuest('${quest.id}', 'subtitle', this.value)" value="${escapeHtml(quest.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 -ml-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Subtitle / Category">
                                     </div>
                                     <div class="flex items-center space-x-1 ml-4">
                                         ${renderActionButtons('Quest', quest.id, qIdx === 0, qIdx === quests.length - 1)}
@@ -300,8 +300,8 @@ window.renderContent = function() {
                         <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                             <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <button onclick="window.toggleLocationCollapse('${loc.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${loc.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                <input type="text" oninput="window.updateLocation('${loc.id}', 'title', this.value)" value="${escapeHtml(loc.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Location Name">
-                                <input type="text" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent px-2 py-1 w-full sm:w-auto rounded" placeholder="Region / Details">
+                                <input type="text" oninput="window.updateLocation('${loc.id}', 'title', this.value)" value="${escapeHtml(loc.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400/70" placeholder="Location Name">
+                                <input type="text" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent px-2 py-1 w-full sm:w-auto rounded placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Region / Details">
                             </div>
                             <div class="flex items-center space-x-1 ml-2">
                                 ${renderActionButtons('Location', loc.id, idx === 0, idx === characterData.campaignNotes.locations.length - 1)}
@@ -322,7 +322,7 @@ window.renderContent = function() {
                         <div class="bg-stone-200/50 dark:bg-stone-800/50 px-4 py-3 border-b border-stone-200 dark:border-stone-800 flex justify-between items-center">
                             <div class="flex items-center space-x-2 flex-1 min-w-0">
                                 <button onclick="window.toggleFactionCollapse('${faction.id}')" class="p-1 hover:bg-stone-300/50 dark:hover:bg-stone-700/50 rounded transition-colors focus:outline-none"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-500 chevron ${faction.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-full rounded px-2 py-0.5">
+                                <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-full rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Faction Name">
                             </div>
                             <div class="flex items-center space-x-1 ml-2">
                                 ${renderActionButtons('Faction', faction.id, fIdx === 0, fIdx === characterData.campaignNotes.npcs.length - 1)}
@@ -341,7 +341,7 @@ window.renderContent = function() {
                                             <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5" placeholder="Character Name">
+                                            <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full mb-1 bg-transparent rounded px-2 -ml-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
                                             ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
                                         </div>
                                         <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
