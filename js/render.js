@@ -349,7 +349,7 @@ window.renderContent = function() {
                                                 <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'subtitle', this.value)" value="${escapeHtml(npc.subtitle || '')}" class="seamless-input text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Role, Title, or Allegiance (e.g., Carnival Owner)">
                                             </div>
                                             <div class="collapsible-content ${npc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
-                                                ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '_' + npc.id, npc.notes, 'min-h-[40px] text-sm mt-1', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
+                                                ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '##' + npc.id, npc.notes, 'min-h-[40px] text-sm mt-1', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
                                             </div>
                                         </div>
                                         <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
