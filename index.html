@@ -25,6 +25,7 @@
     
     <script src="https://unpkg.com/lucide@latest"></script>
     
+    <!-- Firebase SDK Compat Core, Auth, and Firestore (CORS and File Protocol Safe) -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
@@ -33,6 +34,7 @@
 </head>
 <body class="bg-stone-100 text-stone-800 dark:bg-stone-950 dark:text-stone-100 font-sans h-screen flex overflow-hidden">
 
+    <!-- Auth Lock Screen Overlay -->
     <div id="auth-overlay" class="fixed inset-0 bg-stone-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-stone-900 dark:border-stone-800 rounded-2xl shadow-2xl border border-stone-200 w-full max-w-md p-8 animate-fade-in">
             <div class="text-center mb-8">
@@ -65,12 +67,14 @@
         </div>
     </div>
 
+    <!-- Reusable Custom Dialog/Alert Modal -->
     <div id="custom-dialog" class="fixed inset-0 bg-stone-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 hidden">
         <div class="bg-white dark:bg-stone-900 dark:border-stone-800 rounded-2xl shadow-2xl border border-stone-200 w-full max-w-sm p-6 text-center animate-fade-in">
             <div class="text-4xl mb-3" id="dialog-icon">⚠️</div>
             <h3 class="text-xl font-bold text-stone-800 dark:text-stone-100 tracking-tight" id="dialog-title">Are you sure?</h3>
             <p class="text-sm text-stone-500 mt-2 leading-relaxed" id="dialog-message">This action cannot be undone.</p>
             
+            <!-- Type-To-Confirm Double-Verification Input -->
             <div id="dialog-input-container" class="mt-4 hidden text-left animate-fade-in">
                 <label class="block text-xs font-bold text-stone-500 tracking-wider mb-1" id="dialog-input-label">Type "Delete" to confirm</label>
                 <input type="text" id="dialog-input" class="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-red-500 focus:outline-none transition-all font-semibold" placeholder="">
@@ -83,9 +87,11 @@
         </div>
     </div>
 
+    <!-- Character Manager Modal -->
     <div id="character-modal" class="fixed inset-0 bg-stone-950/80 backdrop-blur-md z-[90] flex items-center justify-center p-4 hidden">
         <div class="bg-white dark:bg-stone-900 dark:border-stone-800 rounded-2xl shadow-2xl border border-stone-200 w-full max-w-xl p-6 sm:p-8 flex flex-col max-h-[85vh] animate-fade-in">
             
+            <!-- Modal Header -->
             <div class="flex justify-between items-center pb-4 border-b border-stone-200 dark:border-stone-800">
                 <div class="flex items-center space-x-3">
                     <span class="text-3xl">👥</span>
@@ -99,20 +105,25 @@
                 </button>
             </div>
 
+            <!-- Content Area split in two parts: list & creation -->
             <div class="flex-1 overflow-y-auto custom-scrollbar my-6 pr-1 space-y-6">
                 
+                <!-- Active Characters Section -->
                 <div>
                     <div class="flex items-center justify-between mb-3">
                         <h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest">Active Sheets</h4>
+                        <!-- Simple local filter bar -->
                         <div class="relative w-44">
                             <input type="text" id="character-modal-search" oninput="window.filterCharacterModalList(this.value)" placeholder="Search sheets..." class="seamless-input text-xs w-full pl-7 pr-2.5 py-1.5 border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-lg bg-white shadow-sm focus:ring-1 focus:ring-emerald-500">
                             <i data-lucide="search" class="w-3.5 h-3.5 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
                         </div>
                     </div>
                     <div id="character-modal-list" class="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
-                        </div>
+                        <!-- Dynamic list items injected here -->
+                    </div>
                 </div>
 
+                <!-- Add New Character Section -->
                 <div class="bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 p-5 rounded-2xl">
                     <h4 class="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-widest mb-4 flex items-center space-x-2">
                         <i data-lucide="sparkles" class="w-4 h-4 text-emerald-600"></i>
@@ -142,8 +153,10 @@
         </div>
     </div>
 
+    <!-- Mobile Menu Overlay -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden" onclick="toggleMobileMenu()"></div>
 
+    <!-- Sidebar -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out w-64 bg-stone-900 text-stone-200 flex flex-col z-30 shadow-xl">
         <div class="p-6 flex items-center justify-between border-b border-stone-800">
             <div>
@@ -159,17 +172,20 @@
 
         <div class="p-4 border-t border-stone-800 space-y-3">
             
+            <!-- Dark Mode Toggle Button -->
             <button onclick="window.toggleDarkMode()" class="w-full flex items-center justify-between px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold rounded-xl transition-all border border-stone-700/50 text-sm">
                 <div class="flex items-center space-x-2">
                     <i data-lucide="moon" class="w-4.5 h-4.5 text-amber-400" id="dark-mode-moon-icon"></i>
                     <i data-lucide="sun" class="w-4.5 h-4.5 text-amber-400 hidden" id="dark-mode-sun-icon"></i>
                     <span id="dark-mode-text">Dark Mode</span>
                 </div>
+                <!-- Sliding toggle visual marker -->
                 <div class="w-8 h-4 bg-stone-600 rounded-full relative transition-all duration-200 border border-stone-500">
                     <div id="dark-mode-switch-dot" class="w-3 h-3 bg-stone-100 rounded-full absolute top-[1px] left-[1px] transition-all duration-200"></div>
                 </div>
             </button>
 
+            <!-- Character Switcher Button -->
             <button onclick="window.openCharacterModal()" class="w-full flex items-center justify-center space-x-2 py-2.5 bg-emerald-900/50 hover:bg-emerald-800 text-emerald-100 font-bold rounded-xl transition-all shadow-md shadow-emerald-950/40 border border-emerald-700/50 text-sm">
                 <i data-lucide="users" class="w-4.5 h-4.5"></i>
                 <span>Switch Character</span>
@@ -189,6 +205,7 @@
         </div>
     </aside>
 
+    <!-- Main Content -->
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-stone-50 dark:bg-stone-950 relative">
         
         <header class="bg-white dark:bg-stone-900 border-b dark:border-stone-800/80 shadow-sm dark:shadow-none px-6 py-4 flex items-center justify-between z-10">
@@ -202,7 +219,9 @@
                 </h2>
             </div>
             
+            <!-- Integrated Right-Side Action Toolbar -->
             <div class="flex items-center space-x-3">
+                <!-- 1. Save Status Notification Indicator -->
                 <div class="flex items-center space-x-2 text-stone-400 dark:text-stone-500 bg-stone-50 dark:bg-stone-800/60 px-3 py-1.5 rounded-full border border-stone-200 dark:border-stone-800 transition-all duration-300 flex-shrink-0" id="save-indicator">
                     <span id="save-icon-wrapper" class="flex items-center justify-center">
                         <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
@@ -210,6 +229,7 @@
                     <span class="text-sm font-medium" id="save-text">Saved automatically</span>
                 </div>
 
+                <!-- 2. Cloud Synchronization Status Badge Wrapper -->
                 <div class="flex-shrink-0 min-w-[170px]">
                     <div id="cloud-status-btn" class="w-full flex items-center justify-center space-x-2 px-3 py-1.5 rounded-lg text-sm transition-all bg-stone-800 text-stone-400">
                         <i data-lucide="hard-drive" class="w-4 h-4"></i>
@@ -217,6 +237,7 @@
                     </div>
                 </div>
 
+                <!-- 3. System Session Termination Sign Out Button -->
                 <button onclick="window.handleSignOut()" class="flex items-center justify-center space-x-2 px-3 py-1.5 bg-red-950/40 hover:bg-red-900 rounded-lg text-sm text-red-300 transition-colors flex-shrink-0">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                     <span>Sign Out</span>
@@ -229,9 +250,14 @@
             <div class="h-24 md:h-12"></div>
         </div>
 
+        <!-- Global Mention Dropdown -->
         <ul id="mention-dropdown" class="hidden absolute z-50 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-2xl max-h-64 overflow-y-auto w-72 text-sm flex flex-col"></ul>
     </main>
 
+    <!-- Global Mention Quick-Read Reference Tooltip Frame -->
+    <div id="mention-tooltip" class="hidden absolute pointer-events-none z-[200] max-w-xs bg-stone-900/95 text-stone-100 border border-stone-700/40 dark:border-stone-800 p-3 rounded-xl shadow-2xl backdrop-blur-sm text-xs leading-relaxed flex flex-col gap-1 transition-opacity duration-150 animate-fade-in"></div>
+
+    <!-- App scripts. Load order matters: state/data must load before code that uses them. -->
     <script src="js/firebase-config.js"></script>
     <script src="js/data.js"></script>
     <script src="js/state.js"></script>
