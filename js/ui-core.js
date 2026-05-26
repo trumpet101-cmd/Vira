@@ -104,4 +104,105 @@ window.toggleMobileMenu = function() {
     const overlay = document.getElementById('mobile-overlay');
     if (isMobileMenuOpen) { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); } 
     else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); }
+};
+
+// --- GLOBAL DYNAMIC @MENTION REFERENCE HOVER TOOLTIPS ---
+document.addEventListener('mouseover', function(event) {
+    // Target any text reference anchors built via insertMention deep linking paths
+    const anchor = event.target.closest('a[onclick*="window.setTab"]');
+    if (!anchor) return;
+
+    const onclickValue = anchor.getAttribute('onclick') || '';
+    const parsingMatrix = onclickValue.match(/window\.setTab\s*\(\s*'(.*?)'\s*,\s*'(.*?)'\s*\)/);
+    if (!parsingMatrix) return;
+
+    const targetTabId = parsingMatrix[1];
+    const targetItemId = parsingMatrix[2];
+    
+    let previewContent = '';
+    let categoryLabel = '';
+
+    // Route entity query criteria down to global state scopes safely
+    if (targetTabId === 'campaign_sessionNotes') {
+        const row = characterData.campaignNotes.sessionNotes.find(s => s.id === targetItemId);
+        if (row) { previewContent = row.notes; categoryLabel = 'Session Notes'; }
+    } else if (targetTabId === 'campaign_quests') {
+        const row = characterData.campaignNotes.quests.find(q => q.id === targetItemId);
+        if (row) { previewContent = row.notes; categoryLabel = 'Quest Log'; }
+    } else if (targetTabId === 'campaign_locations') {
+        const row = characterData.campaignNotes.locations.find(l => l.id === targetItemId);
+        if (row) { previewContent = row.notes; categoryLabel = 'Location Details'; }
+    } else if (targetTabId === 'campaign_npcs') {
+        characterData.campaignNotes.npcs.forEach(faction => {
+            if (faction.id === targetItemId) {
+                previewContent = faction.name ? 'Campaign Faction / Alliance Group Directory.' : '';
+                categoryLabel = 'Faction Group';
+            } else if (faction.members) {
+                const npc = faction.members.find(n => n.id === targetItemId);
+                if (npc) {
+                    previewContent = (npc.subtitle ? `[${npc.subtitle}] ` : '') + (npc.notes || '');
+                    categoryLabel = 'NPC Profile';
+                }
+            }
+        });
+    } else if (targetTabId === 'backstory') {
+        const row = characterData.backstory.find(b => b.id === targetItemId);
+        if (row) { previewContent = row.notes; categoryLabel = 'Character Backstory'; }
+    } else if (targetTabId === 'personality') {
+        const row = characterData.personality.find(p => p.id === targetItemId);
+        if (row) { previewContent = row.notes; categoryLabel = 'Trait / Core Behavior'; }
+    }
+
+    // Process notes text strings and extract tags gracefully 
+    const sanitizerNode = document.createElement('div');
+    sanitizerNode.innerHTML = previewContent;
+    let cleanSnippet = sanitizerNode.innerText || sanitizerNode.textContent || '';
+    cleanSnippet = cleanSnippet.trim().replace(/\s+/g, ' ');
+
+    if (!cleanSnippet || cleanSnippet === '<br>') {
+        cleanSnippet = 'No description or logs recorded for this entry yet.';
+    } else if (cleanSnippet.length > 160) {
+        cleanSnippet = cleanSnippet.substring(0, 157) + '...';
+    }
+
+    const frame = document.getElementById('mention-tooltip');
+    if (frame) {
+        frame.innerHTML = `<span class="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider">${categoryLabel}</span><p class="text-stone-200 dark:text-stone-300 font-medium">${window.escapeHtml(cleanSnippet)}</p>`;
+        frame.classList.remove('hidden');
+
+        // Initial cursor placement positioning callback tracking parameters
+        adjustTooltipPosition(event, frame);
+
+        const onMouseMove = function(moveEvent) {
+            adjustTooltipPosition(moveEvent, frame);
+        };
+
+        const onMouseLeave = function() {
+            frame.classList.add('hidden');
+            anchor.removeEventListener('mousemove', onMouseMove);
+            anchor.removeEventListener('mouseleave', onMouseLeave);
+        };
+
+        anchor.addEventListener('mousemove', onMouseMove);
+        anchor.addEventListener('mouseleave', onMouseLeave);
+    }
+});
+
+function adjustTooltipPosition(event, tooltipElement) {
+    const cursorSpacingOffset = 15;
+    let coordinateX = event.clientX + cursorSpacingOffset;
+    let coordinateY = event.clientY + cursorSpacingOffset;
+
+    const dimensions = tooltipElement.getBoundingClientRect();
+    
+    // Reverse bounds calculations safely if floating off the visible workspace edges
+    if (coordinateX + dimensions.width > window.innerWidth) {
+        coordinateX = event.clientX - dimensions.width - cursorSpacingOffset;
+    }
+    if (coordinateY + dimensions.height > window.innerHeight) {
+        coordinateY = event.clientY - dimensions.height - cursorSpacingOffset;
+    }
+
+    tooltipElement.style.left = coordinateX + 'px';
+    tooltipElement.style.top = coordinateY + 'px';
 }
