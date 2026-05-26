@@ -124,7 +124,15 @@ window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.c
 window.updateFaction = function(facId, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.name = val; window.saveData(); }
 window.deleteFaction = function(facId) { window.showCustomConfirm('Delete Faction?', 'Are you sure you want to delete this faction, its members, and all related logs?', '🛡️', () => { characterData.campaignNotes.npcs = characterData.campaignNotes.npcs.filter(f => f.id !== facId); window.saveData(); window.renderContent(); lucide.createIcons(); }); }
 window.toggleFactionCollapse = function(facId) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if (fac) { fac.isCollapsed = !fac.isCollapsed; window.saveData(); window.renderContent(); lucide.createIcons(); } };
-window.toggleAllFactions = function(collapse) { characterData.campaignNotes.npcs.forEach(f => f.isCollapsed = collapse); window.saveData(); window.renderContent(); lucide.createIcons(); };
+window.toggleAllFactions = function(collapse) {
+    characterData.campaignNotes.npcs.forEach(f => {
+        f.isCollapsed = collapse;
+        if (f.members && Array.isArray(f.members)) {
+            f.members.forEach(npc => { npc.isCollapsed = collapse; });
+        }
+    });
+    window.saveData(); window.renderContent(); lucide.createIcons();
+};
 window.moveFaction = function(facId, direction) { const arr = characterData.campaignNotes.npcs; const index = arr.findIndex(f => f.id === facId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); lucide.createIcons(); } } };
 
 window.addNPC = function(facId) { currentSearchQueries.npcs = ''; const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { fac.members.push({ id: 'npc_' + Date.now(), name: '', subtitle: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); lucide.createIcons(); } }
@@ -206,6 +214,21 @@ window.handleOutlineKeyDown = function(event) {
         return;
     }
     window.handleKeyDown(event);
+};
+
+window.handleOutlineFocus = function(event) {
+    const div = event.currentTarget;
+    const html = div.innerHTML.trim();
+    if (html === "" || html === "<br>" || html === "<div><br></div>" || !div.querySelector('ul')) {
+        div.innerHTML = "<ul><li><br></li></ul>";
+        setTimeout(() => {
+            const range = document.createRange();
+            const sel = window.getSelection();
+            const li = div.querySelector('li');
+            if (li) { range.setStart(li, 0); range.collapse(true); sel.removeAllRanges(); sel.addRange(range); }
+        }, 0);
+        div.dispatchEvent(new Event('input', { bubbles: true }));
+    }
 };
 
 window.handleOutlineFocus = function(event) {
