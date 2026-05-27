@@ -438,3 +438,182 @@ function flashElement(element) {
     element.classList.add('ring-4', 'ring-emerald-500/50', 'ring-offset-2', 'dark:ring-offset-stone-900', 'transition-all', 'duration-500');
     setTimeout(() => { element.classList.remove('ring-4', 'ring-emerald-500/50', 'ring-offset-2', 'dark:ring-offset-stone-900'); }, 2000);
 }
+
+// --- GLOBAL VAULT OMNISEARCH SYSTEM ENGINE ---
+window.globalSearchContext = { query: '', results: [], selectedIndex: -1 };
+
+function cleanHtmlTags(htmlString) {
+    if (!htmlString) return '';
+    const lookupNode = document.createElement('div');
+    lookupNode.innerHTML = htmlString;
+    return lookupNode.innerText || lookupNode.textContent || '';
+}
+
+function getSearchResultSnippet(fullText, searchTerm) {
+    const plainText = cleanHtmlTags(fullText).replace(/\s+/g, ' ').trim();
+    const matchIndex = plainText.toLowerCase().indexOf(searchTerm.toLowerCase());
+    if (matchIndex === -1) return plainText.substring(0, 90);
+    
+    const startBoundary = Math.max(0, matchIndex - 40);
+    const endBoundary = Math.min(plainText.length, matchIndex + 50);
+    let snippetBlock = plainText.substring(startBoundary, endBoundary);
+    
+    if (startBoundary > 0) snippetBlock = '...' + snippetBlock;
+    if (endBoundary < plainText.length) snippetBlock = snippetBlock + '...';
+    return snippetBlock;
+}
+
+window.handleGlobalSearchInput = function(value) {
+    const dropdown = document.getElementById('global-search-dropdown');
+    if (!dropdown) return;
+    
+    const q = value.trim().toLowerCase();
+    if (!q) { window.hideGlobalSearchDropdown(); return; }
+    
+    let matchingEntries = [];
+
+    // 1. Deep index through Session Notes
+    characterData.campaignNotes.sessionNotes.forEach(s => {
+        const textNotes = cleanHtmlTags(s.notes);
+        if (s.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (s.date && s.date.toLowerCase().includes(q))) {
+            matchingEntries.push({ tabId: 'campaign_sessionNotes', itemId: s.id, type: 'Session Note', title: s.title || 'Untitled Session', snippet: getSearchResultSnippet(s.notes, q) });
+        }
+    });
+
+    // 2. Deep index through Quest Logs
+    characterData.campaignNotes.quests.forEach(quest => {
+        const textNotes = cleanHtmlTags(quest.notes);
+        if (quest.title.toLowerCase().includes(q) || quest.subtitle.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q)) {
+            matchingEntries.push({ tabId: 'campaign_quests', itemId: quest.id, type: 'Quest', title: quest.title || 'Untitled Quest', snippet: getSearchResultSnippet(quest.subtitle + " " + quest.notes, q) });
+        }
+    });
+
+    // 3. Deep index through Locations Matrix
+    characterData.campaignNotes.locations.forEach(loc => {
+        const textNotes = cleanHtmlTags(loc.notes);
+        if (loc.title.toLowerCase().includes(q) || loc.subtitle.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q)) {
+            matchingEntries.push({ tabId: 'campaign_locations', itemId: loc.id, type: 'Location', title: loc.title || 'Untitled Location', snippet: getSearchResultSnippet(loc.subtitle + " " + loc.notes, q) });
+        }
+    });
+
+    // 4. Deep index through Factions & Nested NPCs
+    characterData.campaignNotes.npcs.forEach(faction => {
+        if (faction.name.toLowerCase().includes(q)) {
+            matchingEntries.push({ tabId: 'campaign_npcs', itemId: faction.id, type: 'Faction Group', title: faction.name, snippet: 'Faction / Group Registry Directory Entry.' });
+        }
+        if (faction.members) {
+            faction.members.forEach(npc => {
+                const textNotes = cleanHtmlTags(npc.notes);
+                if (npc.name.toLowerCase().includes(q) || (npc.subtitle && npc.subtitle.toLowerCase().includes(q)) || textNotes.toLowerCase().includes(q)) {
+                    matchingEntries.push({ tabId: 'campaign_npcs', itemId: npc.id, type: 'NPC Profile', title: npc.name || 'Unnamed NPC', snippet: getSearchResultSnippet((npc.subtitle ? `[${npc.subtitle}] ` : '') + npc.notes, q) });
+                }
+            });
+        }
+    });
+
+    // 5. Deep index through Backstory Logs
+    characterData.backstory.forEach(b => {
+        const textNotes = cleanHtmlTags(b.notes);
+        if (b.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q)) {
+            matchingEntries.push({ tabId: 'backstory', itemId: b.id, type: 'Backstory', title: b.title, snippet: getSearchResultSnippet(b.notes, q) });
+        }
+    });
+
+    // 6. Deep index through Personality Core Logs
+    characterData.personality.forEach(p => {
+        const textNotes = cleanHtmlTags(p.notes);
+        if (p.title.toLowerCase().includes(q) || p.subtitle.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q)) {
+            matchingEntries.push({ tabId: 'personality', itemId: p.id, type: 'Personality Trait', title: p.title, snippet: getSearchResultSnippet(p.subtitle + " " + p.notes, q) });
+        }
+    });
+
+    // 7. Index Miscellaneous scratchpad notes section
+    if (characterData.campaignNotes.misc) {
+        const textNotes = cleanHtmlTags(characterData.campaignNotes.misc);
+        if (textNotes.toLowerCase().includes(q)) {
+            matchingEntries.push({ tabId: 'campaign_misc', itemId: '', type: 'Misc & Loot', title: 'General Scratchpad Log', snippet: getSearchResultSnippet(characterData.campaignNotes.misc, q) });
+        }
+    }
+
+    window.globalSearchContext = { query: value, results: matchingEntries, selectedIndex: matchingEntries.length > 0 ? 0 : -1 };
+    dropdown.classList.remove('hidden');
+    window.renderGlobalSearchDropdownItems();
+};
+
+window.renderGlobalSearchDropdownItems = function() {
+    const dropdown = document.getElementById('global-search-dropdown');
+    if (!dropdown) return;
+    
+    const context = window.globalSearchContext;
+    if (context.results.length === 0) {
+        dropdown.innerHTML = `<li class="py-4 px-4 text-stone-400 dark:text-stone-500 italic text-center bg-white dark:bg-stone-900 select-none">No matching notes found inside vault</li>`;
+        return;
+    }
+
+    dropdown.innerHTML = context.results.map((res, i) => {
+        const isActive = i === context.selectedIndex;
+        const activeClasses = isActive ? 'bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-emerald-500 pl-3' : 'bg-white dark:bg-stone-900 border-l-4 border-transparent pl-4';
+        return `
+        <li onmousedown="window.selectGlobalSearchResult(${i})" class="py-2.5 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800/60 last:border-0 ${activeClasses}">
+            <div class="flex items-center justify-between gap-4">
+                <span class="font-bold text-stone-800 dark:text-stone-100 truncate">${window.escapeHtml(res.title)}</span>
+                <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest bg-emerald-100/60 dark:bg-emerald-950/60 px-2 py-0.5 rounded flex-shrink-0">${res.type}</span>
+            </div>
+            ${res.snippet ? `<span class="text-xs text-stone-400 dark:text-stone-500 truncate mt-0.5 font-medium">${window.escapeHtml(res.snippet)}</span>` : ''}
+        </li>`;
+    }).join('');
+
+    const activeNode = dropdown.children[context.selectedIndex];
+    if (activeNode) activeNode.scrollIntoView({ block: 'nearest' });
+};
+
+window.handleGlobalSearchKeyDown = function(event) {
+    const dropdown = document.getElementById('global-search-dropdown');
+    if (!dropdown || dropdown.classList.contains('hidden')) return;
+    
+    const context = window.globalSearchContext;
+    if (context.results.length === 0) return;
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        context.selectedIndex = Math.min(context.selectedIndex + 1, context.results.length - 1);
+        window.renderGlobalSearchDropdownItems();
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        context.selectedIndex = Math.max(context.selectedIndex - 1, 0);
+        window.renderGlobalSearchDropdownItems();
+    } else if (event.key === 'Enter') {
+        event.preventDefault();
+        if (context.selectedIndex !== -1) {
+            window.selectGlobalSearchResult(context.selectedIndex);
+        }
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+        window.hideGlobalSearchDropdown();
+        event.target.blur();
+    }
+};
+
+window.selectGlobalSearchResult = function(index) {
+    const context = window.globalSearchContext;
+    const selection = context.results[index];
+    if (selection) {
+        window.setTab(selection.tabId, selection.itemId);
+        const searchInput = document.getElementById('global-search-input');
+        if (searchInput) searchInput.value = '';
+        window.hideGlobalSearchDropdown();
+    }
+};
+
+window.hideGlobalSearchDropdown = function() {
+    const dropdown = document.getElementById('global-search-dropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+    window.globalSearchContext = { query: '', results: [], selectedIndex: -1 };
+};
+
+// Global structural click-away listener protecting floating omnisearch context bounds
+document.addEventListener('mousedown', function(e) {
+    if (!e.target.closest('#global-search-dropdown') && !e.target.closest('#global-search-input')) {
+        window.hideGlobalSearchDropdown();
+    }
+});
