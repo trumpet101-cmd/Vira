@@ -202,8 +202,8 @@ window.handleOutlineKeyDown = function(event) {
     const dropdown = document.getElementById('mention-dropdown');
     if (dropdown && !dropdown.classList.contains('hidden') && mentionContext) {
         if (event.key === 'Tab' || event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
-            window.handleKeyDown(event);
-            return;
+            const handled = window.handleKeyDown(event);
+            if (handled) return;
         }
     }
     if (event.key === 'Tab') {
@@ -262,24 +262,30 @@ function getMentionSuggestions(query) {
 
 window.handleKeyDown = function(event) {
     const dropdown = document.getElementById('mention-dropdown');
-    if (dropdown.classList.contains('hidden') || !mentionContext) return;
+    if (dropdown.classList.contains('hidden') || !mentionContext) return false;
 
     if (event.key === 'ArrowDown') {
         event.preventDefault();
         mentionContext.selectedIndex = Math.min(mentionContext.selectedIndex + 1, mentionContext.results.length - 1);
         renderMentionDropdownItems();
+        return true;
     } else if (event.key === 'ArrowUp') {
         event.preventDefault();
         mentionContext.selectedIndex = Math.max(mentionContext.selectedIndex - 1, 0);
         renderMentionDropdownItems();
+        return true;
     } else if (event.key === 'Tab' || event.key === 'Enter') {
         event.preventDefault();
+        event.stopPropagation();
         const selected = mentionContext.results[mentionContext.selectedIndex];
         if (selected) window.insertMention(selected.id, selected.label, selected.itemId);
+        return true;
     } else if (event.key === 'Escape') {
         event.preventDefault();
         hideMentionDropdown();
+        return true;
     }
+    return false;
 };
 
 window.handleInput = function(event, section, field) {
@@ -322,10 +328,23 @@ function showMentionDropdown(div, query, textNode, startOffset, endOffset) {
     if (results.length === 0) { hideMentionDropdown(); return; }
 
     mentionContext = { div, textNode, startOffset, endOffset, results, selectedIndex: 0 };
-    const rect = div.getBoundingClientRect();
-    dropdown.style.top = (rect.bottom + 5) + 'px'; 
-    dropdown.style.left = rect.left + 'px';
-    dropdown.style.width = Math.min(rect.width, 350) + 'px';
+    
+    const selection = window.getSelection();
+    if (selection.rangeCount) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        
+        if (rect.top === 0 && rect.left === 0) {
+            const divRect = div.getBoundingClientRect();
+            dropdown.style.top = (divRect.bottom + 5) + 'px';
+            dropdown.style.left = divRect.left + 'px';
+        } else {
+            dropdown.style.top = (window.scrollY + rect.bottom + 5) + 'px';
+            dropdown.style.left = (window.scrollX + rect.left) + 'px';
+        }
+    }
+    
+    dropdown.style.width = '320px';
     dropdown.classList.remove('hidden');
     renderMentionDropdownItems();
 }
@@ -336,7 +355,7 @@ function renderMentionDropdownItems() {
     dropdown.innerHTML = mentionContext.results.map((res, i) => {
         const isActive = i === mentionContext.selectedIndex;
         const activeClasses = isActive ? 'bg-emerald-100 border-l-4 border-emerald-500 dark:bg-emerald-950/40 pl-3' : 'bg-white dark:bg-stone-900 border-l-4 border-transparent pl-4';
-        return `<li onmousedown="event.preventDefault(); window.insertMention('${res.id}', '${escapeHtml(res.label).replace(/'/g, "\\'")}', '${res.itemId}')" class="py-3 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}"><span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span><span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">${res.type}</span></li>`;
+        return `<li class="py-3 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}"><span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span><span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">${res.type}</span></li>`;
     }).join('');
     const activeEl = dropdown.children[mentionContext.selectedIndex];
     if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
