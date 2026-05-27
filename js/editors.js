@@ -231,21 +231,6 @@ window.handleOutlineFocus = function(event) {
     }
 };
 
-window.handleOutlineFocus = function(event) {
-    const div = event.currentTarget;
-    const html = div.innerHTML.trim();
-    if (html === "" || html === "<br>" || html === "<div><br></div>" || !div.querySelector('ul')) {
-        div.innerHTML = "<ul><li><br></li></ul>";
-        setTimeout(() => {
-            const range = document.createRange();
-            const sel = window.getSelection();
-            const li = div.querySelector('li');
-            if (li) { range.setStart(li, 0); range.collapse(true); sel.removeAllRanges(); sel.addRange(range); }
-        }, 0);
-        div.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-};
-
 window.handleOutlineBlur = function(event) {
     const div = event.currentTarget;
     if (div.innerText.trim() === "") { div.innerHTML = ""; div.dispatchEvent(new Event('input', { bubbles: true })); }
@@ -556,10 +541,10 @@ window.renderGlobalSearchDropdownItems = function() {
         return `
         <li onmousedown="window.selectGlobalSearchResult(${i})" class="py-2.5 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800/60 last:border-0 ${activeClasses}">
             <div class="flex items-center justify-between gap-4">
-                <span class="font-bold text-stone-800 dark:text-stone-100 truncate">${window.escapeHtml(res.title)}</span>
+                <span class="font-bold text-stone-800 dark:text-stone-100 truncate">${escapeHtml(res.title)}</span>
                 <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest bg-emerald-100/60 dark:bg-emerald-950/60 px-2 py-0.5 rounded flex-shrink-0">${res.type}</span>
             </div>
-            ${res.snippet ? `<span class="text-xs text-stone-400 dark:text-stone-500 truncate mt-0.5 font-medium">${window.escapeHtml(res.snippet)}</span>` : ''}
+            ${res.snippet ? `<span class="text-xs text-stone-400 dark:text-stone-500 truncate mt-0.5 font-medium">${escapeHtml(res.snippet)}</span>` : ''}
         </li>`;
     }).join('');
 
