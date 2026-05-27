@@ -359,39 +359,6 @@ function renderMentionDropdownItems() {
 
 function hideMentionDropdown() { document.getElementById('mention-dropdown').classList.add('hidden'); mentionContext = null; }
 
-window.insertMention = function(targetTabId, label, itemId = '') {
-    if (!mentionContext) return;
-    const { div, textNode, startOffset, endOffset } = mentionContext;
-    const selection = window.getSelection();
-    const range = document.createRange();
-    
-    try {
-        range.setStart(textNode, startOffset);
-        range.setEnd(textNode, endOffset);
-        range.deleteContents();
-        
-        const a = document.createElement('a');
-        a.href = "#";
-        a.className = "text-emerald-700 bg-emerald-100/80 dark:text-emerald-300 dark:bg-emerald-950/60 font-bold px-1.5 py-0.5 mx-0.5 rounded shadow-sm hover:bg-emerald-200 hover:text-emerald-800 dark:hover:bg-emerald-900 dark:hover:text-emerald-200 transition-colors inline-flex items-center no-underline cursor-pointer";
-        a.contentEditable = "false";
-        a.setAttribute('onclick', `window.setTab('${targetTabId}', '${itemId}'); return false;`);
-        a.innerText = "@" + label;
-        
-        range.insertNode(a);
-        const space = document.createTextNode('\u00A0'); 
-        a.parentNode.insertBefore(space, a.nextSibling);
-        range.setStartAfter(space);
-        range.setEndAfter(space);
-        selection.removeAllRanges();
-        selection.addRange(range);
-    } catch (e) { console.error("Mention insert failed: ", e); }
-    
-    hideMentionDropdown();
-    div.dispatchEvent(new Event('input', { bubbles: true }));
-};
-
-document.addEventListener('mousedown', (e) => { if (!e.target.closest('#mention-dropdown')) hideMentionDropdown(); });
-
 // --- DEEP LINK SCROLL ENGINE ---
 window.setTab = function(tabId, itemId = '') {
     activeTab = tabId;
