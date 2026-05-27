@@ -201,7 +201,6 @@ window.handleOutlineKeyDown = function(event) {
     const div = event.currentTarget;
     const dropdown = document.getElementById('mention-dropdown');
     
-    // Explicit capture phase optimization to lock and resolve autocomplete triggers instantly
     if (dropdown && !dropdown.classList.contains('hidden') && mentionContext) {
         if (event.key === 'Tab' || event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
             event.preventDefault();
@@ -362,8 +361,6 @@ function renderMentionDropdownItems() {
     dropdown.innerHTML = mentionContext.results.map((res, i) => {
         const isActive = i === mentionContext.selectedIndex;
         const activeClasses = isActive ? 'bg-emerald-100 border-l-4 border-emerald-500 dark:bg-emerald-950/40 pl-3' : 'bg-white dark:bg-stone-900 border-l-4 border-transparent pl-4';
-        
-        // Restored interactive mouse validation bounds alongside default layout structures
         return `<li onmousedown="event.preventDefault(); event.stopPropagation(); window.insertMention('${res.id}', '${escapeHtml(res.label).replace(/'/g, "\\'")}', '${res.itemId}')" class="py-3 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}"><span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span><span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">${res.type}</span></li>`;
     }).join('');
     const activeEl = dropdown.children[mentionContext.selectedIndex];
@@ -371,6 +368,37 @@ function renderMentionDropdownItems() {
 }
 
 function hideMentionDropdown() { document.getElementById('mention-dropdown').classList.add('hidden'); mentionContext = null; }
+
+window.insertMention = function(targetTabId, label, itemId = '') {
+    if (!mentionContext) return;
+    const { div, textNode, startOffset, endOffset } = mentionContext;
+    const selection = window.getSelection();
+    const range = document.createRange();
+    
+    try {
+        range.setStart(textNode, startOffset);
+        range.setEnd(textNode, endOffset);
+        range.deleteContents();
+        
+        const a = document.createElement('a');
+        a.href = "#";
+        a.className = "text-emerald-700 bg-emerald-100/80 dark:text-emerald-300 dark:bg-emerald-950/60 font-bold px-1.5 py-0.5 mx-0.5 rounded shadow-sm hover:bg-emerald-200 hover:text-emerald-800 dark:hover:bg-emerald-900 dark:hover:text-emerald-200 transition-colors inline-flex items-center no-underline cursor-pointer";
+        a.contentEditable = "false";
+        a.setAttribute('onclick', `window.setTab('${targetTabId}', '${itemId}'); return false;`);
+        a.innerText = "@" + label;
+        
+        range.insertNode(a);
+        const space = document.createTextNode('\u00A0'); 
+        a.parentNode.insertBefore(space, a.nextSibling);
+        range.setStartAfter(space);
+        range.setEndAfter(space);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    } catch (e) { console.error("Mention insert failed: ", e); }
+    
+    hideMentionDropdown();
+    div.dispatchEvent(new Event('input', { bubbles: true }));
+};
 
 // --- DEEP LINK SCROLL ENGINE ---
 window.setTab = function(tabId, itemId = '') {
@@ -624,9 +652,12 @@ window.hideGlobalSearchDropdown = function() {
     window.globalSearchContext = { query: '', results: [], selectedIndex: -1 };
 };
 
-// Global structural click-away listener protecting floating omnisearch context bounds
+// Structural click-away listeners protecting both floating context dropdown boundaries simultaneously
 document.addEventListener('mousedown', function(e) {
     if (!e.target.closest('#global-search-dropdown') && !e.target.closest('#global-search-input')) {
         window.hideGlobalSearchDropdown();
+    }
+    if (!e.target.closest('#mention-dropdown')) {
+        hideMentionDropdown();
     }
 });
