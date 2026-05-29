@@ -46,6 +46,27 @@ function renderNavigation() {
 }
 
 window.renderContent = function() {
+    // FOCUS & POSITION GUARD PRESERVATION: Record layout focus vectors right before innerHTML mutations
+    var activeEl = document.activeElement;
+    var activeSection = null;
+    var activeField = null;
+    var caretOffset = 0;
+    
+    if (activeEl && activeEl.hasAttribute('data-editor-field')) {
+        activeSection = activeEl.getAttribute('data-editor-section');
+        activeField = activeEl.getAttribute('data-editor-field');
+        
+        // Calculate raw character caret anchor string index offset range
+        var selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            var range = selection.getRangeAt(0);
+            var preCaretRange = range.cloneRange();
+            preCaretRange.selectNodeContents(activeEl);
+            preCaretRange.setEnd(range.startContainer, range.startOffset);
+            caretOffset = preCaretRange.toString().length;
+        }
+    }
+
     const container = document.getElementById('content-area');
     let html = '';
     window.updateDarkModeUI();
@@ -58,14 +79,15 @@ window.renderContent = function() {
             : `<span class="text-sm">🧝‍♀️</span>`;
     }
 
+    // Injected track indexing tags into mentionable and outline components
     function getMentionableDiv(section, field, value, extraClasses = "") {
         const sectionArg = section ? `'${section}'` : 'null';
-        return `<div contenteditable="true" oninput="window.handleInput(event, ${sectionArg}, '${field}')" onkeydown="window.handleKeyDown(event)" onpaste="window.handlePaste(event)" class="w-full seamless-input rounded-lg p-3 -mx-3 min-h-[40px] cursor-text focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none whitespace-pre-wrap font-sans leading-relaxed text-stone-700 dark:text-stone-300 bg-transparent ${extraClasses}" data-placeholder="Click to type... Type @ to link notes.">${renderHTML(value)}</div>`;
+        return `<div contenteditable="true" data-editor-section="${section || ''}" data-editor-field="${field}" oninput="window.handleInput(event, ${sectionArg}, '${field}')" onkeydown="window.handleKeyDown(event)" onpaste="window.handlePaste(event)" class="w-full seamless-input rounded-lg p-3 -mx-3 min-h-[40px] cursor-text focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none whitespace-pre-wrap font-sans leading-relaxed text-stone-700 dark:text-stone-300 bg-transparent ${extraClasses}" data-placeholder="Click to type... Type @ to link notes.">${renderHTML(value)}</div>`;
     }
 
     function getOutlineNotesEditor(section, field, value, extraClasses = "min-h-[150px]", placeholder = "Start typing... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.") {
         const sectionArg = section ? `'${section}'` : 'null';
-        return `<div contenteditable="true" oninput="window.handleInput(event, ${sectionArg}, '${field}')" onkeydown="window.handleOutlineKeyDown(event)" onfocus="window.handleOutlineFocus(event)" onblur="window.handleOutlineBlur(event)" onpaste="window.handlePaste(event)" class="w-full seamless-input rounded-lg p-3 -mx-3 cursor-text focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none whitespace-pre-wrap font-sans leading-relaxed text-stone-700 dark:text-stone-200 bg-transparent ${extraClasses}" data-placeholder="${escapeHtml(placeholder)}">${renderHTML(value)}</div>`;
+        return `<div contenteditable="true" data-editor-section="${section || ''}" data-editor-field="${field}" oninput="window.handleInput(event, ${sectionArg}, '${field}')" onkeydown="window.handleOutlineKeyDown(event)" onfocus="window.handleOutlineFocus(event)" onblur="window.handleOutlineBlur(event)" onpaste="window.handlePaste(event)" class="w-full seamless-input rounded-lg p-3 -mx-3 cursor-text focus:bg-white dark:focus:bg-stone-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none whitespace-pre-wrap font-sans leading-relaxed text-stone-700 dark:text-stone-200 bg-transparent ${extraClasses}" data-placeholder="${escapeHtml(placeholder)}">${renderHTML(value)}</div>`;
     }
 
     if (activeTab === 'backstory') {
@@ -368,7 +390,7 @@ window.renderContent = function() {
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center space-x-2 w-full">
-                                                <button onclick="window.toggleNpcCollapse('${faction.id}', '${npc.id}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none flex-shrink-0"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
+                                                <button onclick="window.toggleNpcCollapse('${faction.id}', '${npcId}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none flex-shrink-0"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
                                                 <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full bg-transparent rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
                                             </div>
                                             <div class="ml-7 mt-0.5 mb-1">
@@ -409,4 +431,51 @@ window.renderContent = function() {
     else if (activeTab === 'campaign_npcs' && currentSearchQueries.npcs) { document.getElementById('npc-search').value = currentSearchQueries.npcs; window.filterNPCs(currentSearchQueries.npcs); }
     else if (activeTab === 'backstory' && currentSearchQueries.backstory) { document.getElementById('backstory-search').value = currentSearchQueries.backstory; window.filterBackstory(currentSearchQueries.backstory); }
     else if (activeTab === 'personality' && currentSearchQueries.personality) { document.getElementById('personality-search').value = currentSearchQueries.personality; window.filterPersonality(currentSearchQueries.personality); }
+
+    // RESTORE FOCUS & CARET POSITION: Relocate previous caret anchor parameters on reconstructed DOM tree elements
+    if (activeField) {
+        var querySelector = `[data-editor-field="${activeField}"]`;
+        if (activeSection) {
+            querySelector += `[data-editor-section="${activeSection}"]`;
+        }
+        var targetEl = container.querySelector(querySelector);
+        if (targetEl) {
+            targetEl.focus();
+            
+            var range = document.createRange();
+            var sel = window.getSelection();
+            var charCount = 0;
+            var stop = false;
+            
+            function traverse(node) {
+                if (stop) return;
+                if (node.nodeType === Node.TEXT_NODE) {
+                    var nextCount = charCount + node.length;
+                    if (caretOffset >= charCount && caretOffset <= nextCount) {
+                        range.setStart(node, caretOffset - charCount);
+                        range.collapse(true);
+                        stop = true;
+                    }
+                    charCount = nextCount;
+                } else {
+                    for (var i = 0; i < node.childNodes.length; i++) {
+                        traverse(node.childNodes[i]);
+                        if (stop) break;
+                    }
+                }
+            }
+            traverse(targetEl);
+            if (stop) {
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } else {
+                // Safe terminal fallback if elements got truncated or string metrics changed
+                var rangeEnd = document.createRange();
+                rangeEnd.selectNodeContents(targetEl);
+                rangeEnd.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(rangeEnd);
+            }
+        }
+    }
 }

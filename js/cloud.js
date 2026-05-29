@@ -97,8 +97,13 @@ function listenToActiveCharacter() {
     if (!cloudUser || !db || !currentCharacterId) return;
     const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(currentCharacterId);
 
-    unsubscribeActiveCharacter = docRef.onSnapshot((docSnap) => {
+    // Wired metadata changes tracking layer to filter local echo refreshes
+    unsubscribeActiveCharacter = docRef.onSnapshot({ includeMetadataChanges: true }, (docSnap) => {
+        // FILTER LOCAL ECHOES: If this update snapshot has pending database writes, 
+        // it means THIS browser tab just typed it. Do not blind overwrite state or trip innerHTML cursor resets!
+        if (docSnap.metadata.hasPendingWrites) return;
         if (isLocalSaving) return;
+        
         if (docSnap.exists) {
             characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...docSnap.data() };
             migrateData(characterData);
@@ -183,6 +188,7 @@ window.saveData = function() {
         }
     }
     
+    // Extended debounce delay timer window slightly to 1000ms to allow smooth typing sequences
     saveTimeout = setTimeout(async () => {
         if (isCloudReady && cloudUser && db && currentCharacterId) {
             try {
@@ -197,7 +203,7 @@ window.saveData = function() {
                 triggerSaveIndicator();
             }
         } else { triggerSaveIndicator(); }
-    }, 500);
+    }, 1000);
 }
 
 window.updateField = function(section, field, value) {
