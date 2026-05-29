@@ -115,7 +115,7 @@ window.deleteCharacter = function(event, charId) {
     });
 };
 
-// --- AVATAR UPLOADS (RESIZED TO HD 512px CONTAINER) ---
+// --- AVATAR UPLOADS (DIRECT STREAM TO HYBRID FIREBASE STORAGE BUCKET) ---
 window.handleCharAvatarUpload = function(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -131,8 +131,30 @@ window.handleCharAvatarUpload = function(event) {
             canvas.width = TARGET_SIZE; canvas.height = TARGET_SIZE;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, TARGET_SIZE, TARGET_SIZE);
-            characterData.avatar = canvas.toDataURL('image/jpeg', 0.75);
-            window.saveData(); window.renderContent(); lucide.createIcons();
+            
+            // Check if Cloud syncing is connected and active
+            if (typeof isCloudReady !== 'undefined' && isCloudReady && cloudUser && typeof storage !== 'undefined') {
+                if (window.updateCloudUIStatus) {
+                    window.updateCloudUIStatus("Uploading Portrait...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+                }
+                canvas.toBlob(function(blob) {
+                    if (!blob) return;
+                    var fileRef = storage.ref().child('users/' + cloudUser.uid + '/characters/' + currentCharacterId + '/avatar.jpg');
+                    fileRef.put(blob).then(function(snapshot) {
+                        return snapshot.ref.getDownloadURL();
+                    }).then(function(url) {
+                        characterData.avatar = url;
+                        window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+                    }).catch(function(err) {
+                        console.error("Cloud avatar upload failed: ", err);
+                        if (window.updateCloudUIStatus) window.updateCloudUIStatus("Upload Failed", "cloud-off", "bg-red-950 text-red-400");
+                    });
+                }, 'image/jpeg', 0.85);
+            } else {
+                // Offline fallback mode to Base64 string block
+                characterData.avatar = canvas.toDataURL('image/jpeg', 0.75);
+                window.saveData(); window.renderContent(); lucide.createIcons();
+            }
         };
         img.src = e.target.result;
     };
@@ -155,10 +177,35 @@ window.handleNPCAvatarUpload = function(event, facId, npcId) {
             canvas.width = TARGET_SIZE; canvas.height = TARGET_SIZE;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, TARGET_SIZE, TARGET_SIZE);
-            const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
-            if (fac) {
-                const npc = fac.members.find(n => n.id === npcId);
-                if (npc) { npc.avatar = canvas.toDataURL('image/jpeg', 0.75); window.saveData(); window.renderContent(); lucide.createIcons(); }
+            
+            // Check if Cloud syncing is connected and active
+            if (typeof isCloudReady !== 'undefined' && isCloudReady && cloudUser && typeof storage !== 'undefined') {
+                if (window.updateCloudUIStatus) {
+                    window.updateCloudUIStatus("Uploading NPC...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
+                }
+                canvas.toBlob(function(blob) {
+                    if (!blob) return;
+                    var fileRef = storage.ref().child('users/' + cloudUser.uid + '/characters/' + currentCharacterId + '/npcs/' + npcId + '.jpg');
+                    fileRef.put(blob).then(function(snapshot) {
+                        return snapshot.ref.getDownloadURL();
+                    }).then(function(url) {
+                        const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+                        if (fac) {
+                            const npc = fac.members.find(n => n.id === npcId);
+                            if (npc) { npc.avatar = url; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+                        }
+                    }).catch(function(err) {
+                        console.error("Cloud NPC upload failed: ", err);
+                        if (window.updateCloudUIStatus) window.updateCloudUIStatus("Upload Failed", "cloud-off", "bg-red-950 text-red-400");
+                    });
+                }, 'image/jpeg', 0.85);
+            } else {
+                // Offline fallback mode to Base64 string block
+                const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+                if (fac) {
+                    const npc = fac.members.find(n => n.id === npcId);
+                    if (npc) { npc.avatar = canvas.toDataURL('image/jpeg', 0.75); window.saveData(); window.renderContent(); lucide.createIcons(); }
+                }
             }
         };
         img.src = e.target.result;

@@ -17,6 +17,7 @@ var appId = 'vira-dnd-notes';
 var appInstance = firebase.initializeApp(firebaseConfig);
 var auth = firebase.auth();
 var db = firebase.firestore();
+var storage = firebase.storage();
 
 // Cloud sync state vars (used across cloud.js)
 var cloudUser = null;
