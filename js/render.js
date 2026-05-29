@@ -50,20 +50,33 @@ window.renderContent = function() {
     var activeEl = document.activeElement;
     var activeSection = null;
     var activeField = null;
+    var activeInputId = null;
     var caretOffset = 0;
+    var selectionStart = 0;
+    var selectionEnd = 0;
     
-    if (activeEl && activeEl.hasAttribute('data-editor-field')) {
-        activeSection = activeEl.getAttribute('data-editor-section');
-        activeField = activeEl.getAttribute('data-editor-field');
-        
-        // Calculate raw character caret anchor string index offset range
-        var selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-            var range = selection.getRangeAt(0);
-            var preCaretRange = range.cloneRange();
-            preCaretRange.selectNodeContents(activeEl);
-            preCaretRange.setEnd(range.startContainer, range.startOffset);
-            caretOffset = preCaretRange.toString().length;
+    if (activeEl) {
+        if (activeEl.hasAttribute('data-editor-field')) {
+            activeSection = activeEl.getAttribute('data-editor-section');
+            activeField = activeEl.getAttribute('data-editor-field');
+            
+            var selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                var range = selection.getRangeAt(0);
+                // VITAL SAFETY CHECK: Prevent fatal DOM index errors if a button was clicked but focus hasn't shifted yet
+                if (activeEl.contains(range.startContainer)) {
+                    var preCaretRange = range.cloneRange();
+                    preCaretRange.selectNodeContents(activeEl);
+                    preCaretRange.setEnd(range.startContainer, range.startOffset);
+                    caretOffset = preCaretRange.toString().length;
+                }
+            }
+        } else if (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') {
+            activeInputId = activeEl.id;
+            try {
+                selectionStart = activeEl.selectionStart || 0;
+                selectionEnd = activeEl.selectionEnd || 0;
+            } catch(e) {}
         }
     }
 
@@ -124,7 +137,7 @@ window.renderContent = function() {
                         ${Object.entries(characterData.basics).map(([key, val]) => `
                             <div class="bg-stone-50 dark:bg-stone-950 p-3 rounded-lg border border-stone-100 dark:border-stone-800">
                                 <div class="text-xs text-stone-400 dark:text-stone-500 font-semibold uppercase tracking-wider mb-1 capitalize">${key}</div>
-                                <input type="text" oninput="window.updateField('basics', '${key}', this.value)" value="${escapeHtml(val)}" class="seamless-input w-full bg-transparent font-medium text-stone-800 dark:text-stone-200 rounded px-1 -mx-1 py-0.5 focus:outline-none">
+                                <input type="text" id="input-basic-${key}" oninput="window.updateField('basics', '${key}', this.value)" value="${escapeHtml(val)}" class="seamless-input w-full bg-transparent font-medium text-stone-800 dark:text-stone-200 rounded px-1 -mx-1 py-0.5 focus:outline-none">
                             </div>`).join('')}
                     </div>
                 </div>
@@ -144,7 +157,7 @@ window.renderContent = function() {
                     <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                         <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                             <button onclick="window.toggleBackstoryCollapse('${b.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i></button>
-                            <input type="text" oninput="window.updateBackstory('${b.id}', 'title', this.value)" value="${escapeHtml(b.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Backstory Title">
+                            <input type="text" id="input-b-title-${b.id}" oninput="window.updateBackstory('${b.id}', 'title', this.value)" value="${escapeHtml(b.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded" placeholder="Backstory Title">
                         </div>
                         <div class="flex items-center space-x-1 ml-2">
                             ${renderActionButtons('Backstory', b.id, isFirst, isLast)}
@@ -168,8 +181,8 @@ window.renderContent = function() {
                     <div class="bg-stone-50/40 dark:bg-stone-800/40 border-b border-stone-200/50 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                         <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                             <button onclick="window.togglePersonalityCollapse('${p.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${p.isCollapsed ? 'collapsed' : ''}"></i></button>
-                            <input type="text" oninput="window.updatePersonality('${p.id}', 'title', this.value)" value="${escapeHtml(p.title)}" class="seamless-input text-lg bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded text-stone-800 dark:text-stone-100 font-bold" placeholder="Trait Title">
-                            <input type="text" oninput="window.updatePersonality('${p.id}', 'subtitle', this.value)" value="${escapeHtml(p.subtitle)}" class="seamless-input text-sm font-semibold bg-transparent px-2 py-1 w-full sm:w-auto rounded text-emerald-600 dark:text-emerald-400" placeholder="Subheading / State">
+                            <input type="text" id="input-p-title-${p.id}" oninput="window.updatePersonality('${p.id}', 'title', this.value)" value="${escapeHtml(p.title)}" class="seamless-input text-lg bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded text-stone-800 dark:text-stone-100 font-bold" placeholder="Trait Title">
+                            <input type="text" id="input-p-sub-${p.id}" oninput="window.updatePersonality('${p.id}', 'subtitle', this.value)" value="${escapeHtml(p.subtitle)}" class="seamless-input text-sm font-semibold bg-transparent px-2 py-1 w-full sm:w-auto rounded text-emerald-600 dark:text-emerald-400" placeholder="Subheading / State">
                         </div>
                         <div class="flex items-center space-x-1 ml-2">
                             ${renderActionButtons('Personality', p.id, idx === 0, idx === characterData.personality.length - 1)}
@@ -191,9 +204,9 @@ window.renderContent = function() {
         let modifierRows = abilities.map((ability, aIdx) => `
             <tr class="border-b border-stone-100 dark:border-stone-800 hover:bg-stone-50/50 dark:hover:bg-stone-800/30 transition-colors">
                 <td class="px-4 py-3 font-bold text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800">${ability.name}</td>
-                <td class="px-2 py-3 text-center"><input type="number" oninput="window.updateAbilityPoint(${aIdx}, 'starting', this.value)" value="${ability.starting || 0}" class="seamless-input w-14 text-center bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1.5 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 text-stone-800 dark:text-stone-100 font-semibold focus:outline-none"></td>
-                <td class="px-2 py-3 text-center border-r border-stone-200 dark:border-stone-800 bg-stone-50/40 dark:bg-stone-900/30"><input type="number" oninput="window.updateAbilityPoint(${aIdx}, 'species', this.value)" value="${ability.species || 0}" class="seamless-input w-12 text-center bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 text-emerald-700 dark:text-emerald-400 font-bold focus:outline-none"></td>
-                ${keys.slice(2).map(col => `<td class="px-2 py-3 text-center"><input type="number" oninput="window.updateAbilityPoint(${aIdx}, '${col.key}', this.value)" value="${ability[col.key] || 0}" class="seamless-input w-12 text-center bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 text-stone-700 dark:text-stone-200 focus:outline-none"></td>`).join('')}
+                <td class="px-2 py-3 text-center"><input type="number" id="input-ability-start-${aIdx}" oninput="window.updateAbilityPoint(${aIdx}, 'starting', this.value)" value="${ability.starting || 0}" class="seamless-input w-14 text-center bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1.5 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 text-stone-800 dark:text-stone-100 font-semibold focus:outline-none"></td>
+                <td class="px-2 py-3 text-center border-r border-stone-200 dark:border-stone-800 bg-stone-50/40 dark:bg-stone-900/30"><input type="number" id="input-ability-spec-${aIdx}" oninput="window.updateAbilityPoint(${aIdx}, 'species', this.value)" value="${ability.species || 0}" class="seamless-input w-12 text-center bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 text-emerald-700 dark:text-emerald-400 font-bold focus:outline-none"></td>
+                ${keys.slice(2).map(col => `<td class="px-2 py-3 text-center"><input type="number" id="input-ability-${col.key}-${aIdx}" oninput="window.updateAbilityPoint(${aIdx}, '${col.key}', this.value)" value="${ability[col.key] || 0}" class="seamless-input w-12 text-center bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 text-stone-700 dark:text-stone-200 focus:outline-none"></td>`).join('')}
             </tr>`).join('');
 
         let calculatedProgressRows = abilities.map((ability, aIdx) => `
@@ -213,7 +226,7 @@ window.renderContent = function() {
             acRowsHtml += `
                 <tr class="border-b border-stone-100 dark:border-stone-800 hover:bg-stone-50/40 dark:hover:bg-stone-900/30">
                     <td class="px-4 py-3 font-semibold text-stone-700 dark:text-stone-300 bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800">
-                        <select onchange="window.updateAcSelection(${rIdx}, this.value)" class="seamless-input font-bold text-sm bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-800 rounded-lg py-1.5 px-2.5 text-stone-700 dark:text-stone-200 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 focus:outline-none w-full max-w-[220px]">
+                        <select id="input-armor-select-${rIdx}" onchange="window.updateAcSelection(${rIdx}, this.value)" class="seamless-input font-bold text-sm bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-800 rounded-lg py-1.5 px-2.5 text-stone-700 dark:text-stone-200 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-stone-800 focus:outline-none w-full max-w-[220px]">
                             <option value="" class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Select Armor...</option>
                             <option value="unarmored" ${armorKey === 'unarmored' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Unarmored Barbarian</option>
                             <option value="unarmored_monk" ${armorKey === 'unarmored_monk' ? 'selected' : ''} class="bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200">Unarmored Monk</option>
@@ -242,7 +255,7 @@ window.renderContent = function() {
                         <table class="w-full text-sm text-left border-collapse">
                             <thead>
                                 <tr class="bg-stone-800 dark:bg-stone-950 text-stone-200 dark:text-stone-400 text-xs font-bold uppercase border-b border-stone-700 dark:border-stone-800"><th class="p-4 rounded-tl-xl border-r border-stone-700 dark:border-stone-800 text-[11px] w-[180px]">Progression Matrix</th><th class="p-3 text-center text-[11px]">Starting</th><th class="p-3 text-center border-r border-stone-700 dark:border-stone-800 text-[11px]">Species</th>${keys.slice(2).map(col => `<th class="p-3 text-center"><div class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-1">${col.featLabel}</div><div class="text-[11px] text-stone-100 font-extrabold">${col.labelLong}</div></th>`).join('')}</tr>
-                                <tr class="bg-stone-900/5 dark:bg-stone-900/20 border-b border-stone-200 dark:border-stone-800"><td class="p-3 font-semibold text-stone-400 text-xs italic bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800">Associated Feat / ASI</td><td class="p-3 text-center text-stone-300 bg-stone-50/10">-</td><td class="p-3 text-center text-stone-300 border-r border-stone-200 dark:border-stone-800 bg-stone-50/10">-</td>${keys.slice(2).map(col => `<td class="p-2 text-center"><input type="text" oninput="window.updateFeatName('${col.key}', this.value)" value="${escapeHtml(feats[col.key] || '')}" class="seamless-input w-full text-xs text-center border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1.5 font-bold text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 placeholder-stone-300 shadow-sm focus:ring-1 focus:ring-emerald-500 dark:focus:bg-stone-800" placeholder="Feat Name"></td>`).join('')}</tr>
+                                <tr class="bg-stone-900/5 dark:bg-stone-900/20 border-b border-stone-200 dark:border-stone-800"><td class="p-3 font-semibold text-stone-400 text-xs italic bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800">Associated Feat / ASI</td><td class="p-3 text-center text-stone-300 bg-stone-50/10">-</td><td class="p-3 text-center text-stone-300 border-r border-stone-200 dark:border-stone-800 bg-stone-50/10">-</td>${keys.slice(2).map(col => `<td class="p-2 text-center"><input type="text" id="input-feat-${col.key}" oninput="window.updateFeatName('${col.key}', this.value)" value="${escapeHtml(feats[col.key] || '')}" class="seamless-input w-full text-xs text-center border border-stone-200 dark:border-stone-800 rounded-lg py-1 px-1.5 font-bold text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 placeholder-stone-300 shadow-sm focus:ring-1 focus:ring-emerald-500 dark:focus:bg-stone-800" placeholder="Feat Name"></td>`).join('')}</tr>
                             </thead>
                             <tbody>${modifierRows}</tbody>
                         </table>
@@ -278,8 +291,8 @@ window.renderContent = function() {
                         <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                             <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${sess.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                <input type="text" oninput="window.updateSession('${sess.id}', 'title', this.value)" value="${escapeHtml(sess.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Session Title">
-                                <input type="text" oninput="window.updateSession('${sess.id}', 'date', this.value)" value="${escapeHtml(sess.date)}" class="seamless-input text-sm text-stone-500 bg-transparent px-2 py-1 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Date">
+                                <input type="text" id="input-sess-title-${sess.id}" oninput="window.updateSession('${sess.id}', 'title', this.value)" value="${escapeHtml(sess.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Session Title">
+                                <input type="text" id="input-sess-date-${sess.id}" oninput="window.updateSession('${sess.id}', 'date', this.value)" value="${escapeHtml(sess.date)}" class="seamless-input text-sm text-stone-500 bg-transparent px-2 py-1 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Date">
                             </div>
                             <div class="flex items-center space-x-1 ml-2">
                                 ${renderActionButtons('Session', sess.id, idx === 0, idx === characterData.campaignNotes.sessionNotes.length - 1)}
@@ -309,8 +322,8 @@ window.renderContent = function() {
                             <div class="p-5 flex-1 flex flex-col">
                                 <div class="flex justify-between items-start mb-2">
                                     <div class="flex-1">
-                                        <input type="text" oninput="window.updateQuest('${quest.id}', 'title', this.value)" value="${escapeHtml(quest.title)}" class="seamless-input font-bold text-lg ${quest.isCompleted ? 'text-stone-500 dark:text-stone-400 line-through' : 'text-stone-800 dark:text-stone-100'} bg-transparent w-full mb-1 rounded px-2 -ml-2 py-0.5 placeholder-stone-400/70" placeholder="Quest Title">
-                                        <input type="text" oninput="window.updateQuest('${quest.id}', 'subtitle', this.value)" value="${escapeHtml(quest.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 -ml-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Subtitle / Category">
+                                        <input type="text" id="input-quest-title-${quest.id}" oninput="window.updateQuest('${quest.id}', 'title', this.value)" value="${escapeHtml(quest.title)}" class="seamless-input font-bold text-lg ${quest.isCompleted ? 'text-stone-500 dark:text-stone-400 line-through' : 'text-stone-800 dark:text-stone-100'} bg-transparent w-full mb-1 rounded px-2 -ml-2 py-0.5 placeholder-stone-400/70" placeholder="Quest Title">
+                                        <input type="text" id="input-quest-sub-${quest.id}" oninput="window.updateQuest('${quest.id}', 'subtitle', this.value)" value="${escapeHtml(quest.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 -ml-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Subtitle / Category">
                                     </div>
                                     <div class="flex items-center space-x-1 ml-4">
                                         ${renderActionButtons('Quest', quest.id, qIdx === 0, qIdx === quests.length - 1)}
@@ -335,8 +348,8 @@ window.renderContent = function() {
                         <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                             <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <button onclick="window.toggleLocationCollapse('${loc.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${loc.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                <input type="text" oninput="window.updateLocation('${loc.id}', 'title', this.value)" value="${escapeHtml(loc.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400/70" placeholder="Location Name">
-                                <input type="text" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent px-2 py-1 w-full sm:w-auto rounded placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Region / Details">
+                                <input type="text" id="input-loc-title-${loc.id}" oninput="window.updateLocation('${loc.id}', 'title', this.value)" value="${escapeHtml(loc.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400/70" placeholder="Location Name">
+                                <input type="text" id="input-loc-sub-${loc.id}" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent px-2 py-1 w-full sm:w-auto rounded placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Region / Details">
                             </div>
                             <div class="flex items-center space-x-1 ml-2">
                                 ${renderActionButtons('Location', loc.id, idx === 0, idx === characterData.campaignNotes.locations.length - 1)}
@@ -357,7 +370,7 @@ window.renderContent = function() {
                         <div class="bg-stone-200/50 dark:bg-stone-800/50 px-4 py-3 border-b border-stone-200 dark:border-stone-800 flex justify-between items-center">
                             <div class="flex items-center space-x-2 flex-1 min-w-0">
                                 <button onclick="window.toggleFactionCollapse('${faction.id}')" class="p-1 hover:bg-stone-300/50 dark:hover:bg-stone-700/50 rounded transition-colors focus:outline-none"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-500 chevron ${faction.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                <input type="text" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-full rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Faction Name">
+                                <input type="text" id="input-fac-name-${faction.id}" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-full rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Faction Name">
                             </div>
                             <div class="flex items-center space-x-1 ml-2">
                                 ${renderActionButtons('Faction', faction.id, fIdx === 0, fIdx === characterData.campaignNotes.npcs.length - 1)}
@@ -391,10 +404,10 @@ window.renderContent = function() {
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center space-x-2 w-full">
                                                 <button onclick="window.toggleNpcCollapse('${faction.id}', '${npc.id}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none flex-shrink-0"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full bg-transparent rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
+                                                <input type="text" id="input-npc-name-${faction.id}-${npc.id}" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full bg-transparent rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
                                             </div>
                                             <div class="ml-7 mt-0.5 mb-1">
-                                                <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'subtitle', this.value)" value="${escapeHtml(npc.subtitle || '')}" class="seamless-input text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Role, Title, or Allegiance (e.g., Carnival Owner)">
+                                                <input type="text" id="input-npc-sub-${faction.id}-${npc.id}" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'subtitle', this.value)" value="${escapeHtml(npc.subtitle || '')}" class="seamless-input text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Role, Title, or Allegiance (e.g., Carnival Owner)">
                                             </div>
                                             <div class="collapsible-content ${npc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                                                 ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '##' + npc.id, npc.notes, 'min-h-[40px] text-sm mt-1', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
@@ -433,7 +446,15 @@ window.renderContent = function() {
     else if (activeTab === 'personality' && currentSearchQueries.personality) { document.getElementById('personality-search').value = currentSearchQueries.personality; window.filterPersonality(currentSearchQueries.personality); }
 
     // RESTORE FOCUS & CARET POSITION: Relocate previous caret anchor parameters on reconstructed DOM tree elements
-    if (activeField) {
+    if (activeInputId) {
+        var targetInput = document.getElementById(activeInputId);
+        if (targetInput) {
+            targetInput.focus();
+            try {
+                targetInput.setSelectionRange(selectionStart, selectionEnd);
+            } catch(e) {}
+        }
+    } else if (activeField) {
         var querySelector = `[data-editor-field="${activeField}"]`;
         if (activeSection) {
             querySelector += `[data-editor-section="${activeSection}"]`;
