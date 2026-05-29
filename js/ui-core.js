@@ -82,7 +82,7 @@ window.showCustomAlert = function(title, message, icon) {
     
     const confirmBtn = document.getElementById('dialog-confirm-btn');
     const cancelBtn = document.getElementById('dialog-cancel-btn');
-    const inputContainer = document.getElementById('dialog-input-container');
+    const inputContainer = document.getElementById('custom-dialog').querySelector('#dialog-input-container');
     if (inputContainer) inputContainer.classList.add('hidden');
     
     const newConfirmBtn = confirmBtn.cloneNode(true);
@@ -108,7 +108,6 @@ window.toggleMobileMenu = function() {
 
 // --- GLOBAL DYNAMIC @MENTION REFERENCE HOVER TOOLTIPS ---
 document.addEventListener('mouseover', function(event) {
-    // Target any text reference anchors built via insertMention deep linking paths
     const anchor = event.target.closest('a[onclick*="window.setTab"]');
     if (!anchor) return;
 
@@ -122,7 +121,6 @@ document.addEventListener('mouseover', function(event) {
     let previewContent = '';
     let categoryLabel = '';
 
-    // Route entity query criteria down to global state scopes safely
     if (targetTabId === 'campaign_sessionNotes') {
         const row = characterData.campaignNotes.sessionNotes.find(s => s.id === targetItemId);
         if (row) { previewContent = row.notes; categoryLabel = 'Session Notes'; }
@@ -153,7 +151,6 @@ document.addEventListener('mouseover', function(event) {
         if (row) { previewContent = row.notes; categoryLabel = 'Trait / Core Behavior'; }
     }
 
-    // Process notes text strings and extract tags gracefully 
     const sanitizerNode = document.createElement('div');
     sanitizerNode.innerHTML = previewContent;
     let cleanSnippet = sanitizerNode.innerText || sanitizerNode.textContent || '';
@@ -170,7 +167,6 @@ document.addEventListener('mouseover', function(event) {
         frame.innerHTML = `<span class="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider">${categoryLabel}</span><p class="text-stone-200 dark:text-stone-300 font-medium">${window.escapeHtml(cleanSnippet)}</p>`;
         frame.classList.remove('hidden');
 
-        // Initial cursor placement positioning callback tracking parameters
         adjustTooltipPosition(event, frame);
 
         const onMouseMove = function(moveEvent) {
@@ -195,7 +191,6 @@ function adjustTooltipPosition(event, tooltipElement) {
 
     const dimensions = tooltipElement.getBoundingClientRect();
     
-    // Reverse bounds calculations safely if floating off the visible workspace edges
     if (coordinateX + dimensions.width > window.innerWidth) {
         coordinateX = event.clientX - dimensions.width - cursorSpacingOffset;
     }
@@ -206,3 +201,89 @@ function adjustTooltipPosition(event, tooltipElement) {
     tooltipElement.style.left = coordinateX + 'px';
     tooltipElement.style.top = coordinateY + 'px';
 }
+
+// --- GLOBAL IMAGE LIGHTBOX PRESENTATION MATRIX ---
+window.openLightbox = function(src) {
+    const lightbox = document.getElementById('image-lightbox');
+    const img = document.getElementById('lightbox-img');
+    if (lightbox && img && src) {
+        img.src = src;
+        lightbox.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+    }
+};
+
+window.closeLightbox = function() {
+    const lightbox = document.getElementById('image-lightbox');
+    if (lightbox) lightbox.classList.add('hidden');
+};
+
+// Automatic window key listener watch terminating full screen overlay modals
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        window.closeLightbox();
+    }
+});
+
+// --- ENHANCED HIGH-RESOLUTION PORTRAIT CANVAS COMPRESSION MATRIX UPLOAD INTERFACES ---
+window.handleCharAvatarUpload = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const maxDim = 450; // High-resolution medium template boundary definition
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+                if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
+            } else {
+                if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.80); // 80% compression layout metrics
+            characterData.avatar = dataUrl;
+            window.saveData(); window.renderContent();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+window.handleNPCAvatarUpload = function(event, facId, npcId) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const maxDim = 450;
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+                if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
+            } else {
+                if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.80);
+            
+            const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+            if (fac) {
+                const npc = fac.members.find(n => n.id === npcId);
+                if (npc) { npc.avatar = dataUrl; window.saveData(); window.renderContent(); }
+            }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+};
