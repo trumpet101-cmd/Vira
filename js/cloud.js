@@ -22,6 +22,8 @@ else {
 migrateData(characterData);
 
 // --- HYBRID CLOUD LOGIC ---
+var lastLocalEditTime = 0; // The Edit Lock timer
+
 // Track Auth State changes
 auth.onAuthStateChanged(async (u) => {
     try {
@@ -97,12 +99,12 @@ function listenToActiveCharacter() {
     if (!cloudUser || !db || !currentCharacterId) return;
     const docRef = db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(currentCharacterId);
 
-    // Wired metadata changes tracking layer to filter local echo refreshes
     unsubscribeActiveCharacter = docRef.onSnapshot({ includeMetadataChanges: true }, (docSnap) => {
-        // FILTER LOCAL ECHOES: If this update snapshot has pending database writes, 
-        // it means THIS browser tab just typed it. Do not blind overwrite state or trip innerHTML cursor resets!
+        // FILTER LOCAL ECHOES: Ignore any incoming snapshots if this specific browser tab is the one typing
         if (docSnap.metadata.hasPendingWrites) return;
-        if (isLocalSaving) return;
+        
+        // EDIT LOCK PREVENTING SYNC STOMPING: If the user typed anything within the last 4 seconds, ignore cloud echoes
+        if (Date.now() - lastLocalEditTime < 4000) return;
         
         if (docSnap.exists) {
             characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...docSnap.data() };
@@ -152,7 +154,6 @@ function triggerSaveIndicator() {
     }, 600);
 }
 
-// --- SUCCESS SAVE NOTIFICATIONS ---
 function flashSuccessIndicator(textMsg) {
     const ind = document.getElementById('save-indicator');
     const iconWrapper = document.getElementById('save-icon-wrapper');
@@ -171,6 +172,7 @@ function flashSuccessIndicator(textMsg) {
 }
 
 window.saveData = function() {
+    lastLocalEditTime = Date.now(); // Trip the Edit Lock to stop sync stomping
     clearTimeout(saveTimeout);
     localStorage.setItem('character_data_' + currentCharacterId, JSON.stringify(characterData));
 
@@ -188,17 +190,13 @@ window.saveData = function() {
         }
     }
     
-    // Extended debounce delay timer window to allow smooth typing sequences
     saveTimeout = setTimeout(async () => {
         if (isCloudReady && cloudUser && db && currentCharacterId) {
             try {
-                isLocalSaving = true;
                 await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(currentCharacterId).set(characterData);
                 triggerSaveIndicator();
-                setTimeout(() => { isLocalSaving = false; }, 1000);
             } catch (e) {
                 console.error("Cloud save failed, relying on local backup", e);
-                isLocalSaving = false;
                 handleSyncError(e);
                 triggerSaveIndicator();
             }
@@ -218,7 +216,6 @@ window.updateField = function(section, field, value) {
     }
 };
 
-// --- FULL-VAULT (ALL CHARACTERS) BACKUP EXPORT & IMPORT FLOW ---
 window.exportJSON = async function() {
     const backupPayload = { vira_vault_backup: true, version: "2.0", currentCharacterId: currentCharacterId, characterList: characterList, characters: {} };
     updateCloudUIStatus("Preparing Backup...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
@@ -270,7 +267,6 @@ window.importJSON = function(event) {
     reader.onload = async function(e) {
         try {
             const parsedData = JSON.parse(e.target.result);
-            
             if (parsedData.vira_vault_backup === true) {
                 window.showCustomConfirm(
                     'Import Full Vault?', 'Are you sure you want to proceed? This will overwrite ALL characters currently in your vault with the characters inside this backup.', '📥', 
