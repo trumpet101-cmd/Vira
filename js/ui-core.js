@@ -225,7 +225,7 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// --- ENHANCED HIGH-RESOLUTION PORTRAIT CANVAS COMPRESSION MATRIX UPLOAD INTERFACES ---
+// --- ENHANCED HIGH-RESOLUTION PORTRAIT CANVAS COMPRESSION MATRIX UPLOAD INTERFACES (512px SQR CROPS) ---
 window.handleCharAvatarUpload = function(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -234,19 +234,14 @@ window.handleCharAvatarUpload = function(event) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            const maxDim = 450; // High-resolution medium template boundary definition
-            let width = img.width;
-            let height = img.height;
-            if (width > height) {
-                if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
-            } else {
-                if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
-            }
-            canvas.width = width;
-            canvas.height = height;
+            const TARGET_SIZE = 512;
+            let size = Math.min(img.width, img.height);
+            let xOffset = (img.width - size) / 2;
+            let yOffset = (img.height - size) / 2;
+            canvas.width = TARGET_SIZE; canvas.height = TARGET_SIZE;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.80); // 80% compression layout metrics
+            ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, TARGET_SIZE, TARGET_SIZE);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
             characterData.avatar = dataUrl;
             window.saveData(); window.renderContent();
         };
@@ -263,19 +258,14 @@ window.handleNPCAvatarUpload = function(event, facId, npcId) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            const maxDim = 450;
-            let width = img.width;
-            let height = img.height;
-            if (width > height) {
-                if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
-            } else {
-                if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
-            }
-            canvas.width = width;
-            canvas.height = height;
+            const TARGET_SIZE = 512;
+            let size = Math.min(img.width, img.height);
+            let xOffset = (img.width - size) / 2;
+            let yOffset = (img.height - size) / 2;
+            canvas.width = TARGET_SIZE; canvas.height = TARGET_SIZE;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.80);
+            ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, TARGET_SIZE, TARGET_SIZE);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
             
             const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
             if (fac) {

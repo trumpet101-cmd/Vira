@@ -115,7 +115,7 @@ window.deleteCharacter = function(event, charId) {
     });
 };
 
-// --- AVATAR UPLOADS ---
+// --- AVATAR UPLOADS (RESIZED TO HD 512px CONTAINER) ---
 window.handleCharAvatarUpload = function(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -124,14 +124,14 @@ window.handleCharAvatarUpload = function(event) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            const TARGET_SIZE = 256;
+            const TARGET_SIZE = 512;
             let size = Math.min(img.width, img.height);
             let xOffset = (img.width - size) / 2;
             let yOffset = (img.height - size) / 2;
             canvas.width = TARGET_SIZE; canvas.height = TARGET_SIZE;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, TARGET_SIZE, TARGET_SIZE);
-            characterData.avatar = canvas.toDataURL('image/jpeg', 0.7);
+            characterData.avatar = canvas.toDataURL('image/jpeg', 0.75);
             window.saveData(); window.renderContent(); lucide.createIcons();
         };
         img.src = e.target.result;
@@ -148,7 +148,7 @@ window.handleNPCAvatarUpload = function(event, facId, npcId) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            const TARGET_SIZE = 128;
+            const TARGET_SIZE = 512;
             let size = Math.min(img.width, img.height);
             let xOffset = (img.width - size) / 2;
             let yOffset = (img.height - size) / 2;
@@ -158,7 +158,7 @@ window.handleNPCAvatarUpload = function(event, facId, npcId) {
             const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
             if (fac) {
                 const npc = fac.members.find(n => n.id === npcId);
-                if (npc) { npc.avatar = canvas.toDataURL('image/jpeg', 0.7); window.saveData(); window.renderContent(); lucide.createIcons(); }
+                if (npc) { npc.avatar = canvas.toDataURL('image/jpeg', 0.75); window.saveData(); window.renderContent(); lucide.createIcons(); }
             }
         };
         img.src = e.target.result;
