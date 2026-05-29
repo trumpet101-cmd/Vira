@@ -115,7 +115,7 @@ window.deleteCharacter = function(event, charId) {
     });
 };
 
-// --- AVATAR UPLOADS (DIRECT CLOUD STORAGE STREAMING WITH PROGRESS TRACKING) ---
+// --- AVATAR UPLOADS (DIRECT CLOUD STORAGE OBSERVERS WITH EXPLICIT TRAPS) ---
 window.handleCharAvatarUpload = function(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -137,20 +137,33 @@ window.handleCharAvatarUpload = function(event) {
                     window.updateCloudUIStatus("Uploading Portrait...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
                 }
                 canvas.toBlob(function(blob) {
-                    if (!blob) return;
-                    var fileRef = storage.ref().child('users/' + cloudUser.uid + '/characters/' + currentCharacterId + '/avatar.jpg');
-                    fileRef.put(blob).then(function(snapshot) {
-                        return snapshot.ref.getDownloadURL();
-                    }).then(function(url) {
-                        characterData.avatar = url;
-                        window.saveData(); 
-                        window.renderContent(); 
+                    if (!blob) {
+                        window.showCustomAlert("Image Error", "Failed to process image canvas metrics locally.", "❌");
                         if (window.updateCloudUIStatus) window.updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
-                        if (window.lucide) lucide.createIcons();
-                    }).catch(function(err) {
-                        console.error("Cloud avatar upload failed: ", err);
-                        if (window.updateCloudUIStatus) window.updateCloudUIStatus("Upload Failed", "cloud-off", "bg-red-950 text-red-400");
-                    });
+                        return;
+                    }
+                    
+                    var fileRef = storage.ref().child('users/' + cloudUser.uid + '/characters/' + currentCharacterId + '/avatar.jpg');
+                    var uploadTask = fileRef.put(blob);
+                    
+                    // Wire state observer to intercept explicit Firebase errors
+                    uploadTask.on('state_changed', 
+                        function(snapshot) { /* Progress tracking channel */ }, 
+                        function(error) {
+                            console.error("Cloud avatar upload failed:", error);
+                            window.showCustomAlert("Upload Blocked", `Google Cloud rejected file save: ${error.message}\n\nPlease check your Firebase Storage setup or rules configuration.`, "❌");
+                            if (window.updateCloudUIStatus) window.updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
+                        }, 
+                        function() {
+                            uploadTask.snapshot.ref.getDownloadURL().then(function(url) {
+                                characterData.avatar = url;
+                                window.saveData(); 
+                                window.renderContent(); 
+                                if (window.updateCloudUIStatus) window.updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
+                                if (window.lucide) lucide.createIcons();
+                            });
+                        }
+                    );
                 }, 'image/jpeg', 0.85);
             } else {
                 characterData.avatar = canvas.toDataURL('image/jpeg', 0.75);
@@ -184,22 +197,35 @@ window.handleNPCAvatarUpload = function(event, facId, npcId) {
                     window.updateCloudUIStatus("Uploading NPC...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
                 }
                 canvas.toBlob(function(blob) {
-                    if (!blob) return;
-                    var fileRef = storage.ref().child('users/' + cloudUser.uid + '/characters/' + currentCharacterId + '/npcs/' + npcId + '.jpg');
-                    fileRef.put(blob).then(function(snapshot) {
-                        return snapshot.ref.getDownloadURL();
-                    }).then(function(url) {
-                        const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
-                        if (fac) {
-                            const npc = fac.members.find(n => n.id === npcId);
-                            if (npc) { npc.avatar = url; window.saveData(); window.renderContent(); }
-                        }
+                    if (!blob) {
+                        window.showCustomAlert("Image Error", "Failed to process image canvas metrics locally.", "❌");
                         if (window.updateCloudUIStatus) window.updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
-                        if (window.lucide) lucide.createIcons();
-                    }).catch(function(err) {
-                        console.error("Cloud NPC upload failed: ", err);
-                        if (window.updateCloudUIStatus) window.updateCloudUIStatus("Upload Failed", "cloud-off", "bg-red-950 text-red-400");
-                    });
+                        return;
+                    }
+                    
+                    var fileRef = storage.ref().child('users/' + cloudUser.uid + '/characters/' + currentCharacterId + '/npcs/' + npcId + '.jpg');
+                    var uploadTask = fileRef.put(blob);
+                    
+                    // Wire state observer to intercept explicit Firebase errors
+                    uploadTask.on('state_changed', 
+                        function(snapshot) { /* Progress tracking channel */ }, 
+                        function(error) {
+                            console.error("Cloud NPC upload failed:", error);
+                            window.showCustomAlert("Upload Blocked", `Google Cloud rejected file save: ${error.message}\n\nPlease check your Firebase Storage setup or rules configuration.`, "❌");
+                            if (window.updateCloudUIStatus) window.updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
+                        }, 
+                        function() {
+                            uploadTask.snapshot.ref.getDownloadURL().then(function(url) {
+                                const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+                                if (fac) {
+                                    const npc = fac.members.find(n => n.id === npcId);
+                                    if (npc) { npc.avatar = url; window.saveData(); window.renderContent(); }
+                                }
+                                if (window.updateCloudUIStatus) window.updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
+                                if (window.lucide) lucide.createIcons();
+                            });
+                        }
+                    );
                 }, 'image/jpeg', 0.85);
             } else {
                 const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
