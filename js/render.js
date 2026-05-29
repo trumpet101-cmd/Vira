@@ -28,10 +28,6 @@ function renderTocCard(title, targetTab, icon, description) {
     return `<div onclick="window.setTab('${targetTab}')" class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800/80 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-md cursor-pointer transition-all group flex flex-col h-full"><div class="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 group-hover:scale-110 transition-transform"><i data-lucide="${icon}"></i></div><h4 class="text-lg font-bold text-stone-800 dark:text-stone-100 mb-2">${title}</h4><p class="text-sm text-stone-500 dark:text-stone-400 flex-grow">${description}</p><div class="mt-4 text-emerald-600 dark:text-emerald-400 text-sm font-medium flex items-center opacity-0 group-hover:opacity-100 transition-opacity"><span>Open</span><i data-lucide="chevron-right" class="w-4 h-4 ml-1"></i></div></div>`;
 }
 
-function renderTocCard(title, targetTab, icon, description) {
-    return `<div onclick="window.setTab('${targetTab}')" class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800/80 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-md cursor-pointer transition-all group flex flex-col h-full"><div class="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 group-hover:scale-110 transition-transform"><i data-lucide="${icon}"></i></div><h4 class="text-lg font-bold text-stone-800 dark:text-stone-100 mb-2">${title}</h4><p class="text-sm text-stone-500 dark:text-stone-400 flex-grow">${description}</p><div class="mt-4 text-emerald-600 dark:text-emerald-400 text-sm font-medium flex items-center opacity-0 group-hover:opacity-100 transition-opacity"><span>Open</span><i data-lucide="chevron-right" class="w-4 h-4 ml-1"></i></div></div>`;
-}
-
 function renderNavigation() {
     const container = document.getElementById('nav-container');
     container.innerHTML = navItems.map((item, index) => {
@@ -78,9 +74,22 @@ window.renderContent = function() {
             <div class="flex flex-col md:flex-row gap-6 items-start">
                 <div class="flex-shrink-0 flex items-start">
                     <div class="relative w-24 h-24 rounded-full border-2 border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group shadow-inner transition-all duration-200" title="Character portrait">
-                        ${characterData.avatar ? `<img src="${characterData.avatar}" class="w-full h-full object-cover cursor-zoom-in animate-fade-in" onclick="window.openLightbox(this.src)">` : `<span class="text-4xl cursor-pointer" onclick="document.getElementById('char-avatar-input').click()">🧝‍♀️</span>`}
-                        <div onclick="document.getElementById('char-avatar-input').click()" class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200 cursor-pointer"><i data-lucide="camera" class="w-6 h-6 text-white"></i></div>
-                        ${characterData.avatar ? `<button onclick="window.deleteCharAvatar(event)" class="absolute top-0 right-0 p-1 bg-red-600 hover:bg-red-700 text-white rounded-bl shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10" title="Remove portrait"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
+                        ${characterData.avatar ? `
+                            <img src="${characterData.avatar}" class="w-full h-full object-cover cursor-zoom-in animate-fade-in" onclick="window.openLightbox(this.src)">
+                            <div class="absolute inset-0 bg-stone-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200 pointer-events-none">
+                                <button onclick="event.stopPropagation(); document.getElementById('char-avatar-input').click()" class="pointer-events-auto p-1.5 bg-stone-900/85 hover:bg-emerald-600 text-white rounded-full mr-1.5 transition-all shadow-md" title="Change portrait">
+                                    <i data-lucide="camera" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="event.stopPropagation(); window.deleteCharAvatar(event)" class="pointer-events-auto p-1.5 bg-stone-900/85 hover:bg-red-600 text-white rounded-full transition-all shadow-md" title="Remove portrait">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        ` : `
+                            <span class="text-4xl cursor-pointer" onclick="document.getElementById('char-avatar-input').click()">🧝‍♀️</span>
+                            <div onclick="document.getElementById('char-avatar-input').click()" class="absolute inset-0 bg-stone-900/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200 cursor-pointer">
+                                <i data-lucide="camera" class="w-6 h-6 text-white"></i>
+                            </div>
+                        `}
                     </div>
                     <input type="file" id="char-avatar-input" accept="image/*" class="hidden" onchange="window.handleCharAvatarUpload(event)">
                 </div>
@@ -218,7 +227,7 @@ window.renderContent = function() {
                         <div><h4 class="font-extrabold text-stone-800 dark:text-stone-200 text-sm uppercase tracking-wider mb-3 flex items-center space-x-2"><span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span><span>Cumulative Progression scores</span></h4><table class="w-full text-sm text-left border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden shadow-sm"><thead><tr class="bg-stone-100/80 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-xs font-extrabold uppercase border-b border-stone-200 dark:border-stone-800"><th class="p-3 border-r border-stone-200 dark:border-stone-800 w-[180px]">Stats</th><th class="p-3 text-center">Starting</th><th class="p-3 text-center border-r border-stone-200 dark:border-stone-800">Species</th>${keys.slice(2).map(col => `<th class="p-3 text-center font-black text-emerald-800 dark:text-emerald-400">${col.label} Score</th>`).join('')}</tr></thead><tbody class="bg-white dark:bg-stone-900">${calculatedProgressRows}</tbody></table></div>
                         <div><h4 class="font-extrabold text-stone-800 dark:text-stone-200 text-sm uppercase tracking-wider mb-3 flex items-center space-x-2"><span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span><span>Dynamic AC Progression Preview</span></h4><table class="w-full text-sm text-left border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden shadow-sm"><thead><tr class="bg-emerald-950 text-emerald-50 text-xs font-extrabold uppercase border-b border-emerald-900"><th class="p-3 border-r border-emerald-900 w-[240px]">AC calculation options</th><th class="p-3 text-center w-[120px]">Armor Type</th><th class="p-3 text-center border-r border-emerald-900 w-[100px]">Stealth</th>${keys.slice(2).map(col => `<th class="p-3 text-center text-emerald-300 font-extrabold">${col.label} AC</th>`).join('')}</tr></thead><tbody class="bg-white dark:bg-stone-900">${acRowsHtml}</tbody></table></div>
                         <div class="mt-4 flex items-center justify-start bg-stone-50 dark:bg-stone-900/50 p-4 rounded-xl border border-stone-200 dark:border-stone-800 space-x-4">
-                            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0"><input type="checkbox" id="shield-toggle" onchange="window.toggleShieldActive(this.checked)" ${characterData.build.shieldActive ? 'checked' : ''} class="sr-only peer"><div class="w-11 h-6 bg-stone-200 dark:bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div></label>
+                            <label class="relative inline-flex inline-flex items-center cursor-pointer flex-shrink-0"><input type="checkbox" id="shield-toggle" onchange="window.toggleShieldActive(this.checked)" ${characterData.build.shieldActive ? 'checked' : ''} class="sr-only peer"><div class="w-11 h-6 bg-stone-200 dark:bg-stone-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div></label>
                             <div class="flex items-center space-x-3"><span class="p-2 bg-emerald-100 dark:bg-emerald-950/40 rounded-xl text-emerald-700 dark:text-emerald-300 shadow-sm"><i data-lucide="shield" class="w-5 h-5"></i></span><div><h5 class="font-bold text-stone-800 dark:text-stone-200 text-sm">Equip Shield</h5><p class="text-xs text-stone-400 dark:text-stone-500">Adds +2 to all AC calculation rows when active</p></div></div>
                         </div>
                     </div>
@@ -338,9 +347,22 @@ window.renderContent = function() {
                                     <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.subtitle || '')} ${escapeHtml(npc.notes)}">
                                         <div class="flex-shrink-0 flex items-start mt-1">
                                             <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group shadow-inner transition-all animate-fade-in" title="Character avatar">
-                                                ${npc.avatar ? `<img src="${npc.avatar}" class="w-full h-full object-cover cursor-zoom-in" onclick="window.openLightbox(this.src)">` : `<i data-lucide="user" class="w-6 h-6 text-stone-400 cursor-pointer" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()"></i>`}
-                                                <div onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" class="absolute inset-0 bg-stone-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200 cursor-pointer"><i data-lucide="camera" class="w-4 h-4 text-white"></i></div>
-                                                ${npc.avatar ? `<button onclick="window.deleteNPCAvatar(event, '${faction.id}', '${npc.id}')" class="absolute top-0 right-0 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-bl shadow opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10" title="Remove character avatar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
+                                                ${npc.avatar ? `
+                                                    <img src="${npc.avatar}" class="w-full h-full object-cover cursor-zoom-in" onclick="window.openLightbox(this.src)">
+                                                    <div class="absolute inset-0 bg-stone-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200 pointer-events-none">
+                                                        <button onclick="event.stopPropagation(); document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" class="pointer-events-auto p-1 bg-stone-900/80 hover:bg-emerald-600 text-white rounded-full mr-1 transition-colors shadow-sm" title="Change avatar">
+                                                            <i data-lucide="camera" class="w-3 h-3"></i>
+                                                        </button>
+                                                        <button onclick="event.stopPropagation(); window.deleteNPCAvatar(event, '${faction.id}', '${npc.id}')" class="pointer-events-auto p-1 bg-stone-900/80 hover:bg-red-600 text-white rounded-full transition-colors shadow-sm" title="Remove avatar">
+                                                            <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                                        </button>
+                                                    </div>
+                                                ` : `
+                                                    <i data-lucide="user" class="w-6 h-6 text-stone-400 cursor-pointer" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()"></i>
+                                                    <div onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" class="absolute inset-0 bg-stone-900/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200 cursor-pointer">
+                                                        <i data-lucide="camera" class="w-4 h-4 text-white"></i>
+                                                    </div>
+                                                `}
                                             </div>
                                             <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
                                         </div>
