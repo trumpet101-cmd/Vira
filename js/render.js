@@ -46,7 +46,7 @@ function renderNavigation() {
 }
 
 window.renderContent = function() {
-    // FOCUS & POSITION GUARD PRESERVATION: Record layout focus vectors right before innerHTML mutations
+    // FOCUS & POSITION GUARD PRESERVATION: Heavily guarded to prevent script crashes on button clicks
     var activeEl = document.activeElement;
     var activeSection = null;
     var activeField = null;
@@ -55,30 +55,29 @@ window.renderContent = function() {
     var selectionStart = 0;
     var selectionEnd = 0;
     
-    if (activeEl) {
-        if (activeEl.hasAttribute('data-editor-field')) {
-            activeSection = activeEl.getAttribute('data-editor-section');
-            activeField = activeEl.getAttribute('data-editor-field');
-            
-            var selection = window.getSelection();
-            if (selection.rangeCount > 0) {
-                var range = selection.getRangeAt(0);
-                // VITAL SAFETY CHECK: Prevent fatal DOM index errors if a button was clicked but focus hasn't shifted yet
-                if (activeEl.contains(range.startContainer)) {
-                    var preCaretRange = range.cloneRange();
-                    preCaretRange.selectNodeContents(activeEl);
-                    preCaretRange.setEnd(range.startContainer, range.startOffset);
-                    caretOffset = preCaretRange.toString().length;
+    try {
+        if (activeEl && typeof activeEl.hasAttribute === 'function') {
+            if (activeEl.hasAttribute('data-editor-field')) {
+                activeSection = activeEl.getAttribute('data-editor-section');
+                activeField = activeEl.getAttribute('data-editor-field');
+                
+                var selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    var range = selection.getRangeAt(0);
+                    if (activeEl.contains(range.startContainer)) {
+                        var preCaretRange = range.cloneRange();
+                        preCaretRange.selectNodeContents(activeEl);
+                        preCaretRange.setEnd(range.startContainer, range.startOffset);
+                        caretOffset = preCaretRange.toString().length;
+                    }
                 }
-            }
-        } else if (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') {
-            activeInputId = activeEl.id;
-            try {
+            } else if (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') {
+                activeInputId = activeEl.id;
                 selectionStart = activeEl.selectionStart || 0;
                 selectionEnd = activeEl.selectionEnd || 0;
-            } catch(e) {}
+            }
         }
-    }
+    } catch(e) { console.warn("Focus guard capture safely bypassed: ", e); }
 
     const container = document.getElementById('content-area');
     let html = '';
@@ -445,58 +444,59 @@ window.renderContent = function() {
     else if (activeTab === 'backstory' && currentSearchQueries.backstory) { document.getElementById('backstory-search').value = currentSearchQueries.backstory; window.filterBackstory(currentSearchQueries.backstory); }
     else if (activeTab === 'personality' && currentSearchQueries.personality) { document.getElementById('personality-search').value = currentSearchQueries.personality; window.filterPersonality(currentSearchQueries.personality); }
 
-    // RESTORE FOCUS & CARET POSITION: Relocate previous caret anchor parameters on reconstructed DOM tree elements
-    if (activeInputId) {
-        var targetInput = document.getElementById(activeInputId);
-        if (targetInput) {
-            targetInput.focus();
-            try {
-                targetInput.setSelectionRange(selectionStart, selectionEnd);
-            } catch(e) {}
-        }
-    } else if (activeField) {
-        var querySelector = `[data-editor-field="${activeField}"]`;
-        if (activeSection) {
-            querySelector += `[data-editor-section="${activeSection}"]`;
-        }
-        var targetEl = container.querySelector(querySelector);
-        if (targetEl) {
-            targetEl.focus();
-            
-            var range = document.createRange();
-            var sel = window.getSelection();
-            var charCount = 0;
-            var stop = false;
-            
-            function traverse(node) {
-                if (stop) return;
-                if (node.nodeType === Node.TEXT_NODE) {
-                    var nextCount = charCount + node.length;
-                    if (caretOffset >= charCount && caretOffset <= nextCount) {
-                        range.setStart(node, caretOffset - charCount);
-                        range.collapse(true);
-                        stop = true;
-                    }
-                    charCount = nextCount;
-                } else {
-                    for (var i = 0; i < node.childNodes.length; i++) {
-                        traverse(node.childNodes[i]);
-                        if (stop) break;
+    // RESTORE FOCUS & CARET POSITION: Safely bypassed if components were destroyed during transition
+    try {
+        if (activeInputId) {
+            var targetInput = document.getElementById(activeInputId);
+            if (targetInput) {
+                targetInput.focus();
+                try {
+                    targetInput.setSelectionRange(selectionStart, selectionEnd);
+                } catch(e) {}
+            }
+        } else if (activeField) {
+            var querySelector = `[data-editor-field="${activeField}"]`;
+            if (activeSection) {
+                querySelector += `[data-editor-section="${activeSection}"]`;
+            }
+            var targetEl = container.querySelector(querySelector);
+            if (targetEl) {
+                targetEl.focus();
+                
+                var range = document.createRange();
+                var sel = window.getSelection();
+                var charCount = 0;
+                var stop = false;
+                
+                function traverse(node) {
+                    if (stop) return;
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        var nextCount = charCount + node.length;
+                        if (caretOffset >= charCount && caretOffset <= nextCount) {
+                            range.setStart(node, caretOffset - charCount);
+                            range.collapse(true);
+                            stop = true;
+                        }
+                        charCount = nextCount;
+                    } else {
+                        for (var i = 0; i < node.childNodes.length; i++) {
+                            traverse(node.childNodes[i]);
+                            if (stop) break;
+                        }
                     }
                 }
-            }
-            traverse(targetEl);
-            if (stop) {
-                sel.removeAllRanges();
-                sel.addRange(range);
-            } else {
-                // Safe terminal fallback if elements got truncated or string metrics changed
-                var rangeEnd = document.createRange();
-                rangeEnd.selectNodeContents(targetEl);
-                rangeEnd.collapse(false);
-                sel.removeAllRanges();
-                sel.addRange(rangeEnd);
+                traverse(targetEl);
+                if (stop) {
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                } else {
+                    var rangeEnd = document.createRange();
+                    rangeEnd.selectNodeContents(targetEl);
+                    rangeEnd.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(rangeEnd);
+                }
             }
         }
-    }
+    } catch(e) { console.warn("Focus guard restore safely bypassed: ", e); }
 }

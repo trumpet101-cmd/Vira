@@ -110,7 +110,7 @@ function listenToActiveCharacter() {
             localStorage.setItem('character_data_' + currentCharacterId, JSON.stringify(characterData));
             document.getElementById('header-name-input').value = characterData.name;
             window.renderContent();
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
             updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
         }
     }, (error) => handleSyncError(error));
@@ -130,7 +130,7 @@ function updateCloudUIStatus(text, icon, classes) {
     if(btn) {
         btn.className = `w-full flex items-center justify-center space-x-2 px-4 py-2 rounded text-sm transition-all ${classes}`;
         btn.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i><span>${text}</span>`;
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     }
 }
 
@@ -142,13 +142,13 @@ function triggerSaveIndicator() {
     ind.classList.remove('opacity-50');
     iconWrapper.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 text-emerald-500 animate-spin"></i>`;
     text.innerText = "Saving...";
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
 
     setTimeout(() => {
         iconWrapper.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>`;
         text.innerText = isCloudReady ? "Saved to Cloud" : "Saved automatically";
         ind.classList.add('opacity-50');
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     }, 600);
 }
 
@@ -161,12 +161,12 @@ function flashSuccessIndicator(textMsg) {
     ind.classList.remove('opacity-50');
     iconWrapper.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>`;
     text.innerText = textMsg;
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
     
     setTimeout(() => {
         ind.classList.add('opacity-50');
         text.innerText = isCloudReady ? "Saved to Cloud" : "Saved automatically";
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     }, 4000);
 }
 
@@ -188,7 +188,7 @@ window.saveData = function() {
         }
     }
     
-    // Extended debounce delay timer window slightly to 1000ms to allow smooth typing sequences
+    // Extended debounce delay timer window to allow smooth typing sequences
     saveTimeout = setTimeout(async () => {
         if (isCloudReady && cloudUser && db && currentCharacterId) {
             try {
@@ -203,7 +203,7 @@ window.saveData = function() {
                 triggerSaveIndicator();
             }
         } else { triggerSaveIndicator(); }
-    }, 1000);
+    }, 800);
 }
 
 window.updateField = function(section, field, value) {
