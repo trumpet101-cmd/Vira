@@ -390,7 +390,7 @@ window.renderContent = function() {
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center space-x-2 w-full">
-                                                <button onclick="window.toggleNpcCollapse('${faction.id}', '${npcId}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none flex-shrink-0"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
+                                                <button onclick="window.toggleNpcCollapse('${faction.id}', '${npc.id}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none flex-shrink-0"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
                                                 <input type="text" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full bg-transparent rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
                                             </div>
                                             <div class="ml-7 mt-0.5 mb-1">
