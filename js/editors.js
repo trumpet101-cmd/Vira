@@ -36,7 +36,7 @@ window.recalculateBuildScores = function() {
             if (scoreCell) {
                 const mod = Math.floor((currentVal - 10) / 2);
                 const modStr = (mod >= 0 ? '+' : '') + mod;
-                scoreCell.innerHTML = `<span class="font-extrabold text-stone-800 dark:text-stone-200 text-sm">${currentVal}</span><span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold ml-1">(${modStr})</span>`;
+                scoreCell.innerHTML = `<span class="font-extrabold text-stone-800 dark:text-stone-200 text-sm">${currentVal}</span><span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold ml-1">( ${modStr} )</span>`;
             }
         });
     });
@@ -196,7 +196,7 @@ window.filterNPCs = function(query) {
     });
 }
 
-// --- SPECIFIC KEYBOARD OUTLINE HANDLERS ---
+// --- KEYBOARD OUTLINE HANDLERS (VANILLA DOM TREE MUTATIONS REPLACING EXECCOMMAND) ---
 window.handleOutlineKeyDown = function(event) {
     const div = event.currentTarget;
     const dropdown = document.getElementById('mention-dropdown');
@@ -209,10 +209,66 @@ window.handleOutlineKeyDown = function(event) {
             return;
         }
     }
+    
     if (event.key === 'Tab') {
         event.preventDefault();
-        if (event.shiftKey) document.execCommand('outdent', false, null);
-        else document.execCommand('indent', false, null);
+        
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            
+            // Insert a temporary tracking bookmark to secure layout focus
+            const marker = document.createElement('span');
+            marker.id = 'caret-marker';
+            range.insertNode(marker);
+
+            let currentLi = marker.closest('li');
+            if (currentLi) {
+                if (event.shiftKey) {
+                    // OUTDENT: Move the active row up one list layer hierarchy
+                    let parentUl = currentLi.parentElement;
+                    if (parentUl && parentUl.tagName === 'UL') {
+                        let parentLi = parentUl.closest('li');
+                        if (parentLi) {
+                            parentLi.parentNode.insertBefore(currentLi, parentLi.nextSibling);
+                            // Purge parent sublists if they run out of child elements
+                            if (parentUl.children.length === 0) {
+                                parentUl.remove();
+                            }
+                        }
+                    }
+                } else {
+                    // INDENT: Group active row inside previous sibling element's sublist
+                    let prevLi = currentLi.previousElementSibling;
+                    if (prevLi && prevLi.tagName === 'LI') {
+                        let subUl = prevLi.querySelector('ul');
+                        if (!subUl) {
+                            subUl = document.createElement('ul');
+                            prevLi.appendChild(subUl);
+                        }
+                        subUl.appendChild(currentLi);
+                    }
+                }
+            }
+
+            // Reposition caret right next to tracking bookmark before deletion
+            const foundMarker = currentLi ? currentLi.querySelector('#caret-marker') : null;
+            if (foundMarker) {
+                const restoreRange = document.createRange();
+                if (foundMarker.nextSibling && foundMarker.nextSibling.nodeType === Node.TEXT_NODE) {
+                    restoreRange.setStart(foundMarker.nextSibling, 0);
+                } else if (foundMarker.previousSibling && foundMarker.previousSibling.nodeType === Node.TEXT_NODE) {
+                    restoreRange.setStart(foundMarker.previousSibling, foundMarker.previousSibling.length);
+                } else {
+                    restoreRange.setStartBefore(foundMarker);
+                }
+                restoreRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(restoreRange);
+                foundMarker.remove();
+            }
+        }
+        
         div.dispatchEvent(new Event('input', { bubbles: true }));
         return;
     }
