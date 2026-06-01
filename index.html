@@ -219,18 +219,13 @@
                     <span class="text-sm font-medium" id="save-text">Saved automatically</span>
                 </div>
 
-                <button onclick="window.openVersionHistory()" class="relative flex items-center justify-center space-x-2 px-3 py-1.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-sm text-stone-400 hover:text-stone-200 transition-colors flex-shrink-0" title="View version history / restore a previous version">
-                    <i data-lucide="history" class="w-4 h-4"></i>
-                    <span class="hidden sm:inline">History</span>
-                    <span id="version-history-badge" class="hidden absolute -top-1.5 -right-1.5 w-4 h-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none"></span>
-                </button>
-
                 <div class="flex-shrink-0 min-w-[170px]">
                     <div id="cloud-status-btn" class="w-full flex items-center justify-center space-x-2 px-3 py-1.5 rounded-lg text-sm transition-all bg-stone-800 text-stone-400">
                         <i data-lucide="hard-drive" class="w-4 h-4"></i>
                         <span>Local Storage Active</span>
                     </div>
                 </div>
+
                 <button onclick="window.handleSignOut()" class="flex items-center justify-center space-x-2 px-3 py-1.5 bg-red-950/40 hover:bg-red-900 rounded-lg text-sm text-red-300 transition-colors flex-shrink-0">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                     <span>Sign Out</span>
@@ -257,28 +252,60 @@
         </div>
     </div>
 
-    <!-- VERSION HISTORY MODAL -->
-    <div id="version-history-modal" class="fixed inset-0 bg-stone-950/80 backdrop-blur-md z-[90] flex items-center justify-center p-4 hidden">
-        <div class="bg-white dark:bg-stone-900 dark:border-stone-800 rounded-2xl shadow-2xl border border-stone-200 w-full max-w-md flex flex-col max-h-[80vh] animate-fade-in">
+    <!-- QUICK CAPTURE FLOATING BUTTON -->
+    <button onclick="window.openQuickCapture()" title="Quick Capture (Ctrl+Space)" class="fixed bottom-6 right-6 z-[150] w-14 h-14 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-full shadow-2xl shadow-emerald-900/50 flex items-center justify-center transition-all duration-150 border border-emerald-500/50">
+        <i data-lucide="plus" class="w-7 h-7"></i>
+    </button>
 
-            <div class="flex justify-between items-center p-6 border-b border-stone-200 dark:border-stone-800 flex-shrink-0">
-                <div class="flex items-center space-x-3">
-                    <span class="text-2xl">⏱️</span>
-                    <div>
-                        <h3 class="text-lg font-black text-stone-800 dark:text-stone-100 tracking-tight">Version History</h3>
-                        <p class="text-xs text-stone-400 font-medium">Auto-snapshots taken every 5 minutes while editing</p>
+    <!-- QUICK CAPTURE MODAL -->
+    <div id="quick-capture-modal" class="fixed inset-0 bg-stone-950/70 backdrop-blur-sm z-[160] flex items-end sm:items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-2xl shadow-2xl w-full max-w-lg animate-fade-in">
+
+            <div class="flex items-center justify-between px-5 pt-5 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="w-7 h-7 bg-emerald-100 dark:bg-emerald-950/60 rounded-lg flex items-center justify-center">
+                        <i data-lucide="zap" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
                     </div>
+                    <h3 class="font-black text-stone-800 dark:text-stone-100 tracking-tight">Quick Capture</h3>
                 </div>
-                <button onclick="window.closeVersionHistory()" class="text-stone-400 hover:text-stone-600 p-2 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button onclick="window.closeQuickCapture()" class="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
-            <div id="version-history-list" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
+            <div class="px-5 pb-2">
+                <textarea
+                    id="quick-capture-text"
+                    rows="3"
+                    placeholder="Type your note here..."
+                    class="w-full px-3 py-2.5 text-sm rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-950 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-none transition-all font-medium placeholder-stone-400 dark:placeholder-stone-600"
+                ></textarea>
             </div>
 
-            <div class="p-4 border-t border-stone-200 dark:border-stone-800 flex-shrink-0">
-                <p class="text-xs text-stone-400 dark:text-stone-500 text-center">Hover a snapshot and click <strong>Restore</strong> to revert. Your current state is saved first so you can undo.</p>
+            <div class="px-5 pb-4 space-y-3">
+                <div class="flex items-center space-x-3">
+                    <label class="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider whitespace-nowrap">Send to</label>
+                    <select id="quick-capture-dest" onchange="window.updateQuickCapturePreview()" class="flex-1 text-sm px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium transition-all">
+                        <option value="session">📋 Session Notes</option>
+                        <option value="npc">👤 NPC</option>
+                        <option value="quest">⚔️ Quest</option>
+                        <option value="location">📍 Location</option>
+                        <option value="unsorted">📦 Misc & Loot</option>
+                    </select>
+                </div>
+
+                <p id="quick-capture-preview" class="text-xs text-stone-400 dark:text-stone-500 font-medium min-h-[16px]"></p>
+
+                <div class="flex items-center space-x-2 pt-1">
+                    <button onclick="window.saveQuickCapture()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center space-x-2">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>Save</span>
+                    </button>
+                    <button onclick="window.closeQuickCapture()" class="px-4 py-2.5 border border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 font-semibold rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800 transition-all text-sm">
+                        Cancel
+                    </button>
+                </div>
+                <p class="text-center text-[10px] text-stone-300 dark:text-stone-600 font-medium">Ctrl+Enter to save &nbsp;·&nbsp; Escape to close</p>
             </div>
 
         </div>
@@ -292,6 +319,7 @@
     <script src="js/characters.js"></script>
     <script src="js/editors.js"></script>
     <script src="js/render.js"></script>
+    <script src="js/quick-capture.js"></script>
     <script src="js/version-history.js"></script>
     <script src="js/init.js"></script>
 </body>
