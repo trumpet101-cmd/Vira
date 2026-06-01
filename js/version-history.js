@@ -70,15 +70,7 @@ window.refreshVersionHistoryForCharacter = function() {
 
 // --- BADGE: shows snapshot count on the button ---
 function updateVersionHistoryBadge() {
-    var badge = document.getElementById('version-history-badge');
-    if (!badge) return;
-    var count = getVersionHistory().length;
-    if (count > 0) {
-        badge.textContent = count;
-        badge.classList.remove('hidden');
-    } else {
-        badge.classList.add('hidden');
-    }
+    // Badge disabled - count visible inside the modal instead
 }
 
 // --- MODAL: open the history panel ---
