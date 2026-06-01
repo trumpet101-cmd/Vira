@@ -359,12 +359,6 @@ authForm.addEventListener('submit', async (e) => {
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
 
-    if (email.toLowerCase() !== "trumpet101@gmail.com") {
-        authError.innerText = "Access Denied: This system is private and restricted to the authorized campaign administrator.";
-        authError.classList.remove('hidden');
-        return;
-    }
-
     try {
         if (isSignUpMode) await auth.createUserWithEmailAndPassword(email, password);
         else await auth.signInWithEmailAndPassword(email, password);
