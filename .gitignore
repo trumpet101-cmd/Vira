@@ -1,2 +1,3 @@
-# Firebase config contains project credentials - keep off GitHub
-js/firebase-config.js
+# Firebase config was previously hidden here but the site is hosted on GitHub Pages
+# which requires the file to be present in the repo.
+# Protection comes from Firestore Security Rules locked to your UID instead.
