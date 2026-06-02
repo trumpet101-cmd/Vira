@@ -111,8 +111,25 @@ window.updatePinSlot = function(index, el) {
     if (!characterData.campaignNotes.pinnedNotes[index]) {
         characterData.campaignNotes.pinnedNotes[index] = { id: 'pin_' + index, text: '' };
     }
-    characterData.campaignNotes.pinnedNotes[index].text = text;
+    characterData.campaignNotes.pinnedNotes[index].text = el.innerHTML;
     window.saveData();
+
+    // Wire into the @ mention system — same logic as handleInput
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+    if (node.nodeType === Node.TEXT_NODE) {
+        const textUpToCursor = node.textContent.substring(0, range.startOffset);
+        const match = textUpToCursor.match(/(?:\s|^)(@[a-zA-Z0-9_\-\' ]{0,40})$/);
+        if (match) {
+            const matchString = match[1];
+            const query = matchString.substring(1);
+            const endOffset = range.startOffset;
+            const startOffset = endOffset - matchString.length;
+            showMentionDropdown(el, query, node, startOffset, endOffset);
+        } else { hideMentionDropdown(); }
+    } else { hideMentionDropdown(); }
 };
 
 window.clearAllPins = function() {
