@@ -512,15 +512,24 @@ function showMentionDropdown(div, query, textNode, startOffset, endOffset) {
     if (selection.rangeCount) {
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
+        const divRect = div.getBoundingClientRect();
 
-        if (rect.width > 0 || rect.height > 0) {
-            top = window.scrollY + rect.bottom + 5;
-            left = window.scrollX + rect.left;
-        } else {
-            // Fallback to bottom-left of the editor div
-            const divRect = div.getBoundingClientRect();
-            top = window.scrollY + divRect.bottom + 5;
-            left = window.scrollX + divRect.left;
+        // Vertical: use the range rect bottom if valid, else div bottom
+        top = window.scrollY + ((rect.height > 0) ? rect.bottom : divRect.bottom) + 5;
+
+        // Horizontal: measure text width up to the @ using canvas for accuracy
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const style = window.getComputedStyle(div);
+            ctx.font = style.fontSize + ' ' + style.fontFamily;
+            // Get just the text of the current line up to the @ sign
+            const lineText = textNode.textContent.substring(0, startOffset);
+            const textWidth = ctx.measureText(lineText).width;
+            left = window.scrollX + divRect.left + parseFloat(style.paddingLeft || 0) + textWidth;
+        } catch(e) {
+            // Canvas fallback failed, use range left
+            left = window.scrollX + ((rect.width > 0 || rect.height > 0) ? rect.left : divRect.left);
         }
     }
 
