@@ -98,6 +98,7 @@ function migrateData(data) {
             if (!npc.id) npc.id = 'npc_migrated_' + facIdx + '_' + npcIdx + '_' + Date.now(); 
             if (npc.isCollapsed === undefined) npc.isCollapsed = false;
             if (npc.subtitle === undefined) npc.subtitle = "";
+            if (npc.relationship === undefined) npc.relationship = "unknown";
         });
     });
 

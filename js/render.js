@@ -1,4 +1,32 @@
 // --- RENDERERS ---
+
+// NPC relationship status config
+var NPC_RELATIONSHIPS = {
+    unknown:  { label: 'Unknown',  emoji: '⬜', classes: 'bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400 border-stone-200 dark:border-stone-700' },
+    friendly: { label: 'Friendly', emoji: '🟢', classes: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' },
+    neutral:  { label: 'Neutral',  emoji: '🔵', classes: 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
+    wary:     { label: 'Wary',     emoji: '🟡', classes: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
+    hostile:  { label: 'Hostile',  emoji: '🔴', classes: 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400 border-red-200 dark:border-red-800' }
+};
+
+function renderRelationshipBadge(facId, npcId, current) {
+    var rel = NPC_RELATIONSHIPS[current] || NPC_RELATIONSHIPS.unknown;
+    return `
+    <div class="relative inline-block ml-7 mt-1 mb-1" id="rel-wrapper-${npcId}">
+        <select
+            onchange="window.updateNPCRelationship('${facId}', '${npcId}', this.value)"
+            class="appearance-none text-[11px] font-bold pl-2 pr-6 py-0.5 rounded-full border cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${rel.classes}"
+            title="Relationship status">
+            ${Object.entries(NPC_RELATIONSHIPS).map(([key, r]) =>
+                `<option value="${key}" ${key === (current || 'unknown') ? 'selected' : ''}>${r.emoji} ${r.label}</option>`
+            ).join('')}
+        </select>
+        <div class="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
+            <svg class="w-2.5 h-2.5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+    </div>`;
+}
+
 function renderActionButtons(type, id, isFirst, isLast) {
     return `
     <button onclick="window.move${type}('${id}', -1)" ${isFirst ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Up"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
@@ -406,6 +434,7 @@ window.renderContent = function() {
                                             <div class="ml-7 mt-0.5 mb-1">
                                                 <input type="text" id="input-npc-sub-${faction.id}-${npc.id}" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'subtitle', this.value)" value="${escapeHtml(npc.subtitle || '')}" class="seamless-input text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Role, Title, or Allegiance (e.g., Carnival Owner)">
                                             </div>
+                                            ${renderRelationshipBadge(faction.id, npc.id, npc.relationship || 'unknown')}
                                             <div class="collapsible-content ${npc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                                                 ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '##' + npc.id, npc.notes, 'min-h-[40px] text-sm mt-1', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
                                             </div>

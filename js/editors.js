@@ -137,6 +137,23 @@ window.moveFaction = function(facId, direction) { const arr = characterData.camp
 
 window.addNPC = function(facId) { currentSearchQueries.npcs = ''; const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { fac.members.push({ id: 'npc_' + Date.now(), name: '', subtitle: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.updateNPC = function(facId, npcId, field, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { const npc = fac.members.find(n => n.id === npcId); if(npc) npc[field] = val; } window.saveData(); }
+window.updateNPCRelationship = function(facId, npcId, val) {
+    const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+    if (!fac) return;
+    const npc = fac.members.find(n => n.id === npcId);
+    if (!npc) return;
+    npc.relationship = val;
+    window.saveData();
+    // Update badge styling in place without a full re-render
+    const wrapper = document.getElementById('rel-wrapper-' + npcId);
+    if (wrapper && typeof NPC_RELATIONSHIPS !== 'undefined') {
+        const select = wrapper.querySelector('select');
+        const rel = NPC_RELATIONSHIPS[val] || NPC_RELATIONSHIPS.unknown;
+        if (select) {
+            select.className = `appearance-none text-[11px] font-bold pl-2 pr-6 py-0.5 rounded-full border cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${rel.classes}`;
+        }
+    }
+};
 window.deleteNPC = function(facId, npcId) { window.showCustomConfirm('Delete Character?', 'Are you sure you want to permanently remove this NPC?', '👤', () => { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.members = fac.members.filter(n => n.id !== npcId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleNpcCollapse = function(facId, npcId) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if (fac) { const npc = fac.members.find(n => n.id === npcId); if (npc) { npc.isCollapsed = !npc.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
 window.moveNPC = function(facId, npcId, direction) { const faction = characterData.campaignNotes.npcs.find(f => f.id === facId); if (!faction) return; const arr = faction.members; const index = arr.findIndex(n => n.id === npcId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
