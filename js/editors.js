@@ -107,10 +107,10 @@ window.filterSessions = function(query) { currentSearchQueries.sessionNotes = qu
 // --- PINNED NOTES ---
 window.updatePinSlot = function(index, el) {
     if (!Array.isArray(characterData.campaignNotes.pinnedNotes)) characterData.campaignNotes.pinnedNotes = [];
-    const text = (el.innerText || el.textContent || '').trim();
     if (!characterData.campaignNotes.pinnedNotes[index]) {
         characterData.campaignNotes.pinnedNotes[index] = { id: 'pin_' + index, text: '' };
     }
+    // Save as innerHTML so @mention links survive page reload
     characterData.campaignNotes.pinnedNotes[index].text = el.innerHTML;
     window.saveData();
 
