@@ -507,30 +507,40 @@ function showMentionDropdown(div, query, textNode, startOffset, endOffset) {
     mentionContext = { div, textNode, startOffset, endOffset, results, selectedIndex: 0 };
 
     let top = 0, left = 0;
+    const divRect = div.getBoundingClientRect();
 
     try {
-        // Create a range spanning just the @ character for precise positioning
         const atRange = document.createRange();
         atRange.setStart(textNode, startOffset);
         atRange.setEnd(textNode, Math.min(startOffset + 1, textNode.length));
         const rects = atRange.getClientRects();
         if (rects && rects.length > 0) {
-            const r = rects[0];
-            top = window.scrollY + r.bottom + 5;
-            left = window.scrollX + r.left;
+            // getBoundingClientRect returns coords relative to the viewport,
+            // but the dropdown is positioned within the full document.
+            // Subtract the main scroll area's left edge to correct for the sidebar offset.
+            const scrollArea = document.getElementById('scroll-area');
+            const scrollAreaLeft = scrollArea ? scrollArea.getBoundingClientRect().left : 0;
+            top = window.scrollY + rects[0].bottom + 5;
+            left = rects[0].left - scrollAreaLeft + (scrollArea ? scrollArea.scrollLeft : 0);
         } else {
-            // Fallback to div position
-            const divRect = div.getBoundingClientRect();
+            // getClientRects returned nothing — estimate from div + char count
+            const scrollArea = document.getElementById('scroll-area');
+            const scrollAreaLeft = scrollArea ? scrollArea.getBoundingClientRect().left : 0;
+            const style = window.getComputedStyle(div);
+            const charWidth = (parseFloat(style.fontSize) || 14) * 0.55;
+            const textBefore = textNode.textContent.substring(0, startOffset);
+            const approxOffset = textBefore.length * charWidth + parseFloat(style.paddingLeft || 12);
             top = window.scrollY + divRect.bottom + 5;
-            left = window.scrollX + divRect.left;
+            left = divRect.left - scrollAreaLeft + Math.min(approxOffset, divRect.width - 10);
         }
     } catch(e) {
-        const divRect = div.getBoundingClientRect();
+        const scrollArea = document.getElementById('scroll-area');
+        const scrollAreaLeft = scrollArea ? scrollArea.getBoundingClientRect().left : 0;
         top = window.scrollY + divRect.bottom + 5;
-        left = window.scrollX + divRect.left;
+        left = divRect.left - scrollAreaLeft;
     }
 
-    // Clamp so dropdown never goes off the right edge
+    // Clamp so dropdown never goes off the right edge of the viewport
     left = Math.min(left, window.scrollX + window.innerWidth - 330);
 
     dropdown.style.top = top + 'px';
