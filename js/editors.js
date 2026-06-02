@@ -110,11 +110,9 @@ window.updatePinSlot = function(index, el) {
     if (!characterData.campaignNotes.pinnedNotes[index]) {
         characterData.campaignNotes.pinnedNotes[index] = { id: 'pin_' + index, text: '' };
     }
-    // Save as innerHTML so @mention links survive page reload
     characterData.campaignNotes.pinnedNotes[index].text = el.innerHTML;
     window.saveData();
 
-    // Wire into the @ mention system — same logic as handleInput
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
     const range = selection.getRangeAt(0);
@@ -508,21 +506,35 @@ function showMentionDropdown(div, query, textNode, startOffset, endOffset) {
 
     mentionContext = { div, textNode, startOffset, endOffset, results, selectedIndex: 0 };
     
+    // Get cursor position using a collapsed range at the current cursor point
+    // This works reliably for both normal editors and pin slots
+    let top = 0, left = 0;
     const selection = window.getSelection();
     if (selection.rangeCount) {
-        const range = selection.getRangeAt(0);
+        const range = selection.getRangeAt(0).cloneRange();
+        range.collapse(true);
         const rect = range.getBoundingClientRect();
-        
-        if (rect.top === 0 && rect.left === 0) {
-            const divRect = div.getBoundingClientRect();
-            dropdown.style.top = (divRect.bottom + 5) + 'px';
-            dropdown.style.left = divRect.left + 'px';
+
+        if (rect.top !== 0 || rect.left !== 0) {
+            top = window.scrollY + rect.bottom + 5;
+            left = window.scrollX + rect.left;
         } else {
-            dropdown.style.top = (window.scrollY + rect.bottom + 5) + 'px';
-            dropdown.style.left = (window.scrollX + rect.left) + 'px';
+            // Fallback: insert a temporary zero-width span at cursor to get position
+            const marker = document.createElement('span');
+            marker.textContent = '\u200B';
+            range.insertNode(marker);
+            const markerRect = marker.getBoundingClientRect();
+            top = window.scrollY + markerRect.bottom + 5;
+            left = window.scrollX + markerRect.left;
+            marker.parentNode.removeChild(marker);
+            // Restore selection
+            selection.removeAllRanges();
+            selection.addRange(range);
         }
     }
     
+    dropdown.style.top = top + 'px';
+    dropdown.style.left = left + 'px';
     dropdown.style.width = '320px';
     dropdown.classList.remove('hidden');
     renderMentionDropdownItems();
