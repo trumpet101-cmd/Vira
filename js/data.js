@@ -104,7 +104,10 @@ function migrateData(data) {
     });
 
     data.campaignNotes.sessionNotes.forEach((s, sIdx) => { if (!s.id) s.id = 'sess_migrated_' + sIdx + '_' + Date.now(); });
-    data.campaignNotes.quests.forEach((q, qIdx) => { if (!q.id) q.id = 'quest_migrated_' + qIdx + '_' + Date.now(); });
+    data.campaignNotes.quests.forEach((q, qIdx) => {
+        if (!q.id) q.id = 'quest_migrated_' + qIdx + '_' + Date.now();
+        if (q.isUrgent === undefined) q.isUrgent = false;
+    });
     data.campaignNotes.locations.forEach((l, lIdx) => { if (!l.id) l.id = 'loc_migrated_' + lIdx + '_' + Date.now(); });
     
     if (!data.backstory || !Array.isArray(data.backstory)) {

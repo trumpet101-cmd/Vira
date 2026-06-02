@@ -358,23 +358,46 @@ window.renderContent = function() {
         }
         else if (subSection === 'quests') {
             contentHtml = renderSectionHeader('quest-search', 'Search quests...', 'filterQuests', null, 'addQuest');
-            const renderQuestCategory = (title, quests, categoryKey) => {
+            const renderQuestCategory = (title, quests, categoryKey, isUrgentSection = false) => {
                 const isCollapsed = questSectionsState[categoryKey];
-                let sectionHtml = `<div class="quest-section mb-8" data-section-type="${categoryKey}"><div class="flex items-center justify-between mb-4 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/30 p-2 rounded -mx-2 transition-colors" onclick="window.toggleQuestSectionCollapse('${categoryKey}')"><h4 class="text-lg font-bold text-stone-700 dark:text-stone-300 flex items-center space-x-2"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i><span>${title} (${quests.length})</span></h4></div><div class="collapsible-content space-y-4 ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">`;
+                const headerColor = isUrgentSection
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-stone-700 dark:text-stone-300';
+                const headerIcon = isUrgentSection ? 'flame' : 'chevron-down';
+                let sectionHtml = `<div class="quest-section mb-8" data-section-type="${categoryKey}">
+                    <div class="flex items-center justify-between mb-4 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/30 p-2 rounded -mx-2 transition-colors" onclick="window.toggleQuestSectionCollapse('${categoryKey}')">
+                        <h4 class="text-lg font-bold ${headerColor} flex items-center space-x-2">
+                            <i data-lucide="${isUrgentSection ? 'flame' : 'chevron-down'}" class="w-5 h-5 ${isUrgentSection ? 'text-red-500' : 'text-stone-400 chevron ' + (isCollapsed ? 'collapsed' : '')}"></i>
+                            <span>${title} (${quests.length})</span>
+                        </h4>
+                    </div>
+                    <div class="collapsible-content space-y-4 ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">`;
+
                 if (quests.length === 0) sectionHtml += `<p class="text-stone-400 italic px-8 py-2">No quests in this category.</p>`;
 
                 quests.forEach((quest, qIdx) => {
+                    const cardBorder = quest.isUrgent
+                        ? 'border-red-200 dark:border-red-900/60'
+                        : 'border-stone-200 dark:border-stone-800';
+                    const leftBg = quest.isUrgent
+                        ? 'bg-red-50 dark:bg-red-950/30 border-red-100 dark:border-red-900/40'
+                        : 'bg-stone-50 dark:bg-stone-950 border-stone-100 dark:border-stone-800';
+
                     sectionHtml += `
-                        <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(quest.title)} ${escapeHtml(quest.subtitle)} ${escapeHtml(quest.notes)}">
-                            <div class="bg-stone-50 dark:bg-stone-950 px-4 py-5 flex flex-col items-center justify-start border-r border-stone-100 dark:border-stone-800">
-                                <button onclick="window.toggleQuestCompletion('${quest.id}')" class="text-stone-300 dark:text-stone-600 hover:text-emerald-500 transition-colors focus:outline-none">
+                        <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border ${cardBorder} rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(quest.title)} ${escapeHtml(quest.subtitle)} ${escapeHtml(quest.notes)}">
+                            <div class="${leftBg} px-4 py-5 flex flex-col items-center justify-start space-y-3 border-r">
+                                <button onclick="window.toggleQuestCompletion('${quest.id}')" class="text-stone-300 dark:text-stone-600 hover:text-emerald-500 transition-colors focus:outline-none" title="Mark complete">
                                     ${quest.isCompleted ? `<i data-lucide="check-square" class="w-6 h-6 text-emerald-500"></i>` : `<i data-lucide="square" class="w-6 h-6 hover:text-emerald-400"></i>`}
                                 </button>
+                                ${!quest.isCompleted ? `
+                                <button onclick="window.toggleQuestUrgency('${quest.id}')" class="transition-colors focus:outline-none" title="${quest.isUrgent ? 'Remove urgent flag' : 'Mark as urgent'}">
+                                    <i data-lucide="flame" class="w-5 h-5 ${quest.isUrgent ? 'text-red-500' : 'text-stone-300 dark:text-stone-600 hover:text-red-400'}"></i>
+                                </button>` : ''}
                             </div>
                             <div class="p-5 flex-1 flex flex-col">
                                 <div class="flex justify-between items-start mb-2">
                                     <div class="flex-1">
-                                        <input type="text" id="input-quest-title-${quest.id}" oninput="window.updateQuest('${quest.id}', 'title', this.value)" value="${escapeHtml(quest.title)}" class="seamless-input font-bold text-lg ${quest.isCompleted ? 'text-stone-500 dark:text-stone-400 line-through' : 'text-stone-800 dark:text-stone-100'} bg-transparent w-full mb-1 rounded px-2 -ml-2 py-0.5 placeholder-stone-400/70" placeholder="Quest Title">
+                                        <input type="text" id="input-quest-title-${quest.id}" oninput="window.updateQuest('${quest.id}', 'title', this.value)" value="${escapeHtml(quest.title)}" class="seamless-input font-bold text-lg ${quest.isCompleted ? 'text-stone-500 dark:text-stone-400 line-through' : quest.isUrgent ? 'text-red-700 dark:text-red-400' : 'text-stone-800 dark:text-stone-100'} bg-transparent w-full mb-1 rounded px-2 -ml-2 py-0.5 placeholder-stone-400/70" placeholder="Quest Title">
                                         <input type="text" id="input-quest-sub-${quest.id}" oninput="window.updateQuest('${quest.id}', 'subtitle', this.value)" value="${escapeHtml(quest.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 -ml-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Subtitle / Category">
                                     </div>
                                     <div class="flex items-center space-x-1 ml-4">
@@ -388,8 +411,12 @@ window.renderContent = function() {
                 sectionHtml += `</div></div>`;
                 return sectionHtml;
             };
-            contentHtml += renderQuestCategory('In Progress', characterData.campaignNotes.quests.filter(q => !q.isCompleted), 'inProgress');
-            contentHtml += renderQuestCategory('Completed', characterData.campaignNotes.quests.filter(q => q.isCompleted), 'completed');
+            const urgentQuests = characterData.campaignNotes.quests.filter(q => q.isUrgent && !q.isCompleted);
+            const inProgressQuests = characterData.campaignNotes.quests.filter(q => !q.isCompleted && !q.isUrgent);
+            const completedQuests = characterData.campaignNotes.quests.filter(q => q.isCompleted);
+            if (urgentQuests.length > 0) contentHtml += renderQuestCategory('Urgent', urgentQuests, 'urgent', true);
+            contentHtml += renderQuestCategory('In Progress', inProgressQuests, 'inProgress');
+            contentHtml += renderQuestCategory('Completed', completedQuests, 'completed');
         }
         else if (subSection === 'locations') {
             contentHtml = renderSectionHeader('location-search', 'Search locations...', 'filterLocations', 'toggleAllLocations', 'addLocation');
