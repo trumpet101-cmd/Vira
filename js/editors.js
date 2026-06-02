@@ -105,29 +105,18 @@ window.moveSession = function(sessId, direction) { const arr = characterData.cam
 window.filterSessions = function(query) { currentSearchQueries.sessionNotes = query; const q = query.toLowerCase(); document.querySelectorAll('.session-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
 // --- PINNED NOTES ---
-var PIN_MAX = 2;
-
-window.pinNote = function(sessId, text) {
+window.updatePinSlot = function(index, el) {
     if (!Array.isArray(characterData.campaignNotes.pinnedNotes)) characterData.campaignNotes.pinnedNotes = [];
-    if (characterData.campaignNotes.pinnedNotes.length >= PIN_MAX) return;
-    const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId);
-    const sourceLabel = sess ? (sess.title || 'Session Notes') : 'Session Notes';
-    characterData.campaignNotes.pinnedNotes.push({
-        id: 'pin_' + Date.now(),
-        text: text,
-        sourceLabel: sourceLabel,
-        sessId: sessId
-    });
-    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
-};
-
-window.unpinNote = function(pinId) {
-    characterData.campaignNotes.pinnedNotes = characterData.campaignNotes.pinnedNotes.filter(p => p.id !== pinId);
-    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+    const text = (el.innerText || el.textContent || '').trim();
+    if (!characterData.campaignNotes.pinnedNotes[index]) {
+        characterData.campaignNotes.pinnedNotes[index] = { id: 'pin_' + index, text: '' };
+    }
+    characterData.campaignNotes.pinnedNotes[index].text = text;
+    window.saveData();
 };
 
 window.clearAllPins = function() {
-    window.showCustomConfirm('Clear all pins?', 'This will remove all pinned notes. Your session notes are untouched.', '📌', function() {
+    window.showCustomConfirm('Clear all pins?', 'This will empty both pin slots. Your session notes are untouched.', '📌', function() {
         characterData.campaignNotes.pinnedNotes = [];
         window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
     });
@@ -742,13 +731,6 @@ window.handleGlobalSearchInput = function(value) {
             matchingEntries.push({ tabId: 'campaign_misc', itemId: '', type: 'Misc & Loot', title: 'General Scratchpad Log', snippet: getSearchResultSnippet(characterData.campaignNotes.misc, q) });
         }
     }
-
-    // 8. Index Pinned Notes
-    (characterData.campaignNotes.pinnedNotes || []).forEach(pin => {
-        if (pin.text.toLowerCase().includes(q)) {
-            matchingEntries.push({ tabId: 'campaign_sessionNotes', itemId: '', type: 'Pinned Note', title: pin.text.substring(0, 60), snippet: 'Pinned from ' + (pin.sourceLabel || 'Session Notes') });
-        }
-    });
 
     window.globalSearchContext = { query: value, results: matchingEntries, selectedIndex: matchingEntries.length > 0 ? 0 : -1 };
     dropdown.classList.remove('hidden');
