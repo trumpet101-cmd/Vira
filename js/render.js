@@ -12,7 +12,7 @@ var NPC_RELATIONSHIPS = {
 function renderRelationshipBadge(facId, npcId, current) {
     var rel = NPC_RELATIONSHIPS[current] || NPC_RELATIONSHIPS.unknown;
     return `
-    <div class="relative inline-block ml-7 mt-1 mb-1" id="rel-wrapper-${npcId}">
+    <div class="relative inline-block flex-shrink-0" id="rel-wrapper-${npcId}">
         <select
             onchange="window.updateNPCRelationship('${facId}', '${npcId}', this.value)"
             class="appearance-none text-[11px] font-bold pl-2 pr-6 py-0.5 rounded-full border cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${rel.classes}"
@@ -429,12 +429,12 @@ window.renderContent = function() {
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center space-x-2 w-full">
                                                 <button onclick="window.toggleNpcCollapse('${faction.id}', '${npc.id}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none flex-shrink-0"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                                <input type="text" id="input-npc-name-${faction.id}-${npc.id}" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 w-full bg-transparent rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
+                                                <input type="text" id="input-npc-name-${faction.id}-${npc.id}" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 min-w-0 flex-1 bg-transparent rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
+                                                ${renderRelationshipBadge(faction.id, npc.id, npc.relationship || 'unknown')}
                                             </div>
                                             <div class="ml-7 mt-0.5 mb-1">
                                                 <input type="text" id="input-npc-sub-${faction.id}-${npc.id}" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'subtitle', this.value)" value="${escapeHtml(npc.subtitle || '')}" class="seamless-input text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Role, Title, or Allegiance (e.g., Carnival Owner)">
                                             </div>
-                                            ${renderRelationshipBadge(faction.id, npc.id, npc.relationship || 'unknown')}
                                             <div class="collapsible-content ${npc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                                                 ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '##' + npc.id, npc.notes, 'min-h-[40px] text-sm mt-1', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
                                             </div>
