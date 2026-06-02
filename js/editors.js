@@ -506,31 +506,26 @@ function showMentionDropdown(div, query, textNode, startOffset, endOffset) {
 
     mentionContext = { div, textNode, startOffset, endOffset, results, selectedIndex: 0 };
 
-    // Insert a temporary marker span at the @ symbol position to get exact coords
-    const markerRange = document.createRange();
-    markerRange.setStart(textNode, startOffset);
-    markerRange.setEnd(textNode, startOffset);
-    const marker = document.createElement('span');
-    marker.textContent = '\u200B';
-    marker.style.cssText = 'position:relative;display:inline;font-size:inherit;line-height:inherit;';
-    markerRange.insertNode(marker);
-
-    const markerRect = marker.getBoundingClientRect();
-    const top = window.scrollY + markerRect.bottom + 4;
-    const left = Math.min(
-        window.scrollX + markerRect.left,
-        window.innerWidth - 330
-    );
-
-    marker.parentNode.removeChild(marker);
-
-    // Restore cursor to where it was
     const selection = window.getSelection();
-    const restored = document.createRange();
-    restored.setStart(textNode, endOffset);
-    restored.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(restored);
+    let top = 0, left = 0;
+
+    if (selection.rangeCount) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        if (rect.width > 0 || rect.height > 0) {
+            top = window.scrollY + rect.bottom + 5;
+            left = window.scrollX + rect.left;
+        } else {
+            // Fallback to bottom-left of the editor div
+            const divRect = div.getBoundingClientRect();
+            top = window.scrollY + divRect.bottom + 5;
+            left = window.scrollX + divRect.left;
+        }
+    }
+
+    // Clamp so dropdown never goes off the right edge
+    left = Math.min(left, window.scrollX + window.innerWidth - 330);
 
     dropdown.style.top = top + 'px';
     dropdown.style.left = left + 'px';
