@@ -82,6 +82,7 @@ function migrateData(data) {
     if (!Array.isArray(data.campaignNotes.npcs)) data.campaignNotes.npcs = [];
     if (!Array.isArray(data.campaignNotes.locations)) data.campaignNotes.locations = [];
     if (typeof data.campaignNotes.misc !== 'string') data.campaignNotes.misc = "";
+    if (!Array.isArray(data.campaignNotes.pinnedNotes)) data.campaignNotes.pinnedNotes = [];
     
     if (typeof data.campaignNotes.sessionNotes === 'string') {
         data.campaignNotes.sessionNotes = [ { id: 'sess_migrated', title: 'Imported Session Notes', date: '', notes: data.campaignNotes.sessionNotes, isCollapsed: false } ];

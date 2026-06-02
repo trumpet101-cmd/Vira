@@ -308,9 +308,62 @@ window.renderContent = function() {
         let contentHtml = '';
 
         if (subSection === 'sessionNotes') {
-            contentHtml = renderSectionHeader('session-search', 'Search sessions...', 'filterSessions', 'toggleAllSessions', 'addSession');
+            const pins = characterData.campaignNotes.pinnedNotes || [];
+            const atLimit = pins.length >= 2;
+
+            // --- PINNED ZONE ---
+            let pinnedHtml = `
+            <div class="mb-6 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-amber-200 dark:border-amber-900/60">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="pin" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
+                        <span class="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Pinned for this session</span>
+                        <span class="text-[10px] font-black px-2 py-0.5 rounded-full ${atLimit ? 'bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300' : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400'}">${pins.length} / 2</span>
+                    </div>
+                    ${pins.length > 0 ? `<button onclick="window.clearAllPins()" class="text-[11px] text-amber-600 dark:text-amber-500 hover:text-red-500 dark:hover:text-red-400 font-medium border border-amber-200 dark:border-amber-900 hover:border-red-300 px-2 py-1 rounded-lg transition-all flex items-center space-x-1"><i data-lucide="x" class="w-3 h-3"></i><span>Clear all</span></button>` : ''}
+                </div>
+                <div class="p-3 space-y-2">`;
+
+            if (pins.length === 0) {
+                pinnedHtml += `<p class="text-xs text-amber-600/60 dark:text-amber-500/50 italic text-center py-2">No pins yet — hover any note bullet and click Pin to add one.</p>`;
+            } else {
+                pins.forEach(pin => {
+                    pinnedHtml += `
+                    <div class="flex items-start space-x-3 bg-white dark:bg-stone-900 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2.5">
+                        <i data-lucide="pin" class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 mt-0.5 flex-shrink-0"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm text-stone-800 dark:text-stone-100 font-medium leading-snug">${escapeHtml(pin.text)}</p>
+                            <p class="text-[10px] text-stone-400 dark:text-stone-500 mt-0.5">from ${escapeHtml(pin.sourceLabel)}</p>
+                        </div>
+                        <button onclick="window.unpinNote('${pin.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-400 dark:hover:text-red-500 transition-colors flex-shrink-0 p-0.5 rounded" title="Unpin">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>`;
+                });
+            }
+
+            if (atLimit) {
+                pinnedHtml += `<p class="text-[10px] text-amber-600/70 dark:text-amber-500/60 text-right pt-1 pr-1">Max 2 pins — unpin one to add another</p>`;
+            }
+
+            pinnedHtml += `</div></div>`;
+            contentHtml = renderSectionHeader('session-search', 'Search sessions...', 'filterSessions', 'toggleAllSessions', 'addSession') + pinnedHtml;
+
             if (characterData.campaignNotes.sessionNotes.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No sessions added yet.</p>`;
             characterData.campaignNotes.sessionNotes.forEach((sess, idx) => {
+                // Extract plain-text bullet lines from this session's notes for pin buttons
+                const tempDiv = document.createElement ? document.createElement('div') : null;
+                let bulletLines = [];
+                if (tempDiv) {
+                    tempDiv.innerHTML = sess.notes || '';
+                    tempDiv.querySelectorAll('li').forEach(li => {
+                        const t = (li.innerText || li.textContent || '').trim();
+                        if (t) bulletLines.push(t);
+                    });
+                }
+
+                const atPinLimit = (characterData.campaignNotes.pinnedNotes || []).length >= 2;
+
                 contentHtml += `
                     <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(sess.title)} ${escapeHtml(sess.date)} ${escapeHtml(sess.notes)}">
                         <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
@@ -324,7 +377,25 @@ window.renderContent = function() {
                             </div>
                         </div>
                         <div class="collapsible-content ${sess.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
-                            <div class="p-5">${getOutlineNotesEditor('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]', 'Start typing your session notes... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.')}</div>
+                            <div class="p-5">
+                                ${bulletLines.length > 0 ? `
+                                <div class="mb-3 space-y-1">
+                                    ${bulletLines.map(line => {
+                                        const alreadyPinned = (characterData.campaignNotes.pinnedNotes || []).some(p => p.text === line);
+                                        return `<div class="group flex items-start space-x-2 rounded-lg px-2 py-1 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors">
+                                            <span class="text-stone-300 dark:text-stone-600 mt-1.5 flex-shrink-0 text-[8px]">●</span>
+                                            <span class="text-sm text-stone-700 dark:text-stone-300 flex-1 leading-relaxed">${escapeHtml(line)}</span>
+                                            ${alreadyPinned
+                                                ? `<span class="text-[10px] font-bold text-amber-500 dark:text-amber-400 flex items-center space-x-1 flex-shrink-0 px-2 py-0.5"><i data-lucide="pin" class="w-3 h-3"></i><span>Pinned</span></span>`
+                                                : atPinLimit
+                                                    ? ''
+                                                    : `<button onclick="window.pinNote('${sess.id}', ${JSON.stringify(line)})" class="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-stone-400 dark:text-stone-500 hover:text-amber-600 dark:hover:text-amber-400 border border-stone-200 dark:border-stone-700 hover:border-amber-400 flex items-center space-x-1 px-2 py-0.5 rounded-md transition-all flex-shrink-0"><i data-lucide="pin" class="w-3 h-3"></i><span>Pin</span></button>`
+                                            }
+                                        </div>`;
+                                    }).join('')}
+                                </div>` : ''}
+                                ${getOutlineNotesEditor('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]', 'Start typing your session notes... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.')}
+                            </div>
                         </div>
                     </div>`;
             });
