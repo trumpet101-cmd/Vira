@@ -106,6 +106,48 @@ window.toggleMobileMenu = function() {
     else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); }
 };
 
+// --- DESKTOP SIDEBAR COLLAPSE ---
+window.toggleSidebarCollapse = function() {
+    const sidebar = document.getElementById('sidebar');
+    const expandBtn = document.getElementById('sidebar-expand-btn');
+    if (!sidebar) return;
+
+    const isCollapsed = sidebar.dataset.collapsed === 'true';
+
+    if (isCollapsed) {
+        // Expand
+        sidebar.style.width = '';
+        sidebar.style.overflow = '';
+        sidebar.dataset.collapsed = 'false';
+        if (expandBtn) { expandBtn.style.display = 'none'; }
+        localStorage.setItem('sidebar_collapsed', 'false');
+    } else {
+        // Collapse
+        sidebar.style.width = '0px';
+        sidebar.style.overflow = 'hidden';
+        sidebar.dataset.collapsed = 'true';
+        if (expandBtn) { expandBtn.style.display = 'flex'; }
+        localStorage.setItem('sidebar_collapsed', 'true');
+    }
+};
+
+// Restore sidebar collapse state on load
+(function() {
+    if (localStorage.getItem('sidebar_collapsed') === 'true') {
+        // Use a small delay so the DOM is ready
+        setTimeout(function() {
+            const sidebar = document.getElementById('sidebar');
+            const expandBtn = document.getElementById('sidebar-expand-btn');
+            if (sidebar) {
+                sidebar.style.width = '0px';
+                sidebar.style.overflow = 'hidden';
+                sidebar.dataset.collapsed = 'true';
+            }
+            if (expandBtn) { expandBtn.style.display = 'flex'; }
+        }, 50);
+    }
+})();
+
 // --- GLOBAL DYNAMIC @MENTION REFERENCE HOVER TOOLTIPS ---
 document.addEventListener('mouseover', function(event) {
     const anchor = event.target.closest('a[onclick*="window.setTab"]');
