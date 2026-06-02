@@ -527,17 +527,29 @@ function showMentionDropdown(div, query, textNode, startOffset, endOffset) {
             top = window.scrollY + markerRect.bottom + 5;
             left = window.scrollX + markerRect.left;
             marker.parentNode.removeChild(marker);
-            // Restore selection
+            // Restore selection after removing marker
+            const restored = document.createRange();
+            restored.setStart(textNode, endOffset);
+            restored.collapse(true);
             selection.removeAllRanges();
-            selection.addRange(range);
+            selection.addRange(restored);
         }
     }
-    
+
     dropdown.style.top = top + 'px';
     dropdown.style.left = left + 'px';
+    // Clamp to viewport so it never goes off-screen right
     dropdown.style.width = '320px';
     dropdown.classList.remove('hidden');
     renderMentionDropdownItems();
+
+    // After rendering, nudge left if it overflows the viewport
+    requestAnimationFrame(() => {
+        const ddRect = dropdown.getBoundingClientRect();
+        if (ddRect.right > window.innerWidth - 10) {
+            dropdown.style.left = (window.innerWidth - 330) + 'px';
+        }
+    });
 }
 
 function renderMentionDropdownItems() {
