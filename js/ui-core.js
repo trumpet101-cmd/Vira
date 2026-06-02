@@ -120,6 +120,7 @@ document.addEventListener('mouseover', function(event) {
     
     let previewContent = '';
     let categoryLabel = '';
+    let relationshipLabel = '';
 
     if (targetTabId === 'campaign_sessionNotes') {
         const row = characterData.campaignNotes.sessionNotes.find(s => s.id === targetItemId);
@@ -140,6 +141,15 @@ document.addEventListener('mouseover', function(event) {
                 if (npc) {
                     previewContent = (npc.subtitle ? `[${npc.subtitle}] ` : '') + (npc.notes || '');
                     categoryLabel = 'NPC Profile';
+                    const relMap = {
+                        unknown:  { label: 'Unknown',  color: 'text-stone-400' },
+                        friendly: { label: 'Friendly', color: 'text-emerald-400' },
+                        neutral:  { label: 'Neutral',  color: 'text-blue-400' },
+                        wary:     { label: 'Wary',     color: 'text-amber-400' },
+                        hostile:  { label: 'Hostile',  color: 'text-red-400' }
+                    };
+                    const rel = relMap[npc.relationship || 'unknown'] || relMap.unknown;
+                    relationshipLabel = `<span class="text-[10px] font-bold uppercase tracking-wider ${rel.color}">${rel.label}</span>`;
                 }
             }
         });
@@ -164,7 +174,7 @@ document.addEventListener('mouseover', function(event) {
 
     const frame = document.getElementById('mention-tooltip');
     if (frame) {
-        frame.innerHTML = `<span class="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider">${categoryLabel}</span><p class="text-stone-200 dark:text-stone-300 font-medium">${window.escapeHtml(cleanSnippet)}</p>`;
+        frame.innerHTML = `<div class="flex items-center justify-between gap-3"><span class="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider">${categoryLabel}</span>${relationshipLabel}</div><p class="text-stone-200 dark:text-stone-300 font-medium">${window.escapeHtml(cleanSnippet)}</p>`;
         frame.classList.remove('hidden');
 
         adjustTooltipPosition(event, frame);
