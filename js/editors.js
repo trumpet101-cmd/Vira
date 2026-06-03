@@ -528,10 +528,12 @@ var mentionContext = null;
 function getMentionSuggestions(query) {
     const q = query.toLowerCase();
     let results = [];
-    // Order: NPC/Faction → Location → Quest → Session → Backstory → Personality
+    // Order: NPC → Faction → Location → Quest → Session → Backstory → Personality
+    characterData.campaignNotes.npcs.forEach(fac => {
+        fac.members.forEach(npc => { if (npc.name && npc.name.toLowerCase().includes(q)) results.push({ type: 'NPC', id: 'campaign_npcs', itemId: npc.id, label: npc.name }); });
+    });
     characterData.campaignNotes.npcs.forEach(fac => {
         if (fac.name && fac.name.toLowerCase().includes(q)) results.push({ type: 'Faction', id: 'campaign_npcs', itemId: fac.id, label: fac.name });
-        fac.members.forEach(npc => { if (npc.name && npc.name.toLowerCase().includes(q)) results.push({ type: 'NPC', id: 'campaign_npcs', itemId: npc.id, label: npc.name }); });
     });
     characterData.campaignNotes.locations.forEach(loc => { if (loc.title && loc.title.toLowerCase().includes(q)) results.push({ type: 'Location', id: 'campaign_locations', itemId: loc.id, label: loc.title }); });
     characterData.campaignNotes.quests.forEach(qItem => { if (qItem.title && qItem.title.toLowerCase().includes(q)) results.push({ type: 'Quest', id: 'campaign_quests', itemId: qItem.id, label: qItem.title }); });
