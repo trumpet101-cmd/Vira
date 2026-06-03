@@ -431,14 +431,27 @@ window.toggleTagInput = function(entryId) {
     rerenderTagRow(entryId);
 };
 
+// Renders suggestion chips for the tag add-input, with keyboard-selection highlight.
+function renderTagSuggChips(entryId) {
+    var ui = getTagUi(entryId);
+    var sugg = ui.suggestions || [];
+    return sugg.map(function(t, i) {
+        var jsTag = t.display.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        var isSelected = (i === ui.selectedSuggIdx);
+        var cls = isSelected
+            ? 'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-400 dark:ring-emerald-600 font-semibold transition-colors'
+            : 'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors';
+        return '<button onmousedown="event.preventDefault(); window.commitTag(\'' + entryId + '\', \'' + jsTag + '\')" class="' + cls + '"><i data-lucide="tag" class="w-3 h-3"></i>' + escapeHtml(t.display) + '</button>';
+    }).join('');
+}
+
 window.tagInputChanged = function(entryId, value) {
+    var ui = getTagUi(entryId);
+    ui.suggestions = getTagSuggestions(entryId, value);
+    ui.selectedSuggIdx = -1;
     var box = document.getElementById('tag-sugg-' + entryId);
     if (!box) return;
-    var sugg = getTagSuggestions(entryId, value);
-    box.innerHTML = sugg.map(function(t) {
-        var jsTag = t.display.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        return '<button onmousedown="event.preventDefault(); window.commitTag(\'' + entryId + '\', \'' + jsTag + '\')" class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"><i data-lucide="tag" class="w-3 h-3"></i>' + escapeHtml(t.display) + '</button>';
-    }).join('');
+    box.innerHTML = renderTagSuggChips(entryId);
     if (window.lucide) lucide.createIcons();
 };
 
@@ -464,12 +477,40 @@ window.commitTag = function(entryId, value) {
 };
 
 window.tagInputKey = function(event, entryId) {
-    if (event.key === 'Enter' || event.keyCode === 13) {
+    var ui = getTagUi(entryId);
+    var sugg = ui.suggestions || [];
+    var box = document.getElementById('tag-sugg-' + entryId);
+
+    if (event.key === 'ArrowDown') {
         event.preventDefault();
-        window.commitTag(entryId, event.target.value);
+        ui.selectedSuggIdx = sugg.length ? Math.min(ui.selectedSuggIdx + 1, sugg.length - 1) : -1;
+        if (box) { box.innerHTML = renderTagSuggChips(entryId); if (window.lucide) lucide.createIcons(); }
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        ui.selectedSuggIdx = Math.max(ui.selectedSuggIdx - 1, -1);
+        if (box) { box.innerHTML = renderTagSuggChips(entryId); if (window.lucide) lucide.createIcons(); }
+    } else if (event.key === 'Tab') {
+        // Tab selects the highlighted suggestion, or the first one if none highlighted.
+        if (sugg.length > 0) {
+            event.preventDefault();
+            var idx = ui.selectedSuggIdx >= 0 ? ui.selectedSuggIdx : 0;
+            window.commitTag(entryId, sugg[idx].display);
+        }
+        // No suggestions — let Tab move focus naturally (don't prevent default).
+    } else if (event.key === 'Enter' || event.keyCode === 13) {
+        event.preventDefault();
+        if (ui.selectedSuggIdx >= 0 && sugg[ui.selectedSuggIdx]) {
+            // A suggestion is highlighted — commit it.
+            window.commitTag(entryId, sugg[ui.selectedSuggIdx].display);
+        } else {
+            // Nothing highlighted — commit whatever is typed.
+            window.commitTag(entryId, event.target.value);
+        }
     } else if (event.key === 'Escape') {
         event.preventDefault();
-        getTagUi(entryId).adding = false;
+        ui.selectedSuggIdx = -1;
+        ui.suggestions = [];
+        ui.adding = false;
         rerenderTagRow(entryId);
     }
 };
