@@ -598,6 +598,12 @@ window.insertMention = function(targetTabId, label, itemId = '') {
 
 // --- DEEP LINK SCROLL ENGINE ---
 window.setTab = function(tabId, itemId = '') {
+    // Dismiss any lingering @mention hover tooltip before we navigate.
+    // The hovered link is about to be destroyed by the re-render below, so its
+    // own mouseleave never fires — without this the tooltip stays stuck on screen.
+    var lingeringTooltip = document.getElementById('mention-tooltip');
+    if (lingeringTooltip) lingeringTooltip.classList.add('hidden');
+
     activeTab = tabId;
     if (isMobileMenuOpen) window.toggleMobileMenu();
     if (itemId) window.isDeepLinking = true;
