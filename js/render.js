@@ -28,6 +28,20 @@ function renderRelationshipBadge(facId, npcId, current) {
 }
 
 // ============================================================
+// --- UTILITY: Strip HTML to plain text ---
+// Used by the backlink and tag engines for threads (which store text as HTML).
+// Also used by renderThreadsPanel for snippet display.
+function stripHtmlToText(html) {
+    if (!html) return '';
+    try {
+        var doc = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html');
+        return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+    } catch(e) {
+        return html.replace(/<[^>]+>/g, '').trim();
+    }
+}
+
+// ============================================================
 // --- BACKLINKS ENGINE ---
 // Derives "Referenced in" links for any entry by scanning every
 // session / quest / location note for @mention links that point at it.
@@ -41,9 +55,10 @@ var BACKLINK_FILTER_TYPE = 'session'; // which type exposes the text filter
 var BACKLINK_TYPES = [
     { key: 'session',  label: 'Sessions',  icon: 'scroll-text', tab: 'campaign_sessionNotes' },
     { key: 'quest',    label: 'Quests',    icon: 'swords',      tab: 'campaign_quests' },
-    { key: 'location', label: 'Locations', icon: 'map-pin',     tab: 'campaign_locations' }
+    { key: 'location', label: 'Locations', icon: 'map-pin',     tab: 'campaign_locations' },
+    { key: 'thread',   label: 'Threads',   icon: 'help-circle', tab: 'campaign_sessionNotes' }
 ];
-var BACKLINK_ICONS = { session: 'scroll-text', quest: 'swords', location: 'map-pin' };
+var BACKLINK_ICONS = { session: 'scroll-text', quest: 'swords', location: 'map-pin', thread: 'help-circle' };
 
 // targetEntryId -> [ { tabId, sourceId, sourceType, title, meta, snippet, mentionText } ]
 var backlinkIndex = {};
@@ -54,7 +69,7 @@ var backlinkState = {};
 function getBacklinkState(entryId) {
     if (!backlinkState[entryId]) {
         backlinkState[entryId] = {
-            active: { session: false, quest: true, location: true }, // global default
+            active: { session: false, quest: true, location: true, thread: true }, // global default
             expanded: false,
             query: ''
         };
@@ -111,6 +126,7 @@ window.rebuildBacklinkIndex = function() {
     (cn.sessionNotes || []).forEach(function(s) { addSource(s.notes, s.id, 'session',  'campaign_sessionNotes', s.title || 'Untitled session', s.date || ''); });
     (cn.quests || []).forEach(function(q)       { addSource(q.notes, q.id, 'quest',    'campaign_quests',       q.title || 'Untitled quest', 'Quest'); });
     (cn.locations || []).forEach(function(l)    { addSource(l.notes, l.id, 'location', 'campaign_locations',    l.title || 'Untitled location', 'Location'); });
+    (cn.threads || []).forEach(function(t)      { addSource(t.text,  t.id, 'thread',   'campaign_sessionNotes', stripHtmlToText(t.text).slice(0, 60) || 'Open thread', 'Thread'); });
 };
 
 function getBacklinks(entryId) { return backlinkIndex[entryId] || []; }
@@ -194,7 +210,7 @@ function renderBacklinksPanel(entryId) {
     if (!all.length) return '';
 
     var st = getBacklinkState(entryId);
-    var counts = { session: 0, quest: 0, location: 0 };
+    var counts = { session: 0, quest: 0, location: 0, thread: 0 };
     all.forEach(function(b) { if (counts[b.sourceType] !== undefined) counts[b.sourceType]++; });
 
     var chips = BACKLINK_TYPES.filter(function(t) { return counts[t.key] > 0; }).map(function(t) {
@@ -290,9 +306,10 @@ var TAG_TYPES = {
     session:  { tab: 'campaign_sessionNotes', icon: 'scroll-text', label: 'Sessions' },
     quest:    { tab: 'campaign_quests',        icon: 'swords',      label: 'Quests' },
     npc:      { tab: 'campaign_npcs',           icon: 'users',       label: 'NPCs' },
-    location: { tab: 'campaign_locations',      icon: 'map-pin',     label: 'Locations' }
+    location: { tab: 'campaign_locations',      icon: 'map-pin',     label: 'Locations' },
+    thread:   { tab: 'campaign_sessionNotes',   icon: 'help-circle', label: 'Threads' }
 };
-var TAG_TYPE_ORDER = ['session', 'quest', 'npc', 'location'];
+var TAG_TYPE_ORDER = ['session', 'quest', 'npc', 'location', 'thread'];
 
 var tagIndex = {};                 // tagKey -> { display, entries: [ {type, tabId, itemId, title, meta} ] }
 var tagUiState = {};               // entryId -> { adding } (ephemeral header add-input state)
@@ -314,6 +331,8 @@ function findTaggableEntry(entryId) {
     (cn.locations || []).forEach(function(l) { if (l.id === entryId) hit = { entry: l, type: 'location' }; });
     if (hit) return hit;
     (cn.npcs || []).forEach(function(fac) { (fac.members || []).forEach(function(n) { if (n.id === entryId) hit = { entry: n, type: 'npc', factionId: fac.id }; }); });
+    if (hit) return hit;
+    (cn.threads || []).forEach(function(t) { if (t.id === entryId) hit = { entry: t, type: 'thread' }; });
     return hit;
 }
 
@@ -333,6 +352,7 @@ window.rebuildTagIndex = function() {
     (cn.quests || []).forEach(function(q) { add(q, 'quest', q.title || 'Untitled quest', q.subtitle || 'Quest'); });
     (cn.locations || []).forEach(function(l) { add(l, 'location', l.title || 'Untitled location', l.subtitle || 'Location'); });
     (cn.npcs || []).forEach(function(fac) { (fac.members || []).forEach(function(n) { add(n, 'npc', n.name || 'Unnamed NPC', n.subtitle || ''); }); });
+    (cn.threads || []).forEach(function(t) { add(t, 'thread', stripHtmlToText(t.text).slice(0, 60) || 'Untitled thread', 'Thread'); });
 };
 
 window.getAllTagsSorted = function() {
@@ -618,6 +638,115 @@ function renderNavigation() {
     }).join('');
 }
 
+// ============================================================
+// --- OPEN THREADS PANEL ---
+// Renders the amber panel that replaces the old pinned-notes widget at the
+// top of the Session Notes page.  All state mutations are in editors.js;
+// this function is pure render.
+// ============================================================
+function renderThreadsPanel() {
+    var cn = characterData.campaignNotes;
+    var threads = cn.threads || [];
+    var open     = threads.filter(function(t) { return !t.resolved; });
+    var resolved = threads.filter(function(t) { return  t.resolved; });
+
+    // ── Header row ────────────────────────────────────────────────────────
+    var headerHtml =
+        '<div class="flex items-center justify-between px-4 py-3 border-b border-amber-200 dark:border-amber-900/60">'
+      +   '<div class="flex items-center space-x-2">'
+      +     '<i data-lucide="help-circle" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>'
+      +     '<span class="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Open Threads</span>'
+      +   '</div>'
+      +   '<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">'
+      +     open.length + ' open'
+      +   '</span>'
+      + '</div>';
+
+    // ── Unresolved thread cards ────────────────────────────────────────────
+    var bodyHtml = '';
+    if (open.length > 0) {
+        bodyHtml += '<div class="p-3 space-y-2">';
+        open.forEach(function(t) {
+            var safeSearchable = escapeHtml(stripHtmlToText(t.text));
+            bodyHtml +=
+                '<div id="' + t.id + '" class="flex items-start gap-2.5 bg-white dark:bg-stone-900 border border-amber-200 dark:border-amber-800 rounded-lg p-2.5" data-searchable="' + safeSearchable + '">'
+              // Checkbox — click to resolve
+              + '<button onclick="window.toggleThreadResolved('' + t.id + '')" '
+              +   'class="flex-shrink-0 mt-0.5 w-5 h-5 rounded border-2 border-amber-400 dark:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400" '
+              +   'title="Mark as resolved"></button>'
+              // Thread content
+              + '<div class="flex-1 min-w-0">'
+              +   '<div class="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">' + renderHTML(t.text) + '</div>'
+              +   renderTagRow(t.id, 'mt-1.5')
+              + '</div>'
+              // Promote to quest button
+              + '<button onclick="window.promoteThreadToQuest('' + t.id + '')" '
+              +   'class="flex-shrink-0 p-1.5 rounded border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors focus:outline-none" '
+              +   'title="Promote to Quest"><i data-lucide="swords" class="w-3.5 h-3.5"></i>'
+              + '</button>'
+              + '</div>';
+        });
+        bodyHtml += '</div>';
+    }
+
+    // ── Add row (always visible) ───────────────────────────────────────────
+    var addRowHtml =
+        '<div class="px-3 py-2 ' + (open.length > 0 ? 'border-t border-amber-100 dark:border-amber-900/40' : '') + '">'
+      + '<div class="flex items-center gap-2">'
+      +   '<i data-lucide="plus" class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 flex-shrink-0 pointer-events-none"></i>'
+      +   '<div contenteditable="true" id="thread-add-input" '
+      +        'data-editor-section="thread_add" data-editor-field="thread_new" '
+      +        'onkeydown="window.handleThreadAddKeyDown(event)" '
+      +        'oninput="window.handleThreadAddInput(event)" '
+      +        'onblur="window.handleThreadAddBlur(event)" '
+      +        'onpaste="window.handlePaste(event)" '
+      +        'class="flex-1 seamless-input text-sm text-stone-700 dark:text-stone-300 rounded px-2 py-1 min-h-[28px] '
+      +             'focus:outline-none focus:ring-1 focus:ring-amber-400 '
+      +             'empty:before:content-[attr(data-placeholder)] empty:before:text-stone-300 '
+      +             'dark:empty:before:text-stone-600 empty:before:pointer-events-none" '
+      +        'data-placeholder="Add a thread… (@ to mention)"></div>'
+      + '</div>'
+      + '</div>';
+
+    // ── Resolved section (collapsible, collapsed by default) ──────────────
+    var resolvedHtml = '';
+    if (resolved.length > 0) {
+        resolvedHtml +=
+            '<div class="border-t border-amber-200 dark:border-amber-900/60">'
+          + '<div onclick="window.toggleThreadsResolved()" '
+          +      'class="cursor-pointer flex items-center justify-between px-4 py-2.5 hover:bg-amber-100/50 dark:hover:bg-amber-950/30 transition-colors">'
+          +   '<span class="text-xs font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider">Resolved (' + resolved.length + ')</span>'
+          +   '<i data-lucide="' + (threadsResolvedCollapsed ? 'chevron-right' : 'chevron-down') + '" class="w-4 h-4 text-amber-500 dark:text-amber-500"></i>'
+          + '</div>';
+
+        if (!threadsResolvedCollapsed) {
+            resolvedHtml += '<div class="px-3 pb-3 space-y-1.5">';
+            resolved.forEach(function(t) {
+                var displayHtml = renderHTML(t.text)
+                    + (t.resolution ? ' <span class="text-stone-400 dark:text-stone-500">— ' + escapeHtml(t.resolution) + '</span>' : '');
+                resolvedHtml +=
+                    '<div class="flex items-start gap-2 p-2 rounded">'
+                  + '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5"></i>'
+                  + '<div class="flex-1 min-w-0 text-sm text-stone-400 dark:text-stone-500 line-through leading-relaxed opacity-80">' + displayHtml + '</div>'
+                  + '<button onclick="window.deleteThread('' + t.id + '')" '
+                  +   'class="flex-shrink-0 p-1 rounded text-stone-300 dark:text-stone-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors focus:outline-none" '
+                  +   'title="Permanently delete thread"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>'
+                  + '</button>'
+                  + '</div>';
+            });
+            resolvedHtml += '</div>';
+        }
+        resolvedHtml += '</div>';
+    }
+
+    return '<div class="mb-6 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 overflow-hidden">'
+        + headerHtml
+        + bodyHtml
+        + addRowHtml
+        + resolvedHtml
+        + '</div>';
+}
+
 window.renderContent = function() {
     // Rebuild the backlink index from current data before anything renders.
     if (typeof window.rebuildBacklinkIndex === 'function') window.rebuildBacklinkIndex();
@@ -857,34 +986,7 @@ window.renderContent = function() {
         let contentHtml = '';
 
         if (subSection === 'sessionNotes') {
-            const pins = characterData.campaignNotes.pinnedNotes || [];
-            const pin0text = pins[0] ? pins[0].text : '';
-            const pin1text = pins[1] ? pins[1].text : '';
-
-            const pinnedHtml = `
-            <div class="mb-6 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 overflow-hidden">
-                <div class="flex items-center justify-between px-4 py-3 border-b border-amber-200 dark:border-amber-900/60">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="pin" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
-                        <span class="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Pinned for this session</span>
-                    </div>
-                    <button onclick="window.clearAllPins()" class="text-[11px] text-amber-600 dark:text-amber-500 hover:text-red-500 dark:hover:text-red-400 font-medium border border-amber-200 dark:border-amber-900 hover:border-red-300 px-2 py-1 rounded-lg transition-all flex items-center space-x-1">
-                        <i data-lucide="x" class="w-3 h-3"></i><span>Clear</span>
-                    </button>
-                </div>
-                <div class="p-3 space-y-2">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="pin" class="w-3.5 h-3.5 text-amber-400 dark:text-amber-500 flex-shrink-0"></i>
-                        <div contenteditable="true" id="pin-slot-0" onkeydown="window.handleKeyDown(event)" oninput="window.updatePinSlot(0, this)" class="pin-slot flex-1 text-sm text-stone-800 dark:text-stone-100 bg-white dark:bg-stone-900 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[36px] leading-relaxed empty:before:content-[attr(data-placeholder)] empty:before:text-stone-300 dark:empty:before:text-stone-600 empty:before:pointer-events-none" data-placeholder="Pin a note or @mention a session...">${pin0text}</div>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="pin" class="w-3.5 h-3.5 text-amber-400 dark:text-amber-500 flex-shrink-0"></i>
-                        <div contenteditable="true" id="pin-slot-1" onkeydown="window.handleKeyDown(event)" oninput="window.updatePinSlot(1, this)" class="pin-slot flex-1 text-sm text-stone-800 dark:text-stone-100 bg-white dark:bg-stone-900 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[36px] leading-relaxed empty:before:content-[attr(data-placeholder)] empty:before:text-stone-300 dark:empty:before:text-stone-600 empty:before:pointer-events-none" data-placeholder="Pin a note or @mention a session...">${pin1text}</div>
-                    </div>
-                </div>
-            </div>`;
-
-            contentHtml = renderSectionHeader('session-search', 'Search sessions...', 'filterSessions', 'toggleAllSessions', 'addSession') + pinnedHtml;
+            contentHtml = renderSectionHeader('session-search', 'Search sessions...', 'filterSessions', 'toggleAllSessions', 'addSession') + renderThreadsPanel();
             if (characterData.campaignNotes.sessionNotes.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No sessions added yet.</p>`;
             characterData.campaignNotes.sessionNotes.forEach((sess, idx) => {
                 contentHtml += `

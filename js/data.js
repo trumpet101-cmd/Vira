@@ -3,7 +3,7 @@ var initialCharacterData = {
     name: "Víra Tahlwyn",
     basics: { race: "Wood Elf", class: "Barbarian (World Tree)", age: 27, background: "Nomadic Tribesman (Custom)", tribe: "Eryndral Tribe (Orroyen)", familiar: "Tato (Squirrel)" },
     backstory: [
-        { id: 'b_1', title: "Early Life", notes: `Growing up, Vira had a very traditional nomadic life within the Orroyen tribe...\n\nFrom her mother she learned to be upbeat, friendly and open - always seeing meeting others as a chance to “plant new seeds of friendship”.\n\nHer father was the careful balance to that - he taught her discipline, patience, vigilance.`, isCollapsed: false },
+        { id: 'b_1', title: "Early Life", notes: `Growing up, Vira had a very traditional nomadic life within the Orroyen tribe...\n\nFrom her mother she learned to be upbeat, friendly and open - always seeing meeting others as a chance to "plant new seeds of friendship".\n\nHer father was the careful balance to that - he taught her discipline, patience, vigilance.`, isCollapsed: false },
         { id: 'b_2', title: "The Threat", notes: `As with all members of the Orroyen tribes, Vira was well aware of the Iron Authority; the Hobgoblin nation who would see the destruction and conquest of the Jungle and all those who dwell within it.`, isCollapsed: false },
         { id: 'b_3', title: "The Vision", notes: `Many years later, Vira now 27, was led by a playful squirrel (Tato) to a clearing void of the thick dense jungle...`, isCollapsed: false },
         { id: 'b_4', title: "The Journey", notes: `After waking, she sought guidance. Syngorn was unhelpful; the elves were xenophobic and dismissive of her visions...`, isCollapsed: false }
@@ -27,7 +27,7 @@ var initialCharacterData = {
         features: [ "Barbarian (World Tree)", "Speed: 35 feet", "Darkvision: 60 feet", "Fey Ancestry: Advantage on Charm saves", "Trance: 4 hour long rest", "Origin Feat: Magic Initiate (Wizard) - Find Familiar, Message, Mending" ],
         equipment: []
     },
-    campaignNotes: { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "" }
+    campaignNotes: { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "", threads: [] }
 };
 
 // --- DYNAMIC BLANK SLATE MAKER ---
@@ -59,7 +59,7 @@ function getCleanCharacterData(name, race, charClass) {
             feats: { lvl1: "", lvl4: "", lvl8: "", lvl12: "", lvl16: "", lvl19: "", lvl20: "" },
             features: "", equipment: "", acSelection: ["unarmored", ""], shieldActive: false
         },
-        campaignNotes: { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "" }
+        campaignNotes: { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "", threads: [] }
     };
 }
 
@@ -75,15 +75,26 @@ function migrateData(data) {
     }
 
     if (!data.campaignNotes || typeof data.campaignNotes !== 'object') {
-        data.campaignNotes = { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "" };
+        data.campaignNotes = { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "", threads: [] };
     }
     if (!Array.isArray(data.campaignNotes.sessionNotes)) data.campaignNotes.sessionNotes = [];
     if (!Array.isArray(data.campaignNotes.quests)) data.campaignNotes.quests = [];
     if (!Array.isArray(data.campaignNotes.npcs)) data.campaignNotes.npcs = [];
     if (!Array.isArray(data.campaignNotes.locations)) data.campaignNotes.locations = [];
     if (typeof data.campaignNotes.misc !== 'string') data.campaignNotes.misc = "";
-    if (!Array.isArray(data.campaignNotes.pinnedNotes)) data.campaignNotes.pinnedNotes = [];
-    
+
+    // --- Open Threads ---
+    if (!Array.isArray(data.campaignNotes.threads)) data.campaignNotes.threads = [];
+    data.campaignNotes.threads.forEach(function(t, i) {
+        if (!t.id)                            t.id = 'thread_migrated_' + i + '_' + Date.now();
+        if (typeof t.text !== 'string')       t.text = '';
+        if (!Array.isArray(t.tags))           t.tags = [];
+        if (t.resolved === undefined)         t.resolved = false;
+        if (typeof t.resolution !== 'string') t.resolution = '';
+    });
+
+    // Note: pinnedNotes guard has been removed. Old pinnedNotes data is simply dropped on next save.
+
     if (typeof data.campaignNotes.sessionNotes === 'string') {
         data.campaignNotes.sessionNotes = [ { id: 'sess_migrated', title: 'Imported Session Notes', date: '', notes: data.campaignNotes.sessionNotes, isCollapsed: false } ];
     }

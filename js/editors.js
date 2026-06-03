@@ -104,37 +104,136 @@ window.toggleAllSessions = function(collapse) { characterData.campaignNotes.sess
 window.moveSession = function(sessId, direction) { const arr = characterData.campaignNotes.sessionNotes; const index = arr.findIndex(s => s.id === sessId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
 window.filterSessions = function(query) { currentSearchQueries.sessionNotes = query; const q = query.toLowerCase(); document.querySelectorAll('.session-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
-// --- PINNED NOTES ---
-window.updatePinSlot = function(index, el) {
-    if (!Array.isArray(characterData.campaignNotes.pinnedNotes)) characterData.campaignNotes.pinnedNotes = [];
-    if (!characterData.campaignNotes.pinnedNotes[index]) {
-        characterData.campaignNotes.pinnedNotes[index] = { id: 'pin_' + index, text: '' };
-    }
-    characterData.campaignNotes.pinnedNotes[index].text = el.innerHTML;
-    window.saveData();
+// --- OPEN THREADS ---
+// Tracks collapse state of the resolved section (module-level, ephemeral — does not persist).
+// Defined here so editors.js toggleThreadsResolved can flip it and render.js can read it.
+var threadsResolvedCollapsed = true;
 
-    const selection = window.getSelection();
+// Pending blur-commit guard: null means no pending commit.
+var threadAddPending = null;
+
+window.addThread = function(html) {
+    var cn = characterData.campaignNotes;
+    if (!Array.isArray(cn.threads)) cn.threads = [];
+    // Strip to plain text to check for truly empty input (handles "<br>" etc.)
+    var plain = html ? html.replace(/<[^>]+>/g, '').trim() : '';
+    if (!plain) return;
+    cn.threads.push({
+        id: 'thread_' + Date.now(),
+        text: html,
+        tags: [],
+        resolved: false,
+        resolution: ''
+    });
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+
+window.updateThreadText = function(id, html) {
+    var t = (characterData.campaignNotes.threads || []).find(function(t) { return t.id === id; });
+    if (t) t.text = html;
+    window.saveData();
+};
+
+window.toggleThreadResolved = function(id) {
+    var t = (characterData.campaignNotes.threads || []).find(function(t) { return t.id === id; });
+    if (!t) return;
+    t.resolved = !t.resolved;
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+
+window.deleteThread = function(id) {
+    characterData.campaignNotes.threads = (characterData.campaignNotes.threads || []).filter(function(t) { return t.id !== id; });
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+
+window.promoteThreadToQuest = function(id) {
+    var threads = characterData.campaignNotes.threads || [];
+    var t = threads.find(function(t) { return t.id === id; });
+    if (!t) return;
+    // Derive plain-text title from HTML; fall back gracefully.
+    var plainTitle = '';
+    try {
+        var scratchDiv = document.createElement('div');
+        scratchDiv.innerHTML = t.text;
+        plainTitle = (scratchDiv.innerText || scratchDiv.textContent || '').trim().slice(0, 100);
+    } catch(e) { plainTitle = t.text.replace(/<[^>]+>/g, '').slice(0, 100); }
+    if (!plainTitle) plainTitle = 'Promoted thread';
+    var notesHtml = t.text + '<br><em style="color:#78716c;font-size:0.85em">— Promoted from Open Thread</em>';
+    characterData.campaignNotes.quests.unshift({
+        id: 'quest_' + Date.now(),
+        title: plainTitle,
+        subtitle: '',
+        notes: notesHtml,
+        isCompleted: false,
+        isUrgent: false,
+        tags: []
+    });
+    characterData.campaignNotes.threads = threads.filter(function(t) { return t.id !== id; });
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+
+window.toggleThreadsResolved = function() {
+    threadsResolvedCollapsed = !threadsResolvedCollapsed;
+    window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+
+// --- Thread add-row event handlers ---
+// These power the always-visible "+ Add a thread" row at the bottom of the panel.
+// They mirror the pin-slot approach: detect @-mentions and show the picker,
+// commit on Enter or blur (with a 160ms delay guard against mention-picker clicks).
+
+window.handleThreadAddKeyDown = function(event) {
+    // Delegate to handleKeyDown first if the mention dropdown is open
+    var dropdown = document.getElementById('mention-dropdown');
+    if (dropdown && !dropdown.classList.contains('hidden') && mentionContext) {
+        if (event.key === 'Tab' || event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            window.handleKeyDown(event);
+            return;
+        }
+    }
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        var div = event.target;
+        var html = (div.innerHTML || '').trim();
+        if (html && html !== '<br>') {
+            threadAddPending = null; // cancel any pending blur commit
+            window.addThread(html);  // calls renderContent — div is destroyed after this
+        }
+    }
+};
+
+window.handleThreadAddInput = function(event) {
+    var div = event.target;
+    var selection = window.getSelection();
     if (!selection.rangeCount) return;
-    const range = selection.getRangeAt(0);
-    const node = range.startContainer;
+    var range = selection.getRangeAt(0);
+    var node = range.startContainer;
     if (node.nodeType === Node.TEXT_NODE) {
-        const textUpToCursor = node.textContent.substring(0, range.startOffset);
-        const match = textUpToCursor.match(/(?:\s|^)(@[a-zA-Z0-9_\-\' ]{0,40})$/);
+        var textUpToCursor = node.textContent.substring(0, range.startOffset);
+        var match = textUpToCursor.match(/(?:\s|^)(@[a-zA-Z0-9_\-\' ]{0,40})$/);
         if (match) {
-            const matchString = match[1];
-            const query = matchString.substring(1);
-            const endOffset = range.startOffset;
-            const startOffset = endOffset - matchString.length;
-            showMentionDropdown(el, query, node, startOffset, endOffset);
+            var matchString = match[1];
+            var query = matchString.substring(1);
+            var endOffset = range.startOffset;
+            var startOffset = endOffset - matchString.length;
+            showMentionDropdown(div, query, node, startOffset, endOffset);
         } else { hideMentionDropdown(); }
     } else { hideMentionDropdown(); }
 };
 
-window.clearAllPins = function() {
-    window.showCustomConfirm('Clear all pins?', 'This will empty both pin slots. Your session notes are untouched.', '📌', function() {
-        characterData.campaignNotes.pinnedNotes = [];
-        window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
-    });
+window.handleThreadAddBlur = function(event) {
+    var html = (event.target.innerHTML || '').trim();
+    if (!html || html === '<br>') return;
+    threadAddPending = html;
+    // Delay so a mention suggestion's mousedown (which inserts via insertMention) can fire first.
+    setTimeout(function() {
+        if (threadAddPending === null) return; // already committed by Enter or a prior blur
+        var c = threadAddPending;
+        threadAddPending = null;
+        window.addThread(c);
+    }, 160);
 };
 
 window.addQuest = function() { currentSearchQueries.quests = ''; characterData.campaignNotes.quests.unshift({ id: 'quest_' + Date.now(), title: '', subtitle: '', notes: '', isCompleted: false, isUrgent: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
@@ -478,6 +577,9 @@ window.handleInput = function(event, section, field) {
         const [facId, npcId] = field.split('##');
         const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
         if(fac) { const npc = fac.members.find(n => n.id === npcId); if(npc) npc.notes = div.innerHTML; }
+    } else if (section === 'campaignNotes_thread') {
+        const thr = (characterData.campaignNotes.threads || []).find(t => t.id === field);
+        if (thr) thr.text = div.innerHTML;
     } else { window.updateField(section, field, div.innerHTML); }
     window.saveData();
 
@@ -787,6 +889,16 @@ window.handleGlobalSearchInput = function(value) {
             matchingEntries.push({ tabId: 'campaign_misc', itemId: '', type: 'Misc & Loot', title: 'General Scratchpad Log', snippet: getSearchResultSnippet(characterData.campaignNotes.misc, q) });
         }
     }
+
+    // 8. Open Threads
+    (characterData.campaignNotes.threads || []).forEach(thread => {
+        const plainText = cleanHtmlTags(thread.text);
+        if (plainText.toLowerCase().includes(q)) {
+            const snippet = getSearchResultSnippet(thread.text, q);
+            const title = plainText.slice(0, 60) || 'Open Thread';
+            matchingEntries.push({ tabId: 'campaign_sessionNotes', itemId: thread.id, type: 'Thread', title: title, snippet: snippet });
+        }
+    });
 
     window.globalSearchContext = { query: value, results: matchingEntries, selectedIndex: matchingEntries.length > 0 ? 0 : -1 };
     dropdown.classList.remove('hidden');

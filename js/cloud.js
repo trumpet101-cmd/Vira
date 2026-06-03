@@ -196,17 +196,8 @@ window.saveData = function() {
                 // Deep clone so we don't mutate characterData in memory
                 const dataToSave = JSON.parse(JSON.stringify(characterData));
 
-                // Firestore rejects HTML with special chars (e.g. Tailwind's bg-x/80 slashes).
-                // Pin slots store innerHTML locally but we send plain text to the cloud.
-                if (Array.isArray(dataToSave.campaignNotes?.pinnedNotes)) {
-                    const scrubber = document.createElement('div');
-                    dataToSave.campaignNotes.pinnedNotes = dataToSave.campaignNotes.pinnedNotes.map(pin => {
-                        if (!pin || typeof pin.text !== 'string') return pin;
-                        scrubber.innerHTML = pin.text;
-                        return { ...pin, text: scrubber.innerText || scrubber.textContent || '' };
-                    });
-                }
-
+                // Threads store text as HTML (like session/quest/location notes) — the
+                // existing Firestore serialisation handles them fine; no scrubbing needed.
                 await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(currentCharacterId).set(dataToSave);
                 triggerSaveIndicator();
             } catch (e) {
