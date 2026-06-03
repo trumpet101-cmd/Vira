@@ -27,6 +27,256 @@ function renderRelationshipBadge(facId, npcId, current) {
     </div>`;
 }
 
+// ============================================================
+// --- BACKLINKS ENGINE ---
+// Derives "Referenced in" links for any entry by scanning every
+// session / quest / location note for @mention links that point at it.
+// Nothing is stored: the index is rebuilt from existing data on each
+// full render. Per-card type toggles are ephemeral (reset on reload).
+// ============================================================
+
+var BACKLINK_COLLAPSED = 4;          // how many rows show before "Show all"
+var BACKLINK_FILTER_TYPE = 'session'; // which type exposes the text filter
+
+var BACKLINK_TYPES = [
+    { key: 'session',  label: 'Sessions',  icon: 'scroll-text', tab: 'campaign_sessionNotes' },
+    { key: 'quest',    label: 'Quests',    icon: 'swords',      tab: 'campaign_quests' },
+    { key: 'location', label: 'Locations', icon: 'map-pin',     tab: 'campaign_locations' }
+];
+var BACKLINK_ICONS = { session: 'scroll-text', quest: 'swords', location: 'map-pin' };
+
+// targetEntryId -> [ { tabId, sourceId, sourceType, title, meta, snippet, mentionText } ]
+var backlinkIndex = {};
+
+// entryId -> { active: {session, quest, location}, expanded, query }   (ephemeral)
+var backlinkState = {};
+
+function getBacklinkState(entryId) {
+    if (!backlinkState[entryId]) {
+        backlinkState[entryId] = {
+            active: { session: false, quest: true, location: true }, // global default
+            expanded: false,
+            query: ''
+        };
+    }
+    return backlinkState[entryId];
+}
+
+// Pull every @mention target id (and its anchor, for snippet text) out of a notes HTML blob.
+function extractMentionTargets(html) {
+    var out = [];
+    if (!html || html.indexOf('setTab') === -1) return out;
+    try {
+        var doc = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html');
+        var anchors = doc.querySelectorAll('a[onclick]');
+        anchors.forEach(function(a) {
+            var oc = a.getAttribute('onclick') || '';
+            var m = oc.match(/setTab\(\s*'([^']*)'\s*,\s*'([^']*)'\s*\)/);
+            if (m && m[2]) {
+                var block = a.closest('li, p, div') || a.parentNode;
+                var raw = (block ? block.textContent : a.textContent) || '';
+                out.push({
+                    itemId: m[2],
+                    mentionText: (a.textContent || '').trim(),
+                    snippet: raw.replace(/\s+/g, ' ').trim()
+                });
+            }
+        });
+    } catch (e) { /* malformed html — skip silently */ }
+    return out;
+}
+
+// Rebuild the whole index from current characterData. Called at the top of renderContent.
+window.rebuildBacklinkIndex = function() {
+    backlinkIndex = {};
+    var cn = (typeof characterData !== 'undefined' && characterData) ? characterData.campaignNotes : null;
+    if (!cn) return;
+
+    function addSource(html, srcId, srcType, tabId, title, meta) {
+        var targets = extractMentionTargets(html);
+        var seen = {};
+        targets.forEach(function(t) {
+            if (t.itemId === srcId) return;   // never list an entry as referencing itself
+            if (seen[t.itemId]) return;       // one backlink per source entry, even if mentioned twice
+            seen[t.itemId] = true;
+            if (!backlinkIndex[t.itemId]) backlinkIndex[t.itemId] = [];
+            backlinkIndex[t.itemId].push({
+                tabId: tabId, sourceId: srcId, sourceType: srcType,
+                title: title || '(untitled)', meta: meta || '',
+                snippet: t.snippet, mentionText: t.mentionText
+            });
+        });
+    }
+
+    (cn.sessionNotes || []).forEach(function(s) { addSource(s.notes, s.id, 'session',  'campaign_sessionNotes', s.title || 'Untitled session', s.date || ''); });
+    (cn.quests || []).forEach(function(q)       { addSource(q.notes, q.id, 'quest',    'campaign_quests',       q.title || 'Untitled quest', 'Quest'); });
+    (cn.locations || []).forEach(function(l)    { addSource(l.notes, l.id, 'location', 'campaign_locations',    l.title || 'Untitled location', 'Location'); });
+};
+
+function getBacklinks(entryId) { return backlinkIndex[entryId] || []; }
+
+function clipBacklinkSnippet(raw, mentionText) {
+    if (!raw) return '';
+    var MAX = 160;
+    if (raw.length <= MAX) return raw;
+    var idx = mentionText ? raw.indexOf(mentionText) : -1;
+    if (idx === -1) return raw.slice(0, MAX).trim() + '…';
+    var start = Math.max(0, idx - 55);
+    var end = Math.min(raw.length, idx + mentionText.length + 85);
+    var s = raw.slice(start, end).trim();
+    if (start > 0) s = '…' + s;
+    if (end < raw.length) s = s + '…';
+    return s;
+}
+
+function highlightBacklinkSnippet(clipped, mentionText) {
+    var esc = escapeHtml(clipped || '');
+    if (mentionText) {
+        var escM = escapeHtml(mentionText);
+        if (escM && esc.indexOf(escM) !== -1) {
+            esc = esc.split(escM).join('<span class="text-emerald-700 bg-emerald-100/70 dark:text-emerald-300 dark:bg-emerald-950/50 font-semibold px-1 rounded">' + escM + '</span>');
+        }
+    }
+    return esc;
+}
+
+// Apply the active type toggles + text filter, then collapse to N unless expanded/searching.
+function computeBacklinkView(entryId) {
+    var all = getBacklinks(entryId);
+    var st = getBacklinkState(entryId);
+    var q = (st.query || '').toLowerCase();
+
+    var filtered = all.filter(function(b) {
+        if (!st.active[b.sourceType]) return false;
+        if (q) {
+            var hay = ((b.title || '') + ' ' + (b.snippet || '')).toLowerCase();
+            if (hay.indexOf(q) === -1) return false;
+        }
+        return true;
+    });
+
+    var hiddenExist = all.some(function(b) { return !st.active[b.sourceType]; });
+    var shown = (q || st.expanded) ? filtered : filtered.slice(0, BACKLINK_COLLAPSED);
+
+    var emptyMsg = '';
+    if (filtered.length === 0) {
+        if (q) emptyMsg = 'No mentions match that filter.';
+        else if (hiddenExist) emptyMsg = 'Tap a type above to view its references.';
+        else emptyMsg = 'No references yet.';
+    }
+
+    return {
+        shown: shown,
+        emptyMsg: emptyMsg,
+        showBtn: !q && filtered.length > BACKLINK_COLLAPSED,
+        btnLabel: st.expanded ? 'Show fewer' : ('Show all ' + filtered.length)
+    };
+}
+
+function renderBacklinkRowHtml(b) {
+    var icon = BACKLINK_ICONS[b.sourceType] || 'file-text';
+    var metaHtml = b.meta ? ' <span class="text-[11px] font-normal text-stone-400 dark:text-stone-500">· ' + escapeHtml(b.meta) + '</span>' : '';
+    var snip = highlightBacklinkSnippet(clipBacklinkSnippet(b.snippet, b.mentionText), b.mentionText);
+    return '<button onclick="window.setTab(\'' + b.tabId + '\', \'' + b.sourceId + '\'); return false;" '
+        + 'class="w-full text-left flex items-start gap-2.5 p-2 rounded-lg bg-stone-50 dark:bg-stone-950 border border-transparent hover:border-stone-200 dark:hover:border-stone-700 hover:bg-stone-100/70 dark:hover:bg-stone-800/40 transition-all group">'
+        + '<i data-lucide="' + icon + '" class="w-4 h-4 text-stone-400 mt-0.5 flex-shrink-0"></i>'
+        + '<span class="flex-1 min-w-0">'
+        +   '<span class="block text-sm font-semibold text-stone-700 dark:text-stone-200 truncate">' + escapeHtml(b.title) + metaHtml + '</span>'
+        +   '<span class="block text-xs text-stone-500 dark:text-stone-400 leading-snug mt-0.5">' + snip + '</span>'
+        + '</span>'
+        + '<i data-lucide="chevron-right" class="w-4 h-4 text-stone-300 dark:text-stone-600 group-hover:text-emerald-500 self-center flex-shrink-0"></i>'
+        + '</button>';
+}
+
+// Full panel. Returns '' when an entry has no backlinks at all, so clean cards stay clean.
+function renderBacklinksPanel(entryId) {
+    var all = getBacklinks(entryId);
+    if (!all.length) return '';
+
+    var st = getBacklinkState(entryId);
+    var counts = { session: 0, quest: 0, location: 0 };
+    all.forEach(function(b) { if (counts[b.sourceType] !== undefined) counts[b.sourceType]++; });
+
+    var chips = BACKLINK_TYPES.filter(function(t) { return counts[t.key] > 0; }).map(function(t) {
+        var on = st.active[t.key];
+        var chipCls = on
+            ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+            : 'bg-transparent text-stone-400 dark:text-stone-500 border-stone-200 dark:border-stone-700 hover:text-stone-600 dark:hover:text-stone-300';
+        var numCls = on
+            ? 'bg-emerald-600 text-white dark:bg-emerald-500'
+            : 'bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500';
+        return '<button onclick="window.toggleBacklinkType(\'' + entryId + '\', \'' + t.key + '\')" '
+            + 'class="inline-flex items-center gap-1.5 text-xs font-semibold pl-2.5 pr-1.5 py-1 rounded-full border transition-all focus:outline-none ' + chipCls + '">'
+            + '<i data-lucide="' + t.icon + '" class="w-3.5 h-3.5"></i>' + t.label
+            + '<span class="text-[10px] leading-none px-1.5 py-0.5 rounded-full ' + numCls + '">' + counts[t.key] + '</span>'
+            + '</button>';
+    }).join('');
+
+    var searchHtml = st.active[BACKLINK_FILTER_TYPE]
+        ? '<div class="relative mb-2.5">'
+            + '<i data-lucide="search" class="w-3.5 h-3.5 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>'
+            + '<input type="text" value="' + escapeHtml(st.query) + '" oninput="window.filterBacklinks(\'' + entryId + '\', this.value)" placeholder="Filter mentions..." '
+            + 'class="seamless-input w-full text-xs pl-7 pr-2.5 py-1.5 border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-lg bg-white focus:ring-1 focus:ring-emerald-500 focus:outline-none">'
+            + '</div>'
+        : '';
+
+    var view = computeBacklinkView(entryId);
+    var rowsHtml = view.shown.map(renderBacklinkRowHtml).join('');
+
+    return '<div id="backlinks-' + entryId + '" class="mt-3 pt-3 border-t border-stone-100 dark:border-stone-800">'
+        + '<div class="flex items-center gap-2 mb-2">'
+        +   '<i data-lucide="link" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>'
+        +   '<span class="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Referenced in</span>'
+        + '</div>'
+        + '<div class="flex flex-wrap gap-1.5 mb-2.5">' + chips + '</div>'
+        + searchHtml
+        + '<div id="bl-list-' + entryId + '" class="space-y-1.5">' + rowsHtml + '</div>'
+        + '<p id="bl-empty-' + entryId + '" class="text-xs text-stone-400 dark:text-stone-500 italic py-2 ' + (view.emptyMsg ? '' : 'hidden') + '">' + (view.emptyMsg || '') + '</p>'
+        + '<button id="bl-btn-' + entryId + '" onclick="window.toggleBacklinkExpand(\'' + entryId + '\')" '
+        +   'class="' + (view.showBtn ? '' : 'hidden') + ' w-full mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors">'
+        +   view.btnLabel
+        + '</button>'
+        + '</div>';
+}
+
+// Re-render only the list/empty/button region — preserves focus in the filter input.
+function updateBacklinkList(entryId) {
+    var view = computeBacklinkView(entryId);
+    var listEl = document.getElementById('bl-list-' + entryId);
+    var emptyEl = document.getElementById('bl-empty-' + entryId);
+    var btnEl = document.getElementById('bl-btn-' + entryId);
+    if (listEl) listEl.innerHTML = view.shown.map(renderBacklinkRowHtml).join('');
+    if (emptyEl) { emptyEl.textContent = view.emptyMsg; emptyEl.classList.toggle('hidden', !view.emptyMsg); }
+    if (btnEl) { btnEl.textContent = view.btnLabel; btnEl.classList.toggle('hidden', !view.showBtn); }
+    if (window.lucide) lucide.createIcons();
+}
+
+// Toggling a type rebuilds the whole panel (no input focused at click time).
+window.toggleBacklinkType = function(entryId, type) {
+    var st = getBacklinkState(entryId);
+    st.active[type] = !st.active[type];
+    st.expanded = false;
+    if (!st.active[BACKLINK_FILTER_TYPE]) st.query = '';   // search hides with sessions; clear it
+    var el = document.getElementById('backlinks-' + entryId);
+    if (el) {
+        el.outerHTML = renderBacklinksPanel(entryId);
+        if (window.lucide) lucide.createIcons();
+    }
+};
+
+window.toggleBacklinkExpand = function(entryId) {
+    var st = getBacklinkState(entryId);
+    st.expanded = !st.expanded;
+    updateBacklinkList(entryId);
+};
+
+window.filterBacklinks = function(entryId, value) {
+    var st = getBacklinkState(entryId);
+    st.query = value;
+    st.expanded = false;
+    updateBacklinkList(entryId);
+};
+
 function renderActionButtons(type, id, isFirst, isLast) {
     return `
     <button onclick="window.move${type}('${id}', -1)" ${isFirst ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Up"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
@@ -74,6 +324,9 @@ function renderNavigation() {
 }
 
 window.renderContent = function() {
+    // Rebuild the backlink index from current data before anything renders.
+    if (typeof window.rebuildBacklinkIndex === 'function') window.rebuildBacklinkIndex();
+
     // FOCUS & POSITION GUARD PRESERVATION
     var activeEl = document.activeElement;
     var activeSection = null;
@@ -405,6 +658,7 @@ window.renderContent = function() {
                                     </div>
                                 </div>
                                 <div class="mt-2 text-stone-600 dark:text-stone-300 ${quest.isCompleted ? 'opacity-75' : ''}">${getOutlineNotesEditor('campaignNotes_quest', quest.id, quest.notes, 'min-h-[60px]', 'Quest description or sub-objectives... Enter starts a bullet, Tab indents, @ to link.')}</div>
+                                ${renderBacklinksPanel(quest.id)}
                             </div>
                         </div>`;
                 });
@@ -435,7 +689,7 @@ window.renderContent = function() {
                             </div>
                         </div>
                         <div class="collapsible-content ${loc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
-                            <div class="p-5">${getOutlineNotesEditor('campaignNotes_location', loc.id, loc.notes, 'min-h-[100px]', 'Location details, points of interest, or resident lists... Enter starts a bullet, Tab indents, @ to link.')}</div>
+                            <div class="p-5">${getOutlineNotesEditor('campaignNotes_location', loc.id, loc.notes, 'min-h-[100px]', 'Location details, points of interest, or resident lists... Enter starts a bullet, Tab indents, @ to link.')}${renderBacklinksPanel(loc.id)}</div>
                         </div>
                     </div>`;
             });
@@ -491,6 +745,7 @@ window.renderContent = function() {
                                             </div>
                                             <div class="collapsible-content ${npc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                                                 ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '##' + npc.id, npc.notes, 'min-h-[40px] text-sm mt-1', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
+                                                ${renderBacklinksPanel(npc.id)}
                                             </div>
                                         </div>
                                         <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
