@@ -297,6 +297,7 @@ var TAG_TYPE_ORDER = ['session', 'quest', 'npc', 'location'];
 var tagIndex = {};                 // tagKey -> { display, entries: [ {type, tabId, itemId, title, meta} ] }
 var tagUiState = {};               // entryId -> { adding } (ephemeral header add-input state)
 var tagBrowse = { selected: '', filter: '' };  // dedicated-page browse state
+var tagRowClass = {};              // entryId -> extra classes for its header tag row
 
 function getTagUi(id) { if (!tagUiState[id]) tagUiState[id] = { adding: false }; return tagUiState[id]; }
 function entryTags(entry) { return Array.isArray(entry.tags) ? entry.tags : []; }
@@ -363,7 +364,9 @@ function tagChipHtml(entryId, tag, editable) {
         + '</span>';
 }
 
-function renderTagRow(entryId) {
+function renderTagRow(entryId, extraClass) {
+    if (extraClass !== undefined) tagRowClass[entryId] = extraClass;
+    var cls = tagRowClass[entryId] || '';
     var ent = findTaggableEntry(entryId);
     if (!ent) return '';
     var tags = entryTags(ent.entry);
@@ -377,7 +380,7 @@ function renderTagRow(entryId) {
     if (editable) {
         if (ui.adding) {
             addControl = '<span class="inline-flex items-center gap-1.5 flex-wrap">'
-                + '<input id="tag-input-' + entryId + '" type="text" autocomplete="off" placeholder="tag\u2026" '
+                + '<input id="tag-input-' + entryId + '" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="done" placeholder="tag\u2026" '
                 +   'oninput="window.tagInputChanged(\'' + entryId + '\', this.value)" onkeydown="window.tagInputKey(event, \'' + entryId + '\')" onblur="window.tagInputBlur(\'' + entryId + '\')" '
                 +   'class="seamless-input text-xs w-24 px-2.5 py-0.5 rounded-full border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 focus:ring-1 focus:ring-emerald-500 focus:outline-none">'
                 + '<span id="tag-sugg-' + entryId + '" class="inline-flex items-center gap-1.5 flex-wrap"></span>'
@@ -387,7 +390,7 @@ function renderTagRow(entryId) {
         }
     }
 
-    return '<div id="tagrow-' + entryId + '" class="flex flex-wrap items-center gap-1.5 mt-2">' + chips + addControl + '</div>';
+    return '<div id="tagrow-' + entryId + '" class="flex flex-wrap items-center gap-1.5 mt-2 ' + cls + '">' + chips + addControl + '</div>';
 }
 
 function rerenderTagRow(entryId) {
@@ -419,8 +422,29 @@ window.tagInputChanged = function(entryId, value) {
     if (window.lucide) lucide.createIcons();
 };
 
+// Write a tag to the entry (no DOM work). Returns true if a new tag was added.
+function doAddTag(entryId, value) {
+    var raw = (value || '').trim();
+    if (!raw) return false;
+    var ent = findTaggableEntry(entryId);
+    if (!ent) return false;
+    if (!Array.isArray(ent.entry.tags)) ent.entry.tags = [];
+    var dup = ent.entry.tags.some(function(x) { return x.toLowerCase() === raw.toLowerCase(); });
+    if (!dup) ent.entry.tags.push(raw);
+    if (typeof window.saveData === 'function') window.saveData();
+    window.rebuildTagIndex();
+    return true;
+}
+
+// Enter key or suggestion tap: add the tag and close the input.
+window.commitTag = function(entryId, value) {
+    doAddTag(entryId, value);
+    getTagUi(entryId).adding = false;
+    rerenderTagRow(entryId);
+};
+
 window.tagInputKey = function(event, entryId) {
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' || event.keyCode === 13) {
         event.preventDefault();
         window.commitTag(entryId, event.target.value);
     } else if (event.key === 'Escape') {
@@ -430,31 +454,19 @@ window.tagInputKey = function(event, entryId) {
     }
 };
 
+// Losing focus (tapping away, or the mobile keyboard's Done/Next/Enter that fires
+// blur rather than a reliable keydown): SAVE whatever was typed, then close.
 window.tagInputBlur = function(entryId) {
-    // Allow a suggestion mousedown to commit first; then close if still open.
+    var inp = document.getElementById('tag-input-' + entryId);
+    var pending = inp ? inp.value : '';
+    // Delay so a suggestion's mousedown (which commits) can run before we close.
     setTimeout(function() {
         var ui = getTagUi(entryId);
-        if (ui.adding) { ui.adding = false; rerenderTagRow(entryId); }
-    }, 150);
-};
-
-window.commitTag = function(entryId, value) {
-    var raw = (value || '').trim();
-    var ent = findTaggableEntry(entryId);
-    if (!ent) return;
-    if (raw) {
-        if (!Array.isArray(ent.entry.tags)) ent.entry.tags = [];
-        var dup = ent.entry.tags.some(function(x) { return x.toLowerCase() === raw.toLowerCase(); });
-        if (!dup) ent.entry.tags.push(raw);
-        if (typeof window.saveData === 'function') window.saveData();
-        window.rebuildTagIndex();
-    }
-    getTagUi(entryId).adding = true;   // keep open to add several
-    rerenderTagRow(entryId);
-    var inp = document.getElementById('tag-input-' + entryId);
-    if (inp) { inp.value = ''; inp.focus(); }
-    var box = document.getElementById('tag-sugg-' + entryId);
-    if (box) box.innerHTML = '';
+        if (!ui.adding) return;            // already committed/closed by another path
+        if (pending && pending.trim()) doAddTag(entryId, pending);
+        ui.adding = false;
+        rerenderTagRow(entryId);
+    }, 160);
 };
 
 window.removeEntryTag = function(entryId, tag) {
