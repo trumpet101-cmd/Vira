@@ -715,6 +715,16 @@ window.handleGlobalSearchInput = function(value) {
     
     let matchingEntries = [];
 
+    // 0. Tags (theme matches) — surface matching tag collections first
+    if (typeof window.rebuildTagIndex === 'function') window.rebuildTagIndex();
+    if (typeof window.getAllTagsSorted === 'function') {
+        window.getAllTagsSorted().forEach(t => {
+            if (t.key.indexOf(q) !== -1) {
+                matchingEntries.push({ isTag: true, tagName: t.display, type: 'Tag', title: t.display, snippet: t.count + ' tagged ' + (t.count === 1 ? 'entry' : 'entries') + ' \u2014 view all' });
+            }
+        });
+    }
+
     // 1. Deep index through Session Notes
     characterData.campaignNotes.sessionNotes.forEach(s => {
         const textNotes = cleanHtmlTags(s.notes);
@@ -841,7 +851,11 @@ window.selectGlobalSearchResult = function(index) {
     const context = window.globalSearchContext;
     const selection = context.results[index];
     if (selection) {
-        window.setTab(selection.tabId, selection.itemId);
+        if (selection.isTag && typeof window.openTag === 'function') {
+            window.openTag(selection.tagName);
+        } else {
+            window.setTab(selection.tabId, selection.itemId);
+        }
         const searchInput = document.getElementById('global-search-input');
         if (searchInput) searchInput.value = '';
         window.hideGlobalSearchDropdown();

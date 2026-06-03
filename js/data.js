@@ -100,15 +100,17 @@ function migrateData(data) {
             if (npc.isCollapsed === undefined) npc.isCollapsed = false;
             if (npc.subtitle === undefined) npc.subtitle = "";
             if (npc.relationship === undefined) npc.relationship = "unknown";
+            if (!Array.isArray(npc.tags)) npc.tags = [];
         });
     });
 
-    data.campaignNotes.sessionNotes.forEach((s, sIdx) => { if (!s.id) s.id = 'sess_migrated_' + sIdx + '_' + Date.now(); });
+    data.campaignNotes.sessionNotes.forEach((s, sIdx) => { if (!s.id) s.id = 'sess_migrated_' + sIdx + '_' + Date.now(); if (!Array.isArray(s.tags)) s.tags = []; });
     data.campaignNotes.quests.forEach((q, qIdx) => {
         if (!q.id) q.id = 'quest_migrated_' + qIdx + '_' + Date.now();
         if (q.isUrgent === undefined) q.isUrgent = false;
+        if (!Array.isArray(q.tags)) q.tags = [];
     });
-    data.campaignNotes.locations.forEach((l, lIdx) => { if (!l.id) l.id = 'loc_migrated_' + lIdx + '_' + Date.now(); });
+    data.campaignNotes.locations.forEach((l, lIdx) => { if (!l.id) l.id = 'loc_migrated_' + lIdx + '_' + Date.now(); if (!Array.isArray(l.tags)) l.tags = []; });
     
     if (!data.backstory || !Array.isArray(data.backstory)) {
         data.backstory = [

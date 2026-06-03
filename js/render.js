@@ -277,6 +277,289 @@ window.filterBacklinks = function(entryId, value) {
     updateBacklinkList(entryId);
 };
 
+// ============================================================
+// --- TAGS ENGINE ---
+// Freeform tags on sessions, quests, NPCs, and locations (entry.tags).
+// Surfaced two ways: a chip row in each card header (glanceable when
+// collapsed, editable when expanded) and a dedicated "Tags" browse page
+// that gathers everything sharing a tag across all four sections. The
+// tag index is derived from current data on each full render.
+// ============================================================
+
+var TAG_TYPES = {
+    session:  { tab: 'campaign_sessionNotes', icon: 'scroll-text', label: 'Sessions' },
+    quest:    { tab: 'campaign_quests',        icon: 'swords',      label: 'Quests' },
+    npc:      { tab: 'campaign_npcs',           icon: 'users',       label: 'NPCs' },
+    location: { tab: 'campaign_locations',      icon: 'map-pin',     label: 'Locations' }
+};
+var TAG_TYPE_ORDER = ['session', 'quest', 'npc', 'location'];
+
+var tagIndex = {};                 // tagKey -> { display, entries: [ {type, tabId, itemId, title, meta} ] }
+var tagUiState = {};               // entryId -> { adding } (ephemeral header add-input state)
+var tagBrowse = { selected: '', filter: '' };  // dedicated-page browse state
+
+function getTagUi(id) { if (!tagUiState[id]) tagUiState[id] = { adding: false }; return tagUiState[id]; }
+function entryTags(entry) { return Array.isArray(entry.tags) ? entry.tags : []; }
+
+// Locate any taggable entry by id across all four sections.
+function findTaggableEntry(entryId) {
+    var cn = (typeof characterData !== 'undefined' && characterData) ? characterData.campaignNotes : null;
+    if (!cn) return null;
+    var hit = null;
+    (cn.sessionNotes || []).forEach(function(s) { if (s.id === entryId) hit = { entry: s, type: 'session' }; });
+    if (hit) return hit;
+    (cn.quests || []).forEach(function(q) { if (q.id === entryId) hit = { entry: q, type: 'quest' }; });
+    if (hit) return hit;
+    (cn.locations || []).forEach(function(l) { if (l.id === entryId) hit = { entry: l, type: 'location' }; });
+    if (hit) return hit;
+    (cn.npcs || []).forEach(function(fac) { (fac.members || []).forEach(function(n) { if (n.id === entryId) hit = { entry: n, type: 'npc', factionId: fac.id }; }); });
+    return hit;
+}
+
+window.rebuildTagIndex = function() {
+    tagIndex = {};
+    var cn = (typeof characterData !== 'undefined' && characterData) ? characterData.campaignNotes : null;
+    if (!cn) return;
+    function add(entry, type, title, meta) {
+        entryTags(entry).forEach(function(t) {
+            var raw = (t || '').trim(); if (!raw) return;
+            var key = raw.toLowerCase();
+            if (!tagIndex[key]) tagIndex[key] = { display: raw, entries: [] };
+            tagIndex[key].entries.push({ type: type, tabId: TAG_TYPES[type].tab, itemId: entry.id, title: title || '(untitled)', meta: meta || '' });
+        });
+    }
+    (cn.sessionNotes || []).forEach(function(s) { add(s, 'session', s.title || 'Untitled session', s.date || ''); });
+    (cn.quests || []).forEach(function(q) { add(q, 'quest', q.title || 'Untitled quest', q.subtitle || 'Quest'); });
+    (cn.locations || []).forEach(function(l) { add(l, 'location', l.title || 'Untitled location', l.subtitle || 'Location'); });
+    (cn.npcs || []).forEach(function(fac) { (fac.members || []).forEach(function(n) { add(n, 'npc', n.name || 'Unnamed NPC', n.subtitle || ''); }); });
+};
+
+window.getAllTagsSorted = function() {
+    return Object.keys(tagIndex).map(function(k) { return { key: k, display: tagIndex[k].display, count: tagIndex[k].entries.length }; })
+        .sort(function(a, b) { return b.count - a.count || a.display.localeCompare(b.display); });
+};
+
+function getTagSuggestions(entryId, q) {
+    var ent = findTaggableEntry(entryId);
+    var existing = ent ? entryTags(ent.entry).map(function(t) { return t.toLowerCase(); }) : [];
+    var ql = (q || '').trim().toLowerCase();
+    return window.getAllTagsSorted().filter(function(t) {
+        return existing.indexOf(t.key) === -1 && (!ql || t.key.indexOf(ql) !== -1);
+    }).slice(0, 6);
+}
+
+// ---------- card header tag row ----------
+function tagChipHtml(entryId, tag, editable) {
+    var safe = escapeHtml(tag);
+    var jsTag = tag.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    var remove = editable
+        ? '<button onclick="window.removeEntryTag(\'' + entryId + '\', \'' + jsTag + '\')" class="text-stone-400 hover:text-red-500 transition-colors flex items-center" title="Remove tag"><i data-lucide="x" class="w-3 h-3"></i></button>'
+        : '';
+    return '<span class="inline-flex items-center gap-1 text-xs font-medium pl-2 ' + (editable ? 'pr-1.5' : 'pr-2.5') + ' py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300">'
+        + '<button onclick="window.openTag(\'' + jsTag + '\')" class="inline-flex items-center gap-1 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" title="View everything tagged &quot;' + safe + '&quot;">'
+        +   '<i data-lucide="tag" class="w-3 h-3 text-stone-400"></i>' + safe
+        + '</button>'
+        + remove
+        + '</span>';
+}
+
+function renderTagRow(entryId) {
+    var ent = findTaggableEntry(entryId);
+    if (!ent) return '';
+    var tags = entryTags(ent.entry);
+    var editable = !ent.entry.isCollapsed;          // quests have no isCollapsed -> editable
+    if (tags.length === 0 && !editable) return '';  // empty + collapsed -> nothing
+    var ui = getTagUi(entryId);
+
+    var chips = tags.map(function(t) { return tagChipHtml(entryId, t, editable); }).join('');
+
+    var addControl = '';
+    if (editable) {
+        if (ui.adding) {
+            addControl = '<span class="inline-flex items-center gap-1.5 flex-wrap">'
+                + '<input id="tag-input-' + entryId + '" type="text" autocomplete="off" placeholder="tag\u2026" '
+                +   'oninput="window.tagInputChanged(\'' + entryId + '\', this.value)" onkeydown="window.tagInputKey(event, \'' + entryId + '\')" onblur="window.tagInputBlur(\'' + entryId + '\')" '
+                +   'class="seamless-input text-xs w-24 px-2.5 py-0.5 rounded-full border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 focus:ring-1 focus:ring-emerald-500 focus:outline-none">'
+                + '<span id="tag-sugg-' + entryId + '" class="inline-flex items-center gap-1.5 flex-wrap"></span>'
+                + '</span>';
+        } else {
+            addControl = '<button onclick="window.toggleTagInput(\'' + entryId + '\')" class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border border-dashed border-stone-300 dark:border-stone-700 text-stone-400 dark:text-stone-500 hover:text-emerald-600 hover:border-emerald-400 dark:hover:text-emerald-400 transition-colors"><i data-lucide="plus" class="w-3 h-3"></i>tag</button>';
+        }
+    }
+
+    return '<div id="tagrow-' + entryId + '" class="flex flex-wrap items-center gap-1.5 mt-2">' + chips + addControl + '</div>';
+}
+
+function rerenderTagRow(entryId) {
+    var el = document.getElementById('tagrow-' + entryId);
+    var html = renderTagRow(entryId);
+    if (el) {
+        if (html) {
+            el.outerHTML = html;
+        } else { el.remove(); return; }
+    }
+    if (window.lucide) lucide.createIcons();
+    if (getTagUi(entryId).adding) { var inp = document.getElementById('tag-input-' + entryId); if (inp) inp.focus(); }
+}
+
+window.toggleTagInput = function(entryId) {
+    var ui = getTagUi(entryId);
+    ui.adding = !ui.adding;
+    rerenderTagRow(entryId);
+};
+
+window.tagInputChanged = function(entryId, value) {
+    var box = document.getElementById('tag-sugg-' + entryId);
+    if (!box) return;
+    var sugg = getTagSuggestions(entryId, value);
+    box.innerHTML = sugg.map(function(t) {
+        var jsTag = t.display.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return '<button onmousedown="event.preventDefault(); window.commitTag(\'' + entryId + '\', \'' + jsTag + '\')" class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"><i data-lucide="tag" class="w-3 h-3"></i>' + escapeHtml(t.display) + '</button>';
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+};
+
+window.tagInputKey = function(event, entryId) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        window.commitTag(entryId, event.target.value);
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+        getTagUi(entryId).adding = false;
+        rerenderTagRow(entryId);
+    }
+};
+
+window.tagInputBlur = function(entryId) {
+    // Allow a suggestion mousedown to commit first; then close if still open.
+    setTimeout(function() {
+        var ui = getTagUi(entryId);
+        if (ui.adding) { ui.adding = false; rerenderTagRow(entryId); }
+    }, 150);
+};
+
+window.commitTag = function(entryId, value) {
+    var raw = (value || '').trim();
+    var ent = findTaggableEntry(entryId);
+    if (!ent) return;
+    if (raw) {
+        if (!Array.isArray(ent.entry.tags)) ent.entry.tags = [];
+        var dup = ent.entry.tags.some(function(x) { return x.toLowerCase() === raw.toLowerCase(); });
+        if (!dup) ent.entry.tags.push(raw);
+        if (typeof window.saveData === 'function') window.saveData();
+        window.rebuildTagIndex();
+    }
+    getTagUi(entryId).adding = true;   // keep open to add several
+    rerenderTagRow(entryId);
+    var inp = document.getElementById('tag-input-' + entryId);
+    if (inp) { inp.value = ''; inp.focus(); }
+    var box = document.getElementById('tag-sugg-' + entryId);
+    if (box) box.innerHTML = '';
+};
+
+window.removeEntryTag = function(entryId, tag) {
+    var ent = findTaggableEntry(entryId);
+    if (!ent || !Array.isArray(ent.entry.tags)) return;
+    ent.entry.tags = ent.entry.tags.filter(function(x) { return x.toLowerCase() !== tag.toLowerCase(); });
+    if (typeof window.saveData === 'function') window.saveData();
+    window.rebuildTagIndex();
+    rerenderTagRow(entryId);
+};
+
+window.openTag = function(tag) {
+    tagBrowse.selected = (tag || '').toLowerCase();
+    tagBrowse.filter = '';
+    window.setTab('tags');
+};
+
+// ---------- dedicated Tags page ----------
+function tagBrowseListHtml() {
+    var all = window.getAllTagsSorted();
+    var q = (tagBrowse.filter || '').toLowerCase();
+    var shown = q ? all.filter(function(t) { return t.key.indexOf(q) !== -1; }) : all;
+    if (shown.length === 0) return '<p class="text-xs text-stone-400 dark:text-stone-500 italic px-2 py-2">No tags match.</p>';
+    return shown.map(function(t) {
+        var on = t.key === tagBrowse.selected;
+        var base = 'w-full flex items-center justify-between gap-2 text-left text-sm px-3 py-2 rounded-lg transition-colors ';
+        var cls = on
+            ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-semibold'
+            : 'text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800/60';
+        var jsKey = t.key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return '<button onclick="window.selectBrowseTag(\'' + jsKey + '\')" class="' + base + cls + '">'
+            + '<span class="flex items-center gap-2 min-w-0"><i data-lucide="tag" class="w-3.5 h-3.5 flex-shrink-0 ' + (on ? '' : 'text-stone-400') + '"></i><span class="truncate">' + escapeHtml(t.display) + '</span></span>'
+            + '<span class="text-xs ' + (on ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-stone-500') + '">' + t.count + '</span>'
+            + '</button>';
+    }).join('');
+}
+
+function tagBrowseResultsHtml() {
+    var sel = tagBrowse.selected;
+    var rec = sel ? tagIndex[sel] : null;
+    if (!rec || rec.entries.length === 0) {
+        return '<p class="text-stone-400 dark:text-stone-500 italic text-center py-10">Select a tag on the left to see everything that carries it.</p>';
+    }
+    var groups = TAG_TYPE_ORDER.map(function(type) {
+        var rows = rec.entries.filter(function(e) { return e.type === type; });
+        if (rows.length === 0) return '';
+        var meta = TAG_TYPES[type];
+        var rowsHtml = rows.map(function(r) {
+            var metaHtml = r.meta ? ' <span class="text-xs font-normal text-stone-400 dark:text-stone-500">\u00b7 ' + escapeHtml(r.meta) + '</span>' : '';
+            return '<button onclick="window.setTab(\'' + r.tabId + '\', \'' + r.itemId + '\'); return false;" class="w-full text-left flex items-center gap-3 p-3 rounded-lg bg-stone-50 dark:bg-stone-950 border border-transparent hover:border-stone-200 dark:hover:border-stone-700 hover:bg-stone-100/70 dark:hover:bg-stone-800/40 transition-all group">'
+                + '<i data-lucide="' + meta.icon + '" class="w-4 h-4 text-stone-400 flex-shrink-0"></i>'
+                + '<span class="flex-1 min-w-0 text-sm font-semibold text-stone-700 dark:text-stone-200 truncate">' + escapeHtml(r.title) + metaHtml + '</span>'
+                + '<i data-lucide="chevron-right" class="w-4 h-4 text-stone-300 dark:text-stone-600 group-hover:text-emerald-500 flex-shrink-0"></i>'
+                + '</button>';
+        }).join('');
+        return '<div class="mb-5">'
+            + '<div class="flex items-center gap-2 mb-2"><i data-lucide="' + meta.icon + '" class="w-4 h-4 text-stone-400"></i><span class="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">' + meta.label + '</span><span class="text-xs text-stone-400 dark:text-stone-500">(' + rows.length + ')</span></div>'
+            + '<div class="space-y-2">' + rowsHtml + '</div>'
+            + '</div>';
+    }).join('');
+    var sectionCount = TAG_TYPE_ORDER.filter(function(type) { return rec.entries.some(function(e) { return e.type === type; }); }).length;
+    var head = '<div class="mb-4 pb-3 border-b border-stone-100 dark:border-stone-800"><p class="text-lg font-bold text-stone-800 dark:text-stone-100 flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 text-emerald-500"></i>' + escapeHtml(rec.display) + '</p><p class="text-xs text-stone-400 dark:text-stone-500 mt-1">' + rec.entries.length + ' entries across ' + sectionCount + ' section' + (sectionCount === 1 ? '' : 's') + '</p></div>';
+    return head + groups;
+}
+
+window.selectBrowseTag = function(key) {
+    tagBrowse.selected = key;
+    var listEl = document.getElementById('tagbrowse-list');
+    var resEl = document.getElementById('tagbrowse-results');
+    if (listEl) listEl.innerHTML = tagBrowseListHtml();
+    if (resEl) resEl.innerHTML = tagBrowseResultsHtml();
+    if (window.lucide) lucide.createIcons();
+};
+
+window.filterBrowseTags = function(value) {
+    tagBrowse.filter = value || '';
+    var listEl = document.getElementById('tagbrowse-list');
+    if (listEl) listEl.innerHTML = tagBrowseListHtml();
+    if (window.lucide) lucide.createIcons();
+};
+
+function renderTagsPage() {
+    var all = window.getAllTagsSorted();
+    if (all.length === 0) {
+        return '<div class="space-y-6 animate-fade-in"><section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800">'
+            + '<h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-2 flex items-center space-x-2"><i data-lucide="tags" class="text-emerald-600"></i><span>Tags</span></h3>'
+            + '<p class="text-stone-500 dark:text-stone-400 mt-4 italic">No tags yet. Add a tag to any session, quest, NPC, or location and it will show up here \u2014 letting you pull together everything about a theme, faction, or arc in one place.</p>'
+            + '</section></div>';
+    }
+    // default selection: keep current if still valid, else top tag
+    if (!tagBrowse.selected || !tagIndex[tagBrowse.selected]) tagBrowse.selected = all[0].key;
+
+    return '<div class="space-y-6 animate-fade-in"><section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800">'
+        + '<h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-1 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800/80 pb-4"><i data-lucide="tags" class="text-emerald-600"></i><span>Tags</span></h3>'
+        + '<p class="text-sm text-stone-500 dark:text-stone-400 mt-3 mb-5">Browse your campaign by theme. Tags cut across sessions, quests, NPCs, and locations.</p>'
+        + '<div class="grid grid-cols-1 md:grid-cols-[230px_minmax(0,1fr)] gap-6">'
+        +   '<div class="md:border-r md:border-stone-100 dark:md:border-stone-800 md:pr-6">'
+        +     '<input type="text" id="tagbrowse-filter" oninput="window.filterBrowseTags(this.value)" value="' + escapeHtml(tagBrowse.filter) + '" placeholder="Filter tags..." class="seamless-input w-full text-sm mb-3 px-3 py-2 border border-stone-200 dark:border-stone-700 dark:bg-stone-800 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:outline-none">'
+        +     '<div id="tagbrowse-list" class="space-y-1">' + tagBrowseListHtml() + '</div>'
+        +   '</div>'
+        +   '<div id="tagbrowse-results">' + tagBrowseResultsHtml() + '</div>'
+        + '</div>'
+        + '</section></div>';
+}
+
 function renderActionButtons(type, id, isFirst, isLast) {
     return `
     <button onclick="window.move${type}('${id}', -1)" ${isFirst ? 'disabled class="text-stone-300 dark:text-stone-700 cursor-not-allowed p-1.5"' : 'class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move Up"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
@@ -326,6 +609,7 @@ function renderNavigation() {
 window.renderContent = function() {
     // Rebuild the backlink index from current data before anything renders.
     if (typeof window.rebuildBacklinkIndex === 'function') window.rebuildBacklinkIndex();
+    if (typeof window.rebuildTagIndex === 'function') window.rebuildTagIndex();
 
     // FOCUS & POSITION GUARD PRESERVATION
     var activeEl = document.activeElement;
@@ -603,6 +887,7 @@ window.renderContent = function() {
                                 ${renderActionButtons('Session', sess.id, idx === 0, idx === characterData.campaignNotes.sessionNotes.length - 1)}
                             </div>
                         </div>
+                        ${renderTagRow(sess.id, 'px-5 pb-3')}
                         <div class="collapsible-content ${sess.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                             <div class="p-5">${getOutlineNotesEditor('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]', 'Start typing your session notes... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.')}</div>
                         </div>
@@ -657,6 +942,7 @@ window.renderContent = function() {
                                         ${renderActionButtons('Quest', quest.id, qIdx === 0, qIdx === quests.length - 1)}
                                     </div>
                                 </div>
+                                ${renderTagRow(quest.id, '')}
                                 <div class="mt-2 text-stone-600 dark:text-stone-300 ${quest.isCompleted ? 'opacity-75' : ''}">${getOutlineNotesEditor('campaignNotes_quest', quest.id, quest.notes, 'min-h-[60px]', 'Quest description or sub-objectives... Enter starts a bullet, Tab indents, @ to link.')}</div>
                                 ${renderBacklinksPanel(quest.id)}
                             </div>
@@ -688,6 +974,7 @@ window.renderContent = function() {
                                 ${renderActionButtons('Location', loc.id, idx === 0, idx === characterData.campaignNotes.locations.length - 1)}
                             </div>
                         </div>
+                        ${renderTagRow(loc.id, 'px-5 pb-3')}
                         <div class="collapsible-content ${loc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                             <div class="p-5">${getOutlineNotesEditor('campaignNotes_location', loc.id, loc.notes, 'min-h-[100px]', 'Location details, points of interest, or resident lists... Enter starts a bullet, Tab indents, @ to link.')}${renderBacklinksPanel(loc.id)}</div>
                         </div>
@@ -713,7 +1000,7 @@ window.renderContent = function() {
                             <div class="p-4 space-y-4">
                                 ${faction.members.map((npc, nIdx) => `
                                     <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.subtitle || '')} ${escapeHtml(npc.notes)}">
-                                        <div class="flex-shrink-0 flex items-start mt-1">
+                                        <div class="flex-shrink-0 flex flex-col items-center gap-2 mt-1">
                                             <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group shadow-inner transition-all animate-fade-in" title="Character avatar">
                                                 ${npc.avatar ? `
                                                     <img src="${npc.avatar}" class="w-full h-full object-cover cursor-zoom-in" onclick="window.openLightbox(this.src)">
@@ -733,16 +1020,17 @@ window.renderContent = function() {
                                                 `}
                                             </div>
                                             <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
+                                            ${renderRelationshipBadge(faction.id, npc.id, npc.relationship || 'unknown')}
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center space-x-2 w-full">
                                                 <button onclick="window.toggleNpcCollapse('${faction.id}', '${npc.id}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none flex-shrink-0"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
                                                 <input type="text" id="input-npc-name-${faction.id}-${npc.id}" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 min-w-0 flex-1 bg-transparent rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
-                                                ${renderRelationshipBadge(faction.id, npc.id, npc.relationship || 'unknown')}
                                             </div>
                                             <div class="ml-7 mt-0.5 mb-1">
                                                 <input type="text" id="input-npc-sub-${faction.id}-${npc.id}" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'subtitle', this.value)" value="${escapeHtml(npc.subtitle || '')}" class="seamless-input text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Role, Title, or Allegiance (e.g., Carnival Owner)">
                                             </div>
+                                            ${renderTagRow(npc.id, 'ml-7')}
                                             <div class="collapsible-content ${npc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                                                 ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '##' + npc.id, npc.notes, 'min-h-[40px] text-sm mt-1', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
                                                 ${renderBacklinksPanel(npc.id)}
@@ -767,6 +1055,9 @@ window.renderContent = function() {
         }
 
         html = `<div class="space-y-6 animate-fade-in"><section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800"><h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800/80 pb-4"><i data-lucide="${titleMap[subSection].icon}" class="text-emerald-600"></i><span>${titleMap[subSection].title}</span></h3><div>${contentHtml}</div></section></div>`;
+    }
+    else if (activeTab === 'tags') {
+        html = renderTagsPage();
     }
 
     container.innerHTML = html;
