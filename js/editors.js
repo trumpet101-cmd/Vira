@@ -111,6 +111,8 @@ var threadsResolvedCollapsed = true;
 
 // Pending blur-commit guard: null means no pending commit.
 var threadAddPending = null;
+// Set to true by the Enter-key path so the ensuing blur doesn't double-commit.
+var threadAddJustCommitted = false;
 
 window.addThread = function(html) {
     var cn = characterData.campaignNotes;
@@ -198,7 +200,9 @@ window.handleThreadAddKeyDown = function(event) {
         var div = event.target;
         var html = (div.innerHTML || '').trim();
         if (html && html !== '<br>') {
-            threadAddPending = null; // cancel any pending blur commit
+            // Flag BEFORE addThread so the ensuing detach-blur is ignored.
+            threadAddJustCommitted = true;
+            threadAddPending = null;
             window.addThread(html);  // calls renderContent — div is destroyed after this
         }
     }
@@ -224,12 +228,14 @@ window.handleThreadAddInput = function(event) {
 };
 
 window.handleThreadAddBlur = function(event) {
+    // If Enter already committed this input, the detach-blur fires here — ignore it.
+    if (threadAddJustCommitted) { threadAddJustCommitted = false; return; }
     var html = (event.target.innerHTML || '').trim();
     if (!html || html === '<br>') return;
     threadAddPending = html;
     // Delay so a mention suggestion's mousedown (which inserts via insertMention) can fire first.
     setTimeout(function() {
-        if (threadAddPending === null) return; // already committed by Enter or a prior blur
+        if (threadAddPending === null) return; // already committed by another path
         var c = threadAddPending;
         threadAddPending = null;
         window.addThread(c);
