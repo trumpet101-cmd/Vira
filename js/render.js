@@ -671,7 +671,7 @@ function renderThreadsPanel() {
             bodyHtml +=
                 '<div id="' + t.id + '" class="flex items-start gap-2.5 bg-white dark:bg-stone-900 border border-amber-200 dark:border-amber-800 rounded-lg p-2.5" data-searchable="' + safeSearchable + '">'
               // Checkbox — click to resolve
-              + '<button onclick="window.toggleThreadResolved('' + t.id + '')" '
+              + '<button onclick="window.toggleThreadResolved(\'' + t.id + '\')" '
               +   'class="flex-shrink-0 mt-0.5 w-5 h-5 rounded border-2 border-amber-400 dark:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400" '
               +   'title="Mark as resolved"></button>'
               // Thread content
@@ -680,7 +680,7 @@ function renderThreadsPanel() {
               +   renderTagRow(t.id, 'mt-1.5')
               + '</div>'
               // Promote to quest button
-              + '<button onclick="window.promoteThreadToQuest('' + t.id + '')" '
+              + '<button onclick="window.promoteThreadToQuest(\'' + t.id + '\')" '
               +   'class="flex-shrink-0 p-1.5 rounded border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors focus:outline-none" '
               +   'title="Promote to Quest"><i data-lucide="swords" class="w-3.5 h-3.5"></i>'
               + '</button>'
@@ -728,7 +728,7 @@ function renderThreadsPanel() {
                     '<div class="flex items-start gap-2 p-2 rounded">'
                   + '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5"></i>'
                   + '<div class="flex-1 min-w-0 text-sm text-stone-400 dark:text-stone-500 line-through leading-relaxed opacity-80">' + displayHtml + '</div>'
-                  + '<button onclick="window.deleteThread('' + t.id + '')" '
+                  + '<button onclick="window.deleteThread(\'' + t.id + '\')" '
                   +   'class="flex-shrink-0 p-1 rounded text-stone-300 dark:text-stone-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors focus:outline-none" '
                   +   'title="Permanently delete thread"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>'
                   + '</button>'
