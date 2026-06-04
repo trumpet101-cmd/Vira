@@ -66,6 +66,7 @@ window.updateQuickCapturePreview = function() {
     if (!dest || !preview) return;
 
     var messages = {
+        'thread':    '🧵 Adds a new open thread — a question or loose end to investigate.',
         'session':   '📋 Appends to your most recent session note (or creates a new one).',
         'npc':       '👤 Creates a new NPC inside a "Quick Capture" faction.',
         'quest':     '⚔️ Adds a new in-progress quest with your text as the title.',
@@ -92,7 +93,9 @@ window.saveQuickCapture = function() {
     var success = false;
 
     try {
-        if (type === 'session') {
+        if (type === 'thread') {
+            success = captureToThread(text);
+        } else if (type === 'session') {
             success = captureToSession(text);
         } else if (type === 'npc') {
             success = captureToNPC(text);
@@ -114,6 +117,7 @@ window.saveQuickCapture = function() {
         // Re-render only if the user is already on the destination tab,
         // so we don't yank them away from wherever they were.
         var tabMap = {
+            'thread':   'campaign_sessionNotes',
             'session':  'campaign_sessionNotes',
             'npc':      'campaign_npcs',
             'quest':    'campaign_quests',
@@ -127,6 +131,7 @@ window.saveQuickCapture = function() {
 
         if (typeof flashSuccessIndicator === 'function') {
             var labels = {
+                'thread':   'Thread added!',
                 'session':  'Note added to Session Log!',
                 'npc':      'NPC added to Quick Capture faction!',
                 'quest':    'Quest added!',
@@ -139,6 +144,19 @@ window.saveQuickCapture = function() {
 };
 
 // --- CAPTURE HANDLERS ---
+
+function captureToThread(text) {
+    var cn = characterData.campaignNotes;
+    if (!Array.isArray(cn.threads)) cn.threads = [];
+    cn.threads.push({
+        id: 'thread_' + Date.now(),
+        text: escapeHtml(text),
+        tags: [],
+        resolved: false,
+        resolution: ''
+    });
+    return true;
+}
 
 function captureToSession(text) {
     var notes = characterData.campaignNotes.sessionNotes;
