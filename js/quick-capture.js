@@ -6,18 +6,21 @@
 // --- OPEN / CLOSE ---
 window.openQuickCapture = function() {
     var modal = document.getElementById('quick-capture-modal');
-    var textarea = document.getElementById('quick-capture-text');
-    if (!modal || !textarea) return;
+    var input = document.getElementById('quick-capture-text');
+    if (!modal || !input) return;
 
     modal.classList.remove('hidden');
-    textarea.value = '';
-    textarea.focus();
+    input.innerHTML = '';
+    input.focus();
     updateQuickCapturePreview();
 };
 
 window.closeQuickCapture = function() {
     var modal = document.getElementById('quick-capture-modal');
     if (modal) modal.classList.add('hidden');
+    // Dismiss any open @mention dropdown left behind from the QC editor.
+    var dropdown = document.getElementById('mention-dropdown');
+    if (dropdown) dropdown.classList.add('hidden');
 };
 
 // --- KEYBOARD SHORTCUTS ---
@@ -79,32 +82,32 @@ window.updateQuickCapturePreview = function() {
 
 // --- SAVE ---
 window.saveQuickCapture = function() {
-    var dest     = document.getElementById('quick-capture-dest');
-    var textarea = document.getElementById('quick-capture-text');
-    if (!dest || !textarea) return;
+    var dest  = document.getElementById('quick-capture-dest');
+    var input = document.getElementById('quick-capture-text');
+    if (!dest || !input) return;
 
-    var text = textarea.value.trim();
-    if (!text) {
-        textarea.focus();
-        return;
-    }
+    // html  → passed to HTML-aware destinations (thread, session, misc)
+    // plain → used as plain-text titles (quest, npc, location)
+    var html  = (input.innerHTML  || '').trim();
+    var plain = (input.innerText  || input.textContent || '').trim();
+    if (!plain) { input.focus(); return; }
 
-    var type = dest.value;
+    var type    = dest.value;
     var success = false;
 
     try {
         if (type === 'thread') {
-            success = captureToThread(text);
+            success = captureToThread(html);
         } else if (type === 'session') {
-            success = captureToSession(text);
+            success = captureToSession(html);
         } else if (type === 'npc') {
-            success = captureToNPC(text);
+            success = captureToNPC(plain);
         } else if (type === 'quest') {
-            success = captureToQuest(text);
+            success = captureToQuest(plain);
         } else if (type === 'location') {
-            success = captureToLocation(text);
+            success = captureToLocation(plain);
         } else if (type === 'unsorted') {
-            success = captureToMisc(text);
+            success = captureToMisc(html);
         }
     } catch(e) {
         console.error("Quick capture save failed:", e);
@@ -158,32 +161,28 @@ function captureToThread(text) {
     return true;
 }
 
-function captureToSession(text) {
+function captureToSession(html) {
     var notes = characterData.campaignNotes.sessionNotes;
 
     if (notes.length > 0) {
-        // Append to the most recent session note
         var latest = notes[0];
         var existing = latest.notes || '';
-        // If there's already content, add a line break before the new text
         if (existing && existing !== '<ul><li><br></li></ul>' && existing.trim() !== '') {
-            // Append as a new bullet item inside existing list, or as a new paragraph
             if (existing.includes('</ul>')) {
-                latest.notes = existing.replace(/<\/ul>\s*$/, '<li>' + escapeHtml(text) + '</li></ul>');
+                latest.notes = existing.replace(/<\/ul>\s*$/, '<li>' + html + '</li></ul>');
             } else {
-                latest.notes = existing + '<br>' + escapeHtml(text);
+                latest.notes = existing + '<br>' + html;
             }
         } else {
-            latest.notes = '<ul><li>' + escapeHtml(text) + '</li></ul>';
+            latest.notes = '<ul><li>' + html + '</li></ul>';
         }
     } else {
-        // No session notes exist yet — create one
         var today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         notes.unshift({
             id: 'sess_' + Date.now(),
             title: 'Session Notes',
             date: today,
-            notes: '<ul><li>' + escapeHtml(text) + '</li></ul>',
+            notes: '<ul><li>' + html + '</li></ul>',
             isCollapsed: false
         });
     }
@@ -237,21 +236,19 @@ function captureToLocation(text) {
     return true;
 }
 
-function captureToMisc(text) {
-    var existing = characterData.campaignNotes.misc || '';
+function captureToMisc(html) {
+    var existing  = characterData.campaignNotes.misc || '';
     var timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    var entry     = '[' + timestamp + '] ' + html;
 
     if (existing && existing.trim() !== '') {
         if (existing.includes('</ul>')) {
-            characterData.campaignNotes.misc = existing.replace(
-                /<\/ul>\s*$/,
-                '<li>[' + timestamp + '] ' + escapeHtml(text) + '</li></ul>'
-            );
+            characterData.campaignNotes.misc = existing.replace(/<\/ul>\s*$/, '<li>' + entry + '</li></ul>');
         } else {
-            characterData.campaignNotes.misc = existing + '<br>[' + timestamp + '] ' + escapeHtml(text);
+            characterData.campaignNotes.misc = existing + '<br>' + entry;
         }
     } else {
-        characterData.campaignNotes.misc = '<ul><li>[' + timestamp + '] ' + escapeHtml(text) + '</li></ul>';
+        characterData.campaignNotes.misc = '<ul><li>' + entry + '</li></ul>';
     }
     return true;
 }

@@ -522,6 +522,44 @@ window.handlePaste = function(e) {
     document.execCommand('insertText', false, text); 
 };
 
+// --- QUICK CAPTURE MENTION HANDLERS ---
+// Defined here (not quick-capture.js) so they share editors.js's local
+// showMentionDropdown / hideMentionDropdown / mentionContext scope.
+
+window.handleQCKeyDown = function(event) {
+    var dropdown = document.getElementById('mention-dropdown');
+    if (dropdown && !dropdown.classList.contains('hidden') && mentionContext) {
+        if (event.key === 'Tab' || event.key === 'Enter' ||
+            event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            window.handleKeyDown(event);
+            return;
+        }
+    }
+    // Ctrl+Enter save is handled by the document listener in quick-capture.js.
+    // Regular Enter creates a new line inside the QC editor.
+};
+
+window.handleQCInput = function(event) {
+    var div = event.target;
+    var selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    var range = selection.getRangeAt(0);
+    var node = range.startContainer;
+    if (node.nodeType === Node.TEXT_NODE) {
+        var textUpToCursor = node.textContent.substring(0, range.startOffset);
+        var match = textUpToCursor.match(/(?:\s|^)(@[a-zA-Z0-9_\-\' ]{0,40})$/);
+        if (match) {
+            var matchString = match[1];
+            var query = matchString.substring(1);
+            var endOffset = range.startOffset;
+            var startOffset = endOffset - matchString.length;
+            showMentionDropdown(div, query, node, startOffset, endOffset);
+        } else { hideMentionDropdown(); }
+    } else { hideMentionDropdown(); }
+};
+
 // --- THE MENTION SYSTEM ---
 var mentionContext = null;
 
