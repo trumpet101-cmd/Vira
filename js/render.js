@@ -717,7 +717,15 @@ function renderThreadsPanel() {
               +   'title="Mark as resolved"></button>'
               // Thread content
               + '<div class="flex-1 min-w-0">'
-              +   '<div class="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">' + renderHTML(t.text) + '</div>'
+              +   '<div contenteditable="true" '
+              +       'data-editor-section="campaignNotes_thread" data-editor-field="' + t.id + '" '
+              +       'onkeydown="window.handleKeyDown(event)" '
+              +       'oninput="window.handleInput(event, \'campaignNotes_thread\', \'' + t.id + '\')" '
+              +       'onpaste="window.handlePaste(event)" '
+              +       'class="seamless-input flex-1 text-sm text-stone-700 dark:text-stone-300 leading-relaxed rounded px-1 -mx-1 focus:outline-none focus:ring-1 focus:ring-amber-400 min-h-[20px] empty:before:content-[attr(data-placeholder)] empty:before:text-stone-400 dark:empty:before:text-stone-600 empty:before:pointer-events-none" '
+              +       'data-placeholder="What needs investigating...">'
+              +   renderHTML(t.text)
+              +   '</div>'
               +   renderTagRow(t.id, 'mt-1.5')
               + '</div>'
               // Promote to quest button
