@@ -92,6 +92,10 @@ window.saveQuickCapture = function() {
     var plain = (input.innerText  || input.textContent || '').trim();
     if (!plain) { input.focus(); return; }
 
+    // Strip trailing empty-div/br artifacts that Chrome appends to contenteditable
+    html = html.replace(/(<div>\s*<br\s*\/?>\s*<\/div>\s*)+$/i, '').trim();
+    html = html.replace(/(<br\s*\/?>\s*)+$/i, '').trim();
+
     var type    = dest.value;
     var success = false;
 
@@ -148,12 +152,12 @@ window.saveQuickCapture = function() {
 
 // --- CAPTURE HANDLERS ---
 
-function captureToThread(text) {
+function captureToThread(html) {
     var cn = characterData.campaignNotes;
     if (!Array.isArray(cn.threads)) cn.threads = [];
     cn.threads.push({
         id: 'thread_' + Date.now(),
-        text: escapeHtml(text),
+        text: html,
         tags: [],
         resolved: false,
         resolution: ''
