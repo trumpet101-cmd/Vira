@@ -498,7 +498,7 @@ window.handleOutlineKeyDown = function(event) {
 window.handleOutlineFocus = function(event) {
     const div = event.currentTarget;
     const html = div.innerHTML.trim();
-    if (html === "" || html === "<br>" || html === "<div><br></div>" || !div.querySelector('ul')) {
+    if (html === "" || html === "<br>" || html === "<div><br></div>") {
         div.innerHTML = "<ul><li><br></li></ul>";
         setTimeout(() => {
             const range = document.createRange();
