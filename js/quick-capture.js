@@ -131,7 +131,13 @@ window.saveQuickCapture = function() {
             'location': 'campaign_locations',
             'unsorted': 'campaign_misc'
         };
-        if (activeTab === tabMap[type]) {
+        // The Campaign dashboard ('campaignNotes') surfaces threads, sessions,
+        // and quests, so a capture of any of those should refresh it too —
+        // otherwise a thread added via the dashboard's "New" button wouldn't
+        // appear until the next render.
+        var dashboardTypes = ['thread', 'session', 'quest'];
+        if (activeTab === tabMap[type] ||
+            (activeTab === 'campaignNotes' && dashboardTypes.indexOf(type) !== -1)) {
             window.renderContent();
             if (window.lucide) lucide.createIcons();
         }
