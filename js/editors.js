@@ -81,7 +81,7 @@ window.recalculateBuildScores = function() {
 
 // --- DYNAMIC LIST MANAGEMENT ---
 window.addBackstory = function() { currentSearchQueries.backstory = ''; characterData.backstory.unshift({ id: 'b_' + Date.now(), title: 'New Lore Section', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
-window.updateBackstory = function(bId, field, val) { const entry = characterData.backstory.find(b => b.id === bId); if(entry) entry[field] = val; window.saveData(); }
+window.updateBackstory = function(bId, field, val) { const entry = characterData.backstory.find(b => b.id === bId); if(entry) entry[field] = val; if (field === 'title') window.syncMentionLabels(bId, val); window.saveData(); }
 window.deleteBackstory = function(bId) { window.showCustomConfirm('Delete Backstory Section?', 'Are you sure you want to permanently delete this backstory section?', '📜', () => { characterData.backstory = characterData.backstory.filter(b => b.id !== bId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleBackstoryCollapse = function(bId) { const entry = characterData.backstory.find(b => b.id === bId); if(entry) { entry.isCollapsed = !entry.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleAllBackstory = function(collapse) { characterData.backstory.forEach(b => b.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
@@ -89,7 +89,7 @@ window.moveBackstory = function(bId, direction) { const arr = characterData.back
 window.filterBackstory = function(query) { currentSearchQueries.backstory = query; const q = query.toLowerCase(); document.querySelectorAll('.backstory-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
 window.addPersonality = function() { currentSearchQueries.personality = ''; characterData.personality.unshift({ id: 'p_' + Date.now(), title: 'New Trait / Code', subtitle: 'A brief state description', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
-window.updatePersonality = function(pId, field, val) { const entry = characterData.personality.find(p => p.id === pId); if(entry) entry[field] = val; window.saveData(); }
+window.updatePersonality = function(pId, field, val) { const entry = characterData.personality.find(p => p.id === pId); if(entry) entry[field] = val; if (field === 'title') window.syncMentionLabels(pId, val); window.saveData(); }
 window.deletePersonality = function(pId) { window.showCustomConfirm('Delete Personality Trait?', 'Are you sure you want to permanently delete this personality section?', '🧠', () => { characterData.personality = characterData.personality.filter(p => p.id !== pId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.togglePersonalityCollapse = function(pId) { const entry = characterData.personality.find(p => p.id === pId); if(entry) { entry.isCollapsed = !entry.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleAllPersonality = function(collapse) { characterData.personality.forEach(p => p.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
@@ -97,12 +97,97 @@ window.movePersonality = function(pId, direction) { const arr = characterData.pe
 window.filterPersonality = function(query) { currentSearchQueries.personality = query; const q = query.toLowerCase(); document.querySelectorAll('.personality-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
 window.addSession = function() { currentSearchQueries.sessionNotes = ''; characterData.campaignNotes.sessionNotes.unshift({ id: 'sess_' + Date.now(), title: '', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
-window.updateSession = function(sessId, field, val) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) sess[field] = val; window.saveData(); }
+window.updateSession = function(sessId, field, val) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) sess[field] = val; if (field === 'title') window.syncMentionLabels(sessId, val); window.saveData(); }
 window.deleteSession = function(sessId) { window.showCustomConfirm('Delete Session Log?', 'Are you sure you want to permanently delete this session log entry?', '🗑️', () => { characterData.campaignNotes.sessionNotes = characterData.campaignNotes.sessionNotes.filter(s => s.id !== sessId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleSessionCollapse = function(sessId) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) { sess.isCollapsed = !sess.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleAllSessions = function(collapse) { characterData.campaignNotes.sessionNotes.forEach(s => s.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.moveSession = function(sessId, direction) { const arr = characterData.campaignNotes.sessionNotes; const index = arr.findIndex(s => s.id === sessId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
 window.filterSessions = function(query) { currentSearchQueries.sessionNotes = query; const q = query.toLowerCase(); document.querySelectorAll('.session-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
+
+// --- COPY SESSION AS TEXT ---
+// Converts a session's outline HTML into shareable plain text (markdown-style
+// bullets with indentation) and puts it on the clipboard — for pasting recaps
+// into Discord etc. @mention anchors flatten to their visible "@Name" text.
+function htmlToPlainOutline(html) {
+    var container = document.createElement('div');
+    container.innerHTML = html || '';
+    var lines = [];
+
+    // Inline text of a node, excluding any nested ULs (handled recursively).
+    function inlineTextOf(node) {
+        var clone = node.cloneNode(true);
+        clone.querySelectorAll && clone.querySelectorAll('ul, ol').forEach(function(u) { u.remove(); });
+        return (clone.textContent || '').replace(/\u00A0/g, ' ').trim();
+    }
+
+    function walk(node, depth) {
+        var buffer = '';
+        function flushBuffer() {
+            var t = buffer.replace(/\u00A0/g, ' ').trim();
+            if (t) lines.push(t);
+            buffer = '';
+        }
+        Array.prototype.forEach.call(node.childNodes, function(child) {
+            if (child.nodeType === Node.TEXT_NODE) { buffer += child.textContent; return; }
+            if (child.nodeType !== Node.ELEMENT_NODE) return;
+            var tag = child.tagName;
+            if (tag === 'UL' || tag === 'OL') {
+                flushBuffer();
+                Array.prototype.forEach.call(child.children, function(li) {
+                    if (li.tagName !== 'LI') return;
+                    var text = inlineTextOf(li);
+                    if (text) lines.push(new Array(depth + 1).join('  ') + '- ' + text);
+                    // Recurse into nested lists inside this li
+                    Array.prototype.forEach.call(li.children, function(sub) {
+                        if (sub.tagName === 'UL' || sub.tagName === 'OL') {
+                            var wrapper = document.createElement('div');
+                            wrapper.appendChild(sub.cloneNode(true));
+                            walk(wrapper, depth + 1);
+                        }
+                    });
+                });
+            } else if (tag === 'BR') {
+                flushBuffer();
+            } else if (tag === 'DIV' || tag === 'P') {
+                flushBuffer();
+                walk(child, depth);
+            } else {
+                // Inline elements (spans, mention anchors, bold, etc.) — take their text
+                buffer += child.textContent;
+            }
+        });
+        flushBuffer();
+    }
+
+    walk(container, 0);
+    return lines.join('\n');
+}
+
+window.copySessionAsText = function(sessId) {
+    var sess = characterData.campaignNotes.sessionNotes.find(function(s) { return s.id === sessId; });
+    if (!sess) return;
+    var header = (sess.title || 'Untitled Session') + (sess.date ? ' — ' + sess.date : '');
+    var body = htmlToPlainOutline(sess.notes);
+    var output = '**' + header + '**' + (body ? '\n' + body : '\n(No notes yet)');
+
+    function onCopied() {
+        if (typeof flashSuccessIndicator === 'function') flashSuccessIndicator('Session copied as text!');
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(output).then(onCopied).catch(function() { legacyCopy(output, onCopied); });
+    } else {
+        legacyCopy(output, onCopied);
+    }
+    function legacyCopy(text, cb) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); cb(); } catch(e) { console.error('Copy failed', e); }
+        document.body.removeChild(ta);
+    }
+};
 
 // --- OPEN THREADS ---
 // Tracks collapse state of the resolved section (module-level, ephemeral — does not persist).
@@ -242,8 +327,61 @@ window.handleThreadAddBlur = function(event) {
     }, 160);
 };
 
+// --- MENTION LABEL SYNC ON RENAME ---
+// @mention anchors snapshot the entry's name at insert time. When an entry is
+// renamed, this sweeps every notes field and rewrites matching anchors to the
+// new name (the deep link itself uses itemId and never breaks). Anchors store
+// the target id inside their onclick attribute, e.g. setTab('tab','npc_123'),
+// so we match on a[onclick*="'itemId'"]. Visible anchors in the DOM update
+// instantly; the data sweep is debounced per-entry to stay cheap while typing.
+var mentionSyncTimers = {};
+
+function rewriteMentionLabelsInHtml(html, itemId, newLabel) {
+    if (!html || html.indexOf(itemId) === -1) return html;
+    var d = document.createElement('div');
+    d.innerHTML = html;
+    var anchors = d.querySelectorAll('a[onclick*="\'' + itemId + '\'"]');
+    if (anchors.length === 0) return html;
+    anchors.forEach(function(a) { a.textContent = '@' + newLabel; });
+    return d.innerHTML;
+}
+
+window.syncMentionLabels = function(itemId, newLabel) {
+    var label = (newLabel || '').trim();
+    if (!label || !itemId) return; // mid-edit empty name -- wait for real text
+
+    // 1. Instant cosmetic update of any anchors currently rendered on screen
+    document.querySelectorAll('a[onclick*="\'' + itemId + '\'"]').forEach(function(a) {
+        a.textContent = '@' + label;
+    });
+
+    // 2. Debounced sweep of the data model (runs after the user pauses typing)
+    clearTimeout(mentionSyncTimers[itemId]);
+    mentionSyncTimers[itemId] = setTimeout(function() {
+        var changed = false;
+        function sweepField(obj, key) {
+            var updated = rewriteMentionLabelsInHtml(obj[key], itemId, label);
+            if (updated !== obj[key]) { obj[key] = updated; changed = true; }
+        }
+        characterData.backstory.forEach(function(b) { sweepField(b, 'notes'); });
+        characterData.personality.forEach(function(p) { sweepField(p, 'notes'); });
+        var cn = characterData.campaignNotes;
+        cn.sessionNotes.forEach(function(s) { sweepField(s, 'notes'); });
+        cn.quests.forEach(function(qst) { sweepField(qst, 'notes'); });
+        cn.locations.forEach(function(l) { sweepField(l, 'notes'); });
+        cn.npcs.forEach(function(f) { (f.members || []).forEach(function(n) { sweepField(n, 'notes'); }); });
+        (cn.threads || []).forEach(function(t) { sweepField(t, 'text'); });
+        if (typeof cn.misc === 'string') sweepField(cn, 'misc');
+        if (characterData.build) {
+            if (typeof characterData.build.features === 'string') sweepField(characterData.build, 'features');
+            if (typeof characterData.build.equipment === 'string') sweepField(characterData.build, 'equipment');
+        }
+        if (changed) window.saveData();
+    }, 400);
+};
+
 window.addQuest = function() { currentSearchQueries.quests = ''; characterData.campaignNotes.quests.unshift({ id: 'quest_' + Date.now(), title: '', subtitle: '', notes: '', isCompleted: false, isUrgent: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
-window.updateQuest = function(questId, field, val) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) quest[field] = val; window.saveData(); }
+window.updateQuest = function(questId, field, val) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) quest[field] = val; if (field === 'title') window.syncMentionLabels(questId, val); window.saveData(); }
 window.deleteQuest = function(questId) { window.showCustomConfirm('Delete Quest?', 'Are you sure you want to permanently remove this quest objective?', '⚔️', () => { characterData.campaignNotes.quests = characterData.campaignNotes.quests.filter(q => q.id !== questId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleQuestUrgency = function(questId) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) { quest.isUrgent = !quest.isUrgent; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleQuestCompletion = function(questId) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) { quest.isCompleted = !quest.isCompleted; if(quest.isCompleted) quest.isUrgent = false; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
@@ -252,7 +390,7 @@ window.moveQuest = function(questId, direction) { const arr = characterData.camp
 window.filterQuests = function(query) { currentSearchQueries.quests = query; const q = query.toLowerCase(); document.querySelectorAll('.quest-section').forEach(section => { let visibleQuests = 0; section.querySelectorAll('.quest-card').forEach(quest => { if (quest.dataset.searchable.toLowerCase().includes(q)) { quest.classList.remove('hidden'); visibleQuests++; } else { quest.classList.add('hidden'); } }); const contentDiv = section.querySelector('.collapsible-content'); const chevron = section.querySelector('.chevron'); if (q.length > 0 && visibleQuests > 0) { contentDiv.classList.remove('collapsed'); if(chevron) chevron.classList.remove('collapsed'); } else if (q.length === 0) { const isCollapsed = section.dataset.sectionType === 'inProgress' ? questSectionsState.inProgressCollapsed : questSectionsState.completedCollapsed; if(isCollapsed) { contentDiv.classList.add('collapsed'); if(chevron) chevron.classList.add('collapsed'); } } }); }
 
 window.addLocation = function() { currentSearchQueries.locations = ''; characterData.campaignNotes.locations.unshift({ id: 'loc_' + Date.now(), title: '', subtitle: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
-window.updateLocation = function(locId, field, val) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) loc[field] = val; window.saveData(); }
+window.updateLocation = function(locId, field, val) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) loc[field] = val; if (field === 'title') window.syncMentionLabels(locId, val); window.saveData(); }
 window.deleteLocation = function(locId) { window.showCustomConfirm('Delete Location?', 'Are you sure you want to permanently remove this location?', '📍', () => { characterData.campaignNotes.locations = characterData.campaignNotes.locations.filter(l => l.id !== locId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleLocationCollapse = function(locId) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) { loc.isCollapsed = !loc.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleAllLocations = function(collapse) { characterData.campaignNotes.locations.forEach(l => l.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
@@ -260,7 +398,7 @@ window.moveLocation = function(locId, direction) { const arr = characterData.cam
 window.filterLocations = function(query) { currentSearchQueries.locations = query; const q = query.toLowerCase(); document.querySelectorAll('.location-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
 window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: '', isCollapsed: false, members: [] }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
-window.updateFaction = function(facId, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.name = val; window.saveData(); }
+window.updateFaction = function(facId, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.name = val; window.syncMentionLabels(facId, val); window.saveData(); }
 window.deleteFaction = function(facId) { window.showCustomConfirm('Delete Faction?', 'Are you sure you want to delete this faction, its members, and all related logs?', '🛡️', () => { characterData.campaignNotes.npcs = characterData.campaignNotes.npcs.filter(f => f.id !== facId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleFactionCollapse = function(facId) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if (fac) { fac.isCollapsed = !fac.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } };
 window.toggleAllFactions = function(collapse) {
@@ -275,7 +413,7 @@ window.toggleAllFactions = function(collapse) {
 window.moveFaction = function(facId, direction) { const arr = characterData.campaignNotes.npcs; const index = arr.findIndex(f => f.id === facId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
 
 window.addNPC = function(facId) { currentSearchQueries.npcs = ''; const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { fac.members.push({ id: 'npc_' + Date.now(), name: '', subtitle: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
-window.updateNPC = function(facId, npcId, field, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { const npc = fac.members.find(n => n.id === npcId); if(npc) npc[field] = val; } window.saveData(); }
+window.updateNPC = function(facId, npcId, field, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { const npc = fac.members.find(n => n.id === npcId); if(npc) npc[field] = val; } if (field === 'name') window.syncMentionLabels(npcId, val); window.saveData(); }
 window.updateNPCRelationship = function(facId, npcId, val) {
     const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
     if (!fac) return;
@@ -498,7 +636,7 @@ window.handleOutlineKeyDown = function(event) {
 window.handleOutlineFocus = function(event) {
     const div = event.currentTarget;
     const html = div.innerHTML.trim();
-    if (html === "" || html === "<br>" || html === "<div><br></div>") {
+    if (html === "" || html === "<br>" || html === "<div><br></div>" || !div.querySelector('ul')) {
         div.innerHTML = "<ul><li><br></li></ul>";
         setTimeout(() => {
             const range = document.createRange();
@@ -600,8 +738,7 @@ window.handleKeyDown = function(event) {
     } else if (event.key === 'Tab' || event.key === 'Enter') {
         event.preventDefault();
         event.stopPropagation();
-        const selected = mentionContext.results[mentionContext.selectedIndex];
-        if (selected) window.insertMention(selected.id, selected.label, selected.itemId);
+        window.selectMentionResult(mentionContext.selectedIndex);
         return true;
     } else if (event.key === 'Escape') {
         event.preventDefault();
@@ -651,6 +788,20 @@ window.handleInput = function(event, section, field) {
 
 function showMentionDropdown(div, query, textNode, startOffset, endOffset) {
     const results = getMentionSuggestions(query);
+
+    // --- CREATE-NEW OPTIONS ---
+    // If the user has typed a real name (2+ chars), offer to create the entry
+    // on the spot — new NPCs and places show up constantly mid-session, and
+    // bouncing to another tab to add them first kills note-taking flow.
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length >= 2) {
+        const exactMatch = results.some(r => r.label.toLowerCase() === trimmedQuery.toLowerCase());
+        if (!exactMatch) {
+            results.push({ isCreate: true, createType: 'NPC', type: 'Create NPC', id: 'campaign_npcs', itemId: '', label: trimmedQuery });
+            results.push({ isCreate: true, createType: 'Location', type: 'Create Location', id: 'campaign_locations', itemId: '', label: trimmedQuery });
+        }
+    }
+
     const dropdown = document.getElementById('mention-dropdown');
     if (results.length === 0) { hideMentionDropdown(); return; }
 
@@ -705,11 +856,58 @@ function renderMentionDropdownItems() {
     if (!mentionContext) return;
     dropdown.innerHTML = mentionContext.results.map((res, i) => {
         const isActive = i === mentionContext.selectedIndex;
+        if (res.isCreate) {
+            const activeClasses = isActive ? 'bg-emerald-100 border-l-4 border-emerald-500 dark:bg-emerald-950/40 pl-3' : 'bg-stone-50 dark:bg-stone-800/50 border-l-4 border-transparent pl-4';
+            return `<li onmousedown="event.preventDefault(); event.stopPropagation(); window.selectMentionResult(${i})" class="py-3 pr-4 cursor-pointer flex items-center gap-2 transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}"><i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0"></i><span class="flex flex-col"><span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span><span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">+ ${res.type}</span></span></li>`;
+        }
         const activeClasses = isActive ? 'bg-emerald-100 border-l-4 border-emerald-500 dark:bg-emerald-950/40 pl-3' : 'bg-white dark:bg-stone-900 border-l-4 border-transparent pl-4';
-        return `<li onmousedown="event.preventDefault(); event.stopPropagation(); window.insertMention('${res.id}', '${escapeHtml(res.label).replace(/'/g, "\\'")}', '${res.itemId}')" class="py-3 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}"><span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span><span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">${res.type}</span></li>`;
+        return `<li onmousedown="event.preventDefault(); event.stopPropagation(); window.selectMentionResult(${i})" class="py-3 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}"><span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span><span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">${res.type}</span></li>`;
     }).join('');
+    if (window.lucide) lucide.createIcons();
     const activeEl = dropdown.children[mentionContext.selectedIndex];
     if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+}
+
+// Unified selection path for both mouse and keyboard: handles existing-entry
+// inserts and create-new rows by index, sidestepping label-quoting issues.
+window.selectMentionResult = function(index) {
+    if (!mentionContext) return;
+    const res = mentionContext.results[index];
+    if (!res) return;
+    if (res.isCreate) {
+        const newId = createEntryForMention(res.createType, res.label);
+        if (newId) window.insertMention(res.id, res.label, newId);
+        else hideMentionDropdown();
+    } else {
+        window.insertMention(res.id, res.label, res.itemId);
+    }
+};
+
+// Creates the underlying entry for a create-new mention and returns its id.
+// NPCs land in the existing "Quick Capture" faction (created if missing),
+// mirroring quick-capture.js, so they're easy to triage later.
+function createEntryForMention(createType, name) {
+    if (createType === 'NPC') {
+        const npcs = characterData.campaignNotes.npcs;
+        let faction = npcs.find(f => f.name === 'Quick Capture');
+        if (!faction) {
+            faction = { id: 'fac_quickcapture', name: 'Quick Capture', isCollapsed: false, members: [] };
+            npcs.unshift(faction);
+        }
+        const npc = { id: 'npc_' + Date.now(), name: name, subtitle: '', notes: '', isCollapsed: false };
+        faction.members.push(npc);
+        window.saveData();
+        if (typeof flashSuccessIndicator === 'function') flashSuccessIndicator('NPC "' + name + '" created!');
+        return npc.id;
+    }
+    if (createType === 'Location') {
+        const loc = { id: 'loc_' + Date.now(), title: name, subtitle: '', notes: '', isCollapsed: false };
+        characterData.campaignNotes.locations.unshift(loc);
+        window.saveData();
+        if (typeof flashSuccessIndicator === 'function') flashSuccessIndicator('Location "' + name + '" created!');
+        return loc.id;
+    }
+    return null;
 }
 
 function hideMentionDropdown() { document.getElementById('mention-dropdown').classList.add('hidden'); mentionContext = null; }
@@ -855,6 +1053,11 @@ function getSearchResultSnippet(fullText, searchTerm) {
     return snippetBlock;
 }
 
+// True when any of the entry's tags contains the query substring.
+function entryTagsMatch(entry, q) {
+    return Array.isArray(entry.tags) && entry.tags.some(function(t) { return t.toLowerCase().includes(q); });
+}
+
 window.handleGlobalSearchInput = function(value) {
     const dropdown = document.getElementById('global-search-dropdown');
     if (!dropdown) return;
@@ -877,7 +1080,7 @@ window.handleGlobalSearchInput = function(value) {
     // 1. Deep index through Session Notes
     characterData.campaignNotes.sessionNotes.forEach(s => {
         const textNotes = cleanHtmlTags(s.notes);
-        if (s.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (s.date && s.date.toLowerCase().includes(q))) {
+        if (s.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (s.date && s.date.toLowerCase().includes(q)) || entryTagsMatch(s, q)) {
             matchingEntries.push({ tabId: 'campaign_sessionNotes', itemId: s.id, type: 'Session Note', title: s.title || 'Untitled Session', snippet: getSearchResultSnippet(s.notes, q) });
         }
     });
@@ -885,7 +1088,7 @@ window.handleGlobalSearchInput = function(value) {
     // 2. Deep index through Quest Logs
     characterData.campaignNotes.quests.forEach(quest => {
         const textNotes = cleanHtmlTags(quest.notes);
-        if (quest.title.toLowerCase().includes(q) || quest.subtitle.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q)) {
+        if (quest.title.toLowerCase().includes(q) || quest.subtitle.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || entryTagsMatch(quest, q)) {
             matchingEntries.push({ tabId: 'campaign_quests', itemId: quest.id, type: 'Quest', title: quest.title || 'Untitled Quest', snippet: getSearchResultSnippet(quest.subtitle + " " + quest.notes, q) });
         }
     });
@@ -893,7 +1096,7 @@ window.handleGlobalSearchInput = function(value) {
     // 3. Deep index through Locations Matrix
     characterData.campaignNotes.locations.forEach(loc => {
         const textNotes = cleanHtmlTags(loc.notes);
-        if (loc.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (loc.subtitle && loc.subtitle.toLowerCase().includes(q))) {
+        if (loc.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (loc.subtitle && loc.subtitle.toLowerCase().includes(q)) || entryTagsMatch(loc, q)) {
             matchingEntries.push({ tabId: 'campaign_locations', itemId: loc.id, type: 'Location', title: loc.title || 'Untitled Location', snippet: getSearchResultSnippet(loc.subtitle + " " + loc.notes, q) });
         }
     });
@@ -906,7 +1109,7 @@ window.handleGlobalSearchInput = function(value) {
         if (faction.members) {
             faction.members.forEach(npc => {
                 const textNotes = cleanHtmlTags(npc.notes);
-                if (npc.name.toLowerCase().includes(q) || (npc.subtitle && npc.subtitle.toLowerCase().includes(q)) || textNotes.toLowerCase().includes(q)) {
+                if (npc.name.toLowerCase().includes(q) || (npc.subtitle && npc.subtitle.toLowerCase().includes(q)) || textNotes.toLowerCase().includes(q) || entryTagsMatch(npc, q)) {
                     matchingEntries.push({ tabId: 'campaign_npcs', itemId: npc.id, type: 'NPC Profile', title: npc.name || 'Unnamed NPC', snippet: getSearchResultSnippet((npc.subtitle ? `[${npc.subtitle}] ` : '') + npc.notes, q) });
                 }
             });

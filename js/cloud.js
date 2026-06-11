@@ -23,6 +23,7 @@ migrateData(characterData);
 
 // --- HYBRID CLOUD LOGIC ---
 var lastLocalEditTime = 0; // The Edit Lock timer
+var saveTimeout = null;    // Debounce handle for the cloud write
 
 // Track Auth State changes
 auth.onAuthStateChanged(async (u) => {
@@ -171,9 +172,46 @@ function flashSuccessIndicator(textMsg) {
     }, 4000);
 }
 
+// Tracks whether an edit is waiting on the debounced cloud write.
+// Lets the visibility/unload flush below know there is work to push.
+var pendingCloudWrite = false;
+
+// The actual Firestore write, extracted from saveData so it can be invoked
+// immediately (flush) as well as on the debounce timer.
+async function performCloudSave() {
+    clearTimeout(saveTimeout);
+    if (!pendingCloudWrite) return;
+    pendingCloudWrite = false;
+    if (isCloudReady && cloudUser && db && currentCharacterId) {
+        try {
+            // Deep clone so we don't mutate characterData in memory
+            const dataToSave = JSON.parse(JSON.stringify(characterData));
+            await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(currentCharacterId).set(dataToSave);
+            triggerSaveIndicator();
+        } catch (e) {
+            console.error("Cloud save failed, relying on local backup", e);
+            pendingCloudWrite = true; // still dirty — a later flush can retry
+            handleSyncError(e);
+            triggerSaveIndicator();
+        }
+    } else { triggerSaveIndicator(); }
+}
+
+// --- FLUSH ON TAB HIDE / CLOSE ---
+// localStorage is written synchronously, but the cloud write is debounced 800ms.
+// Without this, closing the tab right after typing leaves the cloud copy stale,
+// and the next page load's snapshot listener stomps localStorage with that stale
+// copy (lastLocalEditTime starts at 0 on load). Flushing on 'hidden' covers tab
+// close, tab switch, and mobile app backgrounding; beforeunload is a fallback.
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') performCloudSave();
+});
+window.addEventListener('beforeunload', function() { performCloudSave(); });
+
 window.saveData = function() {
     lastLocalEditTime = Date.now(); // Trip the Edit Lock to stop sync stomping
     clearTimeout(saveTimeout);
+    pendingCloudWrite = true;
     localStorage.setItem('character_data_' + currentCharacterId, JSON.stringify(characterData));
 
     const index = characterList.findIndex(c => c.id === currentCharacterId);
@@ -190,23 +228,7 @@ window.saveData = function() {
         }
     }
     
-    saveTimeout = setTimeout(async () => {
-        if (isCloudReady && cloudUser && db && currentCharacterId) {
-            try {
-                // Deep clone so we don't mutate characterData in memory
-                const dataToSave = JSON.parse(JSON.stringify(characterData));
-
-                // Threads store text as HTML (like session/quest/location notes) — the
-                // existing Firestore serialisation handles them fine; no scrubbing needed.
-                await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(currentCharacterId).set(dataToSave);
-                triggerSaveIndicator();
-            } catch (e) {
-                console.error("Cloud save failed, relying on local backup", e);
-                handleSyncError(e);
-                triggerSaveIndicator();
-            }
-        } else { triggerSaveIndicator(); }
-    }, 800);
+    saveTimeout = setTimeout(performCloudSave, 800);
 }
 
 window.updateField = function(section, field, value) {

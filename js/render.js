@@ -1027,148 +1027,7 @@ window.renderContent = function() {
         </div>`;
     }
     else if (activeTab === 'campaignNotes') {
-        // === CAMPAIGN DASHBOARD ===
-        // Replaces the old table-of-contents cards with an at-a-glance landing
-        // page: open threads up top, then last-session recap + active quests.
-        // Reads existing data only; nothing new is stored. Rows deep-link via
-        // setTab() into the relevant tab/entry.
-        var cn = characterData.campaignNotes || {};
-        var DASH_CAP = 5;
-
-        // Arrays are already newest-first (entries are unshift-ed on create).
-        var openThreads  = (cn.threads || []).filter(function(t) { return !t.resolved; });
-        var activeQuests = (cn.quests  || []).filter(function(q) { return !q.isCompleted; });
-        // Urgent first; recency preserved within each group (stable sort).
-        var sortedQuests = activeQuests.slice().sort(function(a, b) {
-            return (b.isUrgent ? 1 : 0) - (a.isUrgent ? 1 : 0);
-        });
-        var latestSession = (cn.sessionNotes && cn.sessionNotes.length) ? cn.sessionNotes[0] : null;
-
-        var threadsShown = openThreads.slice(0, DASH_CAP);
-        var questsShown  = sortedQuests.slice(0, DASH_CAP);
-        var threadsMore  = openThreads.length  - threadsShown.length;
-        var questsMore   = sortedQuests.length - questsShown.length;
-
-        // Last ~2 sentences of the freshest session note (the "most recent part").
-        function dashSessionTail(rawHtml) {
-            var clean = stripHtmlToText(rawHtml);
-            if (!clean) return '';
-            var parts = clean.match(/[^.!?]+[.!?]*/g);
-            if (!parts || parts.length <= 2) return clean;
-            return '… ' + parts.slice(-2).join(' ').trim();
-        }
-
-        // --- Identity strip ---
-        var basics = characterData.basics || {};
-        var idLine = [basics.race, basics.class, basics.tribe].filter(Boolean).join(' · ');
-        var avatarHtml = characterData.avatar
-            ? '<img src="' + characterData.avatar + '" class="w-full h-full object-cover cursor-pointer hover:opacity-90" onclick="window.openLightbox(this.src)">'
-            : '<span class="text-2xl">🧝‍♀️</span>';
-        var lastPlayed = (latestSession && latestSession.date) ? latestSession.date : '—';
-
-        var headerHtml =
-            '<div class="flex items-center gap-4 bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800">'
-          +   '<div class="w-12 h-12 rounded-full border-2 border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden flex-shrink-0">' + avatarHtml + '</div>'
-          +   '<div class="min-w-0">'
-          +     '<p class="text-lg font-bold text-stone-800 dark:text-stone-100 truncate">' + escapeHtml(characterData.name || 'Unnamed Character') + '</p>'
-          +     '<p class="text-xs text-stone-500 dark:text-stone-400 truncate">' + escapeHtml(idLine) + '</p>'
-          +   '</div>'
-          +   '<div class="ml-auto text-right flex-shrink-0">'
-          +     '<p class="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500 font-bold">Last played</p>'
-          +     '<p class="text-xs font-semibold text-stone-600 dark:text-stone-300">' + escapeHtml(lastPlayed) + '</p>'
-          +   '</div>'
-          + '</div>';
-
-        // --- Open threads (prominent, top) ---
-        var threadsBody = '';
-        if (threadsShown.length > 0) {
-            threadsShown.forEach(function(t) {
-                var line = escapeHtml(stripHtmlToText(t.text)) || '<span class="italic text-stone-400">Empty thread</span>';
-                threadsBody +=
-                    '<div onclick="window.setTab(\'campaign_sessionNotes\', \'' + t.id + '\')" class="group flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-amber-100/60 dark:hover:bg-amber-950/30 cursor-pointer transition-colors">'
-                  +   '<button onclick="event.stopPropagation(); window.toggleThreadResolved(\'' + t.id + '\')" class="flex-shrink-0 w-4 h-4 rounded-full border-2 border-amber-400 dark:border-amber-600 hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400" title="Mark resolved"></button>'
-                  +   '<span class="flex-1 min-w-0 text-sm text-stone-700 dark:text-stone-200 truncate">' + line + '</span>'
-                  +   '<i data-lucide="chevron-right" class="w-4 h-4 text-amber-400 dark:text-amber-600 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"></i>'
-                  + '</div>';
-            });
-            if (threadsMore > 0) {
-                threadsBody += '<button onclick="window.setTab(\'campaign_sessionNotes\')" class="w-full text-left px-2 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline">+ ' + threadsMore + ' more →</button>';
-            }
-        } else {
-            threadsBody = '<p class="px-2 py-6 text-center text-sm text-stone-400 dark:text-stone-500">No open threads. Loose ends you jot down will show up here.</p>';
-        }
-
-        var threadsCard =
-            '<div class="rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 p-4">'
-          +   '<div class="flex items-center gap-2 mb-2">'
-          +     '<i data-lucide="help-circle" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>'
-          +     '<span class="font-bold text-stone-800 dark:text-stone-100">Open Threads</span>'
-          +     '<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">' + openThreads.length + '</span>'
-          +     '<button onclick="var d=document.getElementById(\'quick-capture-dest\'); if(d) d.value=\'thread\'; window.openQuickCapture();" class="ml-auto flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition-colors"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span>New</span></button>'
-          +   '</div>'
-          +   '<div class="space-y-0.5">' + threadsBody + '</div>'
-          + '</div>';
-
-        // --- Last session (left) ---
-        var sessionCard;
-        if (latestSession) {
-            var sTitle = escapeHtml(latestSession.title || 'Untitled session');
-            var sDate  = latestSession.date ? '<p class="text-xs text-stone-400 dark:text-stone-500 mb-2">' + escapeHtml(latestSession.date) + '</p>' : '';
-            var sTail  = escapeHtml(dashSessionTail(latestSession.notes)) || '<span class="italic text-stone-400">No notes written yet.</span>';
-            sessionCard =
-                '<div class="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 p-5">'
-              +   '<div class="flex items-center gap-2 mb-3"><i data-lucide="scroll-text" class="w-5 h-5 text-emerald-600"></i><span class="font-bold text-stone-800 dark:text-stone-100">Last Session</span></div>'
-              +   '<p class="font-semibold text-stone-800 dark:text-stone-100">' + sTitle + '</p>'
-              +   sDate
-              +   '<p class="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">' + sTail + '</p>'
-              +   '<button onclick="window.setTab(\'campaign_sessionNotes\', \'' + latestSession.id + '\')" class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">Read full note <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>'
-              + '</div>';
-        } else {
-            sessionCard =
-                '<div class="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 p-5">'
-              +   '<div class="flex items-center gap-2 mb-3"><i data-lucide="scroll-text" class="w-5 h-5 text-emerald-600"></i><span class="font-bold text-stone-800 dark:text-stone-100">Last Session</span></div>'
-              +   '<p class="text-sm text-stone-400 dark:text-stone-500">No session logged yet. <button onclick="window.setTab(\'campaign_sessionNotes\')" class="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">Start one →</button></p>'
-              + '</div>';
-        }
-
-        // --- Active quests (right) ---
-        var questsBody = '';
-        if (questsShown.length > 0) {
-            questsShown.forEach(function(q) {
-                var pill = q.isUrgent
-                    ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 flex-shrink-0">Urgent</span>'
-                    : '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 flex-shrink-0">Active</span>';
-                var qTitle = escapeHtml(q.title || 'Untitled quest');
-                questsBody +=
-                    '<div onclick="window.setTab(\'campaign_quests\', \'' + q.id + '\')" class="group flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-800/60 cursor-pointer transition-colors">'
-                  +   pill
-                  +   '<span class="flex-1 min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200 truncate">' + qTitle + '</span>'
-                  +   '<i data-lucide="chevron-right" class="w-4 h-4 text-stone-300 dark:text-stone-600 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"></i>'
-                  + '</div>';
-            });
-            if (questsMore > 0) {
-                questsBody += '<button onclick="window.setTab(\'campaign_quests\')" class="w-full text-left px-2 py-1.5 text-xs font-semibold text-stone-500 dark:text-stone-400 hover:underline">+ ' + questsMore + ' more →</button>';
-            }
-        } else {
-            questsBody = '<p class="px-2 py-6 text-center text-sm text-stone-400 dark:text-stone-500">No active quests right now.</p>';
-        }
-
-        var questsCard =
-            '<div class="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 p-5">'
-          +   '<div class="flex items-center gap-2 mb-2">'
-          +     '<i data-lucide="swords" class="w-5 h-5 text-emerald-600"></i>'
-          +     '<span class="font-bold text-stone-800 dark:text-stone-100">Quests</span>'
-          +     '<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400">' + activeQuests.length + ' active</span>'
-          +   '</div>'
-          +   '<div class="space-y-0.5">' + questsBody + '</div>'
-          + '</div>';
-
-        html =
-            '<div class="space-y-5 animate-fade-in">'
-          +   headerHtml
-          +   threadsCard
-          +   '<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">' + sessionCard + questsCard + '</div>'
-          + '</div>';
+        html = `<div class="space-y-6 animate-fade-in"><div class="bg-emerald-900 text-emerald-50 p-6 rounded-2xl shadow-sm flex items-center space-x-4 mb-8"><div class="bg-emerald-800 p-3 rounded-xl"><i data-lucide="map" class="w-8 h-8 text-emerald-300"></i></div><div><h3 class="text-2xl font-bold text-white">Campaign Notes</h3><p class="text-emerald-200">Organize your ongoing adventure logs here.</p></div></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${renderTocCard('Session Notes', 'campaign_sessionNotes', 'scroll-text', 'Log your session events, summaries, and plot developments.')}${renderTocCard('Quests', 'campaign_quests', 'swords', 'Track active main quests, side quests, and completed objectives.')}${renderTocCard('NPCs', 'campaign_npcs', 'users', 'Details on important characters, allies, and villains you meet.')}${renderTocCard('Locations', 'campaign_locations', 'map-pin', 'Notes on cities, dungeons, and unique points of interest.')}${renderTocCard('Misc & Loot', 'campaign_misc', 'package', 'Party treasury, random thoughts, and other loose notes.')}</div></div>`;
     }
     else if (activeTab.startsWith('campaign_')) {
         const subSection = activeTab.replace('campaign_', '');
@@ -1180,7 +1039,7 @@ window.renderContent = function() {
             if (characterData.campaignNotes.sessionNotes.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No sessions added yet.</p>`;
             characterData.campaignNotes.sessionNotes.forEach((sess, idx) => {
                 contentHtml += `
-                    <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(sess.title)} ${escapeHtml(sess.date)} ${escapeHtml(sess.notes)}">
+                    <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(sess.title)} ${escapeHtml(sess.date)} ${escapeHtml(sess.notes)} ${escapeHtml((sess.tags || []).join(' '))}">
                         <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                             <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${sess.isCollapsed ? 'collapsed' : ''}"></i></button>
@@ -1188,6 +1047,7 @@ window.renderContent = function() {
                                 <input type="text" id="input-sess-date-${sess.id}" oninput="window.updateSession('${sess.id}', 'date', this.value)" value="${escapeHtml(sess.date)}" class="seamless-input text-sm text-stone-500 bg-transparent px-2 py-1 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Date">
                             </div>
                             <div class="flex items-center space-x-1 ml-2">
+                                <button onclick="window.copySessionAsText('${sess.id}')" class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800" title="Copy session as text"><i data-lucide="copy" class="w-4 h-4"></i></button>
                                 ${renderActionButtons('Session', sess.id, idx === 0, idx === characterData.campaignNotes.sessionNotes.length - 1)}
                             </div>
                         </div>
@@ -1226,7 +1086,7 @@ window.renderContent = function() {
                         : 'bg-stone-50 dark:bg-stone-950 border-stone-100 dark:border-stone-800';
 
                     sectionHtml += `
-                        <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border ${cardBorder} rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(quest.title)} ${escapeHtml(quest.subtitle)} ${escapeHtml(quest.notes)}">
+                        <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border ${cardBorder} rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(quest.title)} ${escapeHtml(quest.subtitle)} ${escapeHtml(quest.notes)} ${escapeHtml((quest.tags || []).join(' '))}">
                             <div class="${leftBg} px-4 py-5 flex flex-col items-center justify-start space-y-3 border-r">
                                 <button onclick="window.toggleQuestCompletion('${quest.id}')" class="text-stone-300 dark:text-stone-600 hover:text-emerald-500 transition-colors focus:outline-none" title="Mark complete">
                                     ${quest.isCompleted ? `<i data-lucide="check-square" class="w-6 h-6 text-emerald-500"></i>` : `<i data-lucide="square" class="w-6 h-6 hover:text-emerald-400"></i>`}
@@ -1267,7 +1127,7 @@ window.renderContent = function() {
             if (characterData.campaignNotes.locations.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No locations added yet.</p>`;
             characterData.campaignNotes.locations.forEach((loc, idx) => {
                 contentHtml += `
-                    <div id="${loc.id}" class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(loc.title)} ${escapeHtml(loc.subtitle)} ${escapeHtml(loc.notes)}">
+                    <div id="${loc.id}" class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(loc.title)} ${escapeHtml(loc.subtitle)} ${escapeHtml(loc.notes)} ${escapeHtml((loc.tags || []).join(' '))}">
                         <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                             <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <button onclick="window.toggleLocationCollapse('${loc.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${loc.isCollapsed ? 'collapsed' : ''}"></i></button>
@@ -1303,7 +1163,7 @@ window.renderContent = function() {
                         <div class="collapsible-content ${faction.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                             <div class="p-4 space-y-4">
                                 ${faction.members.map((npc, nIdx) => `
-                                    <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.subtitle || '')} ${escapeHtml(npc.notes)}">
+                                    <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.subtitle || '')} ${escapeHtml(npc.notes)} ${escapeHtml((npc.tags || []).join(' '))}">
                                         <div class="flex-shrink-0 flex flex-col items-center gap-2 mt-1">
                                             <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group shadow-inner transition-all animate-fade-in" title="Character avatar">
                                                 ${npc.avatar ? `
