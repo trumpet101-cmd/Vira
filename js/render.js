@@ -1202,6 +1202,14 @@ window.renderContent = function() {
                                         </div>
                                         <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
                                             <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete NPC"><i data-lucide="x" class="w-4 h-4"></i></button>
+                                            <div class="relative" title="Move to another faction">
+                                                <span class="block text-stone-400 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"><i data-lucide="folder-input" class="w-4 h-4"></i></span>
+                                                <select onchange="window.moveNPCToFaction('${faction.id}', '${npc.id}', this.value)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                                    <option value="" selected disabled>Move to faction\u2026</option>
+                                                    ${characterData.campaignNotes.npcs.filter(f => f.id !== faction.id).map(f => `<option value="${f.id}">${escapeHtml(f.name || 'Unnamed Faction')}</option>`).join('')}
+                                                    <option value="__new__">\u2795 New Faction\u2026</option>
+                                                </select>
+                                            </div>
                                             <div class="flex space-x-0.5 mt-2">
                                                 <button onclick="window.moveNPC('${faction.id}', '${npc.id}', -1)" ${nIdx === 0 ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Up"><i data-lucide="arrow-up" class="w-3.5 h-3.5"></i></button>
                                                 <button onclick="window.moveNPC('${faction.id}', '${npc.id}', 1)" ${nIdx === faction.members.length - 1 ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Down"><i data-lucide="arrow-down" class="w-3.5 h-3.5"></i></button>

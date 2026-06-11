@@ -435,6 +435,38 @@ window.deleteNPC = function(facId, npcId) { window.showCustomConfirm('Delete Cha
 window.toggleNpcCollapse = function(facId, npcId) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if (fac) { const npc = fac.members.find(n => n.id === npcId); if (npc) { npc.isCollapsed = !npc.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
 window.moveNPC = function(facId, npcId, direction) { const faction = characterData.campaignNotes.npcs.find(f => f.id === facId); if (!faction) return; const arr = faction.members; const index = arr.findIndex(n => n.id === npcId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
 
+// --- MOVE NPC BETWEEN FACTIONS ---
+// Powers the folder-input picker on each NPC card. Reassigns the NPC to the
+// chosen faction (or to a freshly created one via the '__new__' sentinel,
+// which the user can then rename inline). The NPC keeps its id, so existing
+// @mention deep-links and backlinks keep working after the move.
+window.moveNPCToFaction = function(sourceFacId, npcId, targetFacId) {
+    if (!targetFacId) return;
+    var npcs = characterData.campaignNotes.npcs;
+    var source = npcs.find(function(f) { return f.id === sourceFacId; });
+    if (!source) return;
+    var idx = source.members.findIndex(function(n) { return n.id === npcId; });
+    if (idx === -1) return;
+
+    var target;
+    if (targetFacId === '__new__') {
+        target = { id: 'fac_' + Date.now(), name: 'New Faction', isCollapsed: false, members: [] };
+        npcs.unshift(target);
+    } else {
+        target = npcs.find(function(f) { return f.id === targetFacId; });
+    }
+    if (!target) return;
+
+    var npc = source.members.splice(idx, 1)[0];
+    target.members.push(npc);
+    target.isCollapsed = false; // expand destination so the NPC doesn't silently vanish
+
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+    if (typeof flashSuccessIndicator === 'function') {
+        flashSuccessIndicator('Moved "' + (npc.name || 'NPC') + '" to ' + (target.name || 'faction') + '!');
+    }
+};
+
 window.filterNPCs = function(query) {
     currentSearchQueries.npcs = query;
     const q = query.toLowerCase();
