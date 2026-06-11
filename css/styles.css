@@ -63,3 +63,12 @@
     margin-bottom: 0.25rem !important;
     padding-left: 0.25rem !important;
 }
+/* Native <select> dropdown popups (move-to-faction picker, relationship badge,
+   armor selects) render with browser defaults. Without these rules, dark mode
+   shows the OS's white popup with the page's inherited light text — invisible
+   until hovered. `color-scheme` tells Chromium/Safari to draw the popup with
+   native dark styling; the explicit option colors cover Firefox and Windows. */
+select { color-scheme: light; }
+select option { background-color: #ffffff; color: #292524; }
+.dark select { color-scheme: dark; }
+.dark select option { background-color: #1c1917; color: #f5f5f4; }
