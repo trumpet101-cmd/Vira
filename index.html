@@ -191,6 +191,10 @@
                     <span class="text-[10px] font-bold uppercase tracking-wider">Import</span>
                 </button>
                 <input type="file" id="import-json-input" accept=".json" class="hidden" onchange="window.importJSON(event)">
+                <button onclick="window.exportMarkdown()" class="col-span-2 flex items-center justify-center space-x-2 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export this character's notes as a readable Markdown document (opens in Word, Google Docs, or any text editor)">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Export Readable Notes</span>
+                </button>
             </div>
         </div>
     </aside>
