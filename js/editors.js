@@ -327,6 +327,159 @@ window.handleThreadAddBlur = function(event) {
     }, 160);
 };
 
+// --- EXPORT CHARACTER AS MARKDOWN ---
+// Produces a human-readable .md document of the current character: basics,
+// backstory, personality, build summary, and all campaign notes. Markdown is
+// plain text (safe as a long-term backup) and imports cleanly into Word,
+// Google Docs, Discord, and Obsidian. Empty sections are skipped entirely.
+window.exportMarkdown = function() {
+    var md = [];
+    var cd = characterData;
+
+    function section(text) { if (text) md.push(text); }
+    function notesBlock(html) {
+        var t = htmlToPlainOutline(html);
+        return t ? t + '\n' : '';
+    }
+    function tagSuffix(entry) {
+        return (entry.tags && entry.tags.length) ? '  `#' + entry.tags.join('` `#') + '`' : '';
+    }
+
+    // --- Header ---
+    md.push('# ' + (cd.name || 'Unnamed Character') + '\n');
+    var b = cd.basics || {};
+    var subtitleBits = [b.race, b.class].filter(Boolean).join(' \u2014 ');
+    if (subtitleBits) md.push('*' + subtitleBits + '*\n');
+    var basicLines = [];
+    if (b.age) basicLines.push('**Age:** ' + b.age);
+    if (b.background) basicLines.push('**Background:** ' + b.background);
+    if (b.tribe) basicLines.push('**Tribe/Origin:** ' + b.tribe);
+    if (b.familiar) basicLines.push('**Familiar:** ' + b.familiar);
+    if (basicLines.length) md.push(basicLines.join('  \n') + '\n');
+    md.push('*Exported ' + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) + '*\n');
+
+    // --- Backstory ---
+    var backstory = (cd.backstory || []).filter(function(s) { return (s.notes || '').trim(); });
+    if (backstory.length) {
+        md.push('## Backstory\n');
+        backstory.forEach(function(s) {
+            md.push('### ' + (s.title || 'Untitled') + '\n');
+            section(notesBlock(s.notes));
+        });
+    }
+
+    // --- Personality ---
+    var personality = (cd.personality || []).filter(function(p) { return (p.notes || '').trim(); });
+    if (personality.length) {
+        md.push('## Personality\n');
+        personality.forEach(function(p) {
+            md.push('### ' + (p.title || 'Untitled') + (p.subtitle ? ' \u2014 ' + p.subtitle : '') + '\n');
+            section(notesBlock(p.notes));
+        });
+    }
+
+    // --- Build ---
+    var build = cd.build || {};
+    var buildLines = [];
+    if (Array.isArray(build.abilities) && build.abilities.length) {
+        var abilityParts = build.abilities.map(function(a) {
+            var total = ['starting', 'species', 'lvl1', 'lvl4', 'lvl8', 'lvl12', 'lvl16', 'lvl19', 'lvl20']
+                .reduce(function(sum, k) { return sum + (Number(a[k]) || 0); }, 0);
+            return '- **' + a.name + ':** ' + total;
+        });
+        buildLines.push('### Ability Scores\n' + abilityParts.join('\n') + '\n');
+    }
+    if (build.feats) {
+        var featOrder = [['lvl1', 'Level 1'], ['lvl4', 'Level 4'], ['lvl8', 'Level 8'], ['lvl12', 'Level 12'], ['lvl16', 'Level 16'], ['lvl19', 'Level 19'], ['lvl20', 'Level 20']];
+        var featLines = featOrder.filter(function(f) { return (build.feats[f[0]] || '').trim(); })
+            .map(function(f) { return '- **' + f[1] + ':** ' + build.feats[f[0]]; });
+        if (featLines.length) buildLines.push('### Feats\n' + featLines.join('\n') + '\n');
+    }
+    if ((build.features || '').trim && (build.features || '').trim()) buildLines.push('### Features\n' + notesBlock(build.features));
+    if ((build.equipment || '').trim && (build.equipment || '').trim()) buildLines.push('### Equipment\n' + notesBlock(build.equipment));
+    if (buildLines.length) { md.push('## Build\n'); buildLines.forEach(section); }
+
+    // --- Campaign Notes ---
+    var cn = cd.campaignNotes || {};
+    var hasCampaign = (cn.threads || []).length || (cn.sessionNotes || []).length || (cn.quests || []).length || (cn.npcs || []).some(function(f) { return (f.members || []).length; }) || (cn.locations || []).length || (cn.misc || '').trim();
+    if (hasCampaign) md.push('## Campaign Notes\n');
+
+    if ((cn.threads || []).length) {
+        md.push('### Open Threads\n');
+        md.push(cn.threads.map(function(t) {
+            var text = htmlToPlainOutline(t.text).replace(/\n+/g, ' ');
+            return '- ' + text + tagSuffix(t);
+        }).join('\n') + '\n');
+    }
+
+    if ((cn.sessionNotes || []).length) {
+        md.push('### Session Notes\n');
+        cn.sessionNotes.forEach(function(s) {
+            md.push('#### ' + (s.title || 'Untitled Session') + (s.date ? ' \u2014 ' + s.date : '') + tagSuffix(s) + '\n');
+            section(notesBlock(s.notes));
+        });
+    }
+
+    if ((cn.quests || []).length) {
+        md.push('### Quests\n');
+        [['Urgent', function(q) { return q.isUrgent && !q.isCompleted; }],
+         ['In Progress', function(q) { return !q.isUrgent && !q.isCompleted; }],
+         ['Completed', function(q) { return q.isCompleted; }]].forEach(function(cat) {
+            var list = cn.quests.filter(cat[1]);
+            if (!list.length) return;
+            md.push('#### ' + cat[0] + '\n');
+            list.forEach(function(q) {
+                md.push('**' + (q.title || 'Untitled Quest') + '**' + (q.subtitle ? ' \u2014 ' + q.subtitle : '') + tagSuffix(q) + '\n');
+                section(notesBlock(q.notes));
+            });
+        });
+    }
+
+    var factionsWithMembers = (cn.npcs || []).filter(function(f) { return (f.members || []).length; });
+    if (factionsWithMembers.length) {
+        md.push('### NPCs\n');
+        factionsWithMembers.forEach(function(f) {
+            md.push('#### ' + (f.name || 'Unnamed Faction') + '\n');
+            f.members.forEach(function(n) {
+                var rel = (typeof NPC_RELATIONSHIPS !== 'undefined' && NPC_RELATIONSHIPS[n.relationship]) ? NPC_RELATIONSHIPS[n.relationship].label : '';
+                var headline = '**' + (n.name || 'Unnamed') + '**';
+                if (n.subtitle) headline += ' \u2014 ' + n.subtitle;
+                if (rel && rel !== 'Unknown') headline += ' *(' + rel + ')*';
+                headline += tagSuffix(n);
+                md.push(headline + '\n');
+                section(notesBlock(n.notes));
+            });
+        });
+    }
+
+    if ((cn.locations || []).length) {
+        md.push('### Locations\n');
+        cn.locations.forEach(function(l) {
+            md.push('#### ' + (l.title || 'Untitled Location') + (l.subtitle ? ' \u2014 ' + l.subtitle : '') + tagSuffix(l) + '\n');
+            section(notesBlock(l.notes));
+        });
+    }
+
+    if ((cn.misc || '').trim()) {
+        md.push('### Misc & Loot\n');
+        section(notesBlock(cn.misc));
+    }
+
+    // --- Download ---
+    var output = md.join('\n');
+    var safeName = (cd.name || 'character').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase();
+    var blob = new Blob([output], { type: 'text/markdown;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = safeName + '_notes_' + new Date().toISOString().slice(0, 10) + '.md';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    if (typeof flashSuccessIndicator === 'function') flashSuccessIndicator('Readable notes exported!');
+};
+
 // --- MENTION LABEL SYNC ON RENAME ---
 // @mention anchors snapshot the entry's name at insert time. When an entry is
 // renamed, this sweeps every notes field and rewrites matching anchors to the
