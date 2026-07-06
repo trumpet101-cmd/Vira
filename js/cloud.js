@@ -445,3 +445,76 @@ window.handleSignOut = async function() {
         try { await auth.signOut(); } catch(e) { console.error("Sign out failed: ", e); }
     });
 };
+
+
+// =========================================================================
+// STORAGE USAGE TOOLTIP (hover the cloud-status pill)
+// =========================================================================
+// localStorage is the tightest budget (~5MB per browser origin, shared across
+// every character plus their local snapshots). This adds a hover tooltip to the
+// cloud-status pill so you can keep an eye on it. Usage is summed live on hover;
+// there is no reliable browser API for the exact quota, so this is an estimate
+// against a conservative 5MB budget, not a precise gauge.
+
+var STORAGE_BUDGET_BYTES = 5 * 1024 * 1024;
+
+function computeStorageReport() {
+    var totalBytes = 0, charCount = 0;
+    var thisCharDataBytes = 0, thisCharSnapBytes = 0, thisCharSnapCount = 0;
+    var activeKey = 'character_data_' + currentCharacterId;
+    var histKey   = 'version_history_' + currentCharacterId;
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k === null) continue;
+        var v = localStorage.getItem(k) || '';
+        // Browsers store localStorage as UTF-16, so ~2 bytes per code unit.
+        var bytes = (k.length + v.length) * 2;
+        totalBytes += bytes;
+        if (k.indexOf('character_data_') === 0) charCount++;
+        if (k === activeKey) thisCharDataBytes = bytes;
+        if (k === histKey) {
+            thisCharSnapBytes = bytes;
+            try { thisCharSnapCount = (JSON.parse(v) || []).length; } catch (e) {}
+        }
+    }
+    return {
+        totalBytes: totalBytes,
+        charCount: charCount,
+        thisCharBytes: thisCharDataBytes + thisCharSnapBytes,
+        thisCharSnapCount: thisCharSnapCount
+    };
+}
+
+function formatStorageMB(bytes) {
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function updateCloudStatusTooltip() {
+    var el = document.getElementById('cloud-status-btn');
+    if (!el) return;
+    var r = computeStorageReport();
+    var pct = Math.round(r.totalBytes / STORAGE_BUDGET_BYTES * 100);
+    var snapWord = r.thisCharSnapCount === 1 ? 'snapshot' : 'snapshots';
+    var charWord = r.charCount === 1 ? 'character' : 'characters';
+    el.title =
+        'Local storage: ' + formatStorageMB(r.totalBytes) + ' used (~' + pct + '% of ~5 MB)' + '\n' +
+        'This character: ' + formatStorageMB(r.thisCharBytes) + ' (data + ' + r.thisCharSnapCount + ' local ' + snapWord + ')' + '\n' +
+        r.charCount + ' ' + charWord + ' stored on this device' + '\n' +
+        'Full version history is also saved to the cloud.';
+}
+
+// Refresh the tooltip text right before it shows, so it is always current.
+(function initStorageTooltip() {
+    function attach() {
+        var el = document.getElementById('cloud-status-btn');
+        if (!el || el._storageTooltipWired) return;
+        el._storageTooltipWired = true;
+        el.addEventListener('mouseenter', updateCloudStatusTooltip);
+        updateCloudStatusTooltip();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attach);
+    } else {
+        attach();
+    }
+})();
