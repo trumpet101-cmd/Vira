@@ -43,7 +43,10 @@ window.showCustomConfirm = function(title, message, icon, onConfirm, requiredInp
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
     cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
     
-    cancelBtn.classList.remove('hidden');
+    // FIX: operate on the NEW (live) cancel button. The old node was just
+    // replaced/detached, so un-hiding it had no effect — after any alert
+    // (which hides cancel), every later confirm dialog lost its Cancel button.
+    newCancelBtn.classList.remove('hidden');
     newConfirmBtn.innerText = "Confirm";
     
     if (requiredInputText) {

@@ -175,6 +175,11 @@ function flashSuccessIndicator(textMsg) {
 // Tracks whether an edit is waiting on the debounced cloud write.
 // Lets the visibility/unload flush below know there is work to push.
 var pendingCloudWrite = false;
+// Which character the pending write belongs to. performCloudSave refuses to
+// write if the active character has changed since the edit was made, so a
+// fast character switch can never save character A's data over character B's
+// Firestore document. (switchCharacter also flushes before switching.)
+var pendingSaveCharId = null;
 
 // The actual Firestore write, extracted from saveData so it can be invoked
 // immediately (flush) as well as on the debounce timer.
@@ -239,6 +244,14 @@ window.fromCloudDoc = fromCloudDoc;
 async function performCloudSave() {
     clearTimeout(saveTimeout);
     if (!pendingCloudWrite) return;
+    if (pendingSaveCharId && pendingSaveCharId !== currentCharacterId) {
+        // Stale write from before a character switch — never write it under
+        // the new id. The edit is already safe in localStorage under its own
+        // character_data_<oldId> key and will sync next time that character
+        // is edited.
+        pendingCloudWrite = false;
+        return;
+    }
     pendingCloudWrite = false;
     if (isCloudReady && cloudUser && db && currentCharacterId) {
         try {
@@ -314,6 +327,7 @@ window.saveData = function() {
     lastLocalEditTime = Date.now(); // Trip the Edit Lock to stop sync stomping
     clearTimeout(saveTimeout);
     pendingCloudWrite = true;
+    pendingSaveCharId = currentCharacterId;
     saveCharacterDataLocal();
 
     const index = characterList.findIndex(c => c.id === currentCharacterId);

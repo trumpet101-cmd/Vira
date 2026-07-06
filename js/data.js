@@ -104,24 +104,47 @@ function migrateData(data) {
     
     data.campaignNotes.npcs.forEach((fac, facIdx) => {
         if (!fac.id) fac.id = 'fac_migrated_' + facIdx + '_' + Date.now();
+        if (typeof fac.name !== 'string') fac.name = "";
         if (fac.isCollapsed === undefined) fac.isCollapsed = false;
         if (!Array.isArray(fac.members)) fac.members = [];
         else fac.members.forEach((npc, npcIdx) => { 
             if (!npc.id) npc.id = 'npc_migrated_' + facIdx + '_' + npcIdx + '_' + Date.now(); 
             if (npc.isCollapsed === undefined) npc.isCollapsed = false;
-            if (npc.subtitle === undefined) npc.subtitle = "";
+            if (typeof npc.name !== 'string') npc.name = "";
+            if (typeof npc.notes !== 'string') npc.notes = "";
+            if (npc.subtitle === undefined || typeof npc.subtitle !== 'string') npc.subtitle = "";
             if (npc.relationship === undefined) npc.relationship = "unknown";
             if (!Array.isArray(npc.tags)) npc.tags = [];
         });
     });
 
-    data.campaignNotes.sessionNotes.forEach((s, sIdx) => { if (!s.id) s.id = 'sess_migrated_' + sIdx + '_' + Date.now(); if (!Array.isArray(s.tags)) s.tags = []; });
+    // String-field defaults below protect global search and the mention sweep,
+    // which call .toLowerCase()/.indexOf() on these fields unguarded. Legacy or
+    // hand-imported entries missing a field would otherwise throw and break
+    // search for the whole vault.
+    data.campaignNotes.sessionNotes.forEach((s, sIdx) => {
+        if (!s.id) s.id = 'sess_migrated_' + sIdx + '_' + Date.now();
+        if (typeof s.title !== 'string') s.title = "";
+        if (typeof s.date !== 'string') s.date = "";
+        if (typeof s.notes !== 'string') s.notes = "";
+        if (!Array.isArray(s.tags)) s.tags = [];
+    });
     data.campaignNotes.quests.forEach((q, qIdx) => {
         if (!q.id) q.id = 'quest_migrated_' + qIdx + '_' + Date.now();
+        if (typeof q.title !== 'string') q.title = "";
+        if (typeof q.subtitle !== 'string') q.subtitle = "";
+        if (typeof q.notes !== 'string') q.notes = "";
+        if (q.isCompleted === undefined) q.isCompleted = false;
         if (q.isUrgent === undefined) q.isUrgent = false;
         if (!Array.isArray(q.tags)) q.tags = [];
     });
-    data.campaignNotes.locations.forEach((l, lIdx) => { if (!l.id) l.id = 'loc_migrated_' + lIdx + '_' + Date.now(); if (!Array.isArray(l.tags)) l.tags = []; });
+    data.campaignNotes.locations.forEach((l, lIdx) => {
+        if (!l.id) l.id = 'loc_migrated_' + lIdx + '_' + Date.now();
+        if (typeof l.title !== 'string') l.title = "";
+        if (typeof l.subtitle !== 'string') l.subtitle = "";
+        if (typeof l.notes !== 'string') l.notes = "";
+        if (!Array.isArray(l.tags)) l.tags = [];
+    });
     
     if (!data.backstory || !Array.isArray(data.backstory)) {
         data.backstory = [
@@ -129,7 +152,7 @@ function migrateData(data) {
             { id: 'b_3', title: "The Vision", notes: "", isCollapsed: false }, { id: 'b_4', title: "The Journey", notes: "", isCollapsed: false }
         ];
     } else {
-        data.backstory.forEach((b, bIdx) => { if (b.isCollapsed === undefined) b.isCollapsed = false; if (!b.id) b.id = 'b_migrated_' + bIdx + '_' + Date.now(); });
+        data.backstory.forEach((b, bIdx) => { if (b.isCollapsed === undefined) b.isCollapsed = false; if (!b.id) b.id = 'b_migrated_' + bIdx + '_' + Date.now(); if (typeof b.title !== 'string') b.title = ""; if (typeof b.notes !== 'string') b.notes = ""; });
     }
 
     if (!data.personality || !Array.isArray(data.personality)) {
@@ -144,6 +167,9 @@ function migrateData(data) {
             if ('isRed' in p) delete p.isRed; 
             if (p.isCollapsed === undefined) p.isCollapsed = false;
             if (!p.id) p.id = 'p_migrated_' + pIdx + '_' + Date.now();
+            if (typeof p.title !== 'string') p.title = "";
+            if (typeof p.subtitle !== 'string') p.subtitle = "";
+            if (typeof p.notes !== 'string') p.notes = "";
         });
     }
 

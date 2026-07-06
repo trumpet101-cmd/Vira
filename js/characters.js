@@ -107,20 +107,44 @@ window.createNewCharacter = async function() {
 };
 
 window.switchCharacter = function(charId) {
+    // 1. FLUSH FIRST: push any pending debounced cloud write for the CURRENT
+    //    character before the id changes. performCloudSave reads characterData
+    //    and currentCharacterId synchronously, so calling it here writes the
+    //    right data to the right document. (Its pendingSaveCharId guard also
+    //    protects us if this flush is ever skipped.)
+    if (typeof performCloudSave === 'function') performCloudSave();
+    // 2. CLEAR THE EDIT LOCK: otherwise a switch within 4s of typing makes the
+    //    incoming character's first snapshot get ignored, leaving the previous
+    //    character's data on screen under the new id.
+    if (typeof lastLocalEditTime !== 'undefined') lastLocalEditTime = 0;
+
     currentCharacterId = charId;
     localStorage.setItem('current_character_id', currentCharacterId);
     currentSearchQueries = { sessionNotes: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
+    // Reset per-character snapshot timers so version history doesn't fire
+    // against the wrong character.
+    if (typeof window.refreshVersionHistoryForCharacter === 'function') window.refreshVersionHistoryForCharacter();
+
+    // 3. HYDRATE IMMEDIATELY from the local copy when one exists, even in cloud
+    //    mode. The UI then never shows the previous character's data while
+    //    waiting for the Firestore snapshot (and switching works offline).
+    //    The snapshot, when it arrives, simply refreshes over this.
+    const loaded = JSON.parse(localStorage.getItem('character_data_' + charId));
+    if (loaded) {
+        characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...loaded };
+        migrateData(characterData);
+        document.getElementById('header-name-input').value = characterData.name;
+    } else if (!(isCloudReady && cloudUser && db)) {
+        // Offline with no local copy: fall back to a clean sheet (old behaviour).
+        characterData = JSON.parse(JSON.stringify(initialCharacterData));
+        migrateData(characterData);
+        document.getElementById('header-name-input').value = characterData.name;
+    }
+    // (Cloud mode with no local copy: keep current data on screen briefly and
+    // let the snapshot listener below populate it, as before.)
 
     if (isCloudReady && cloudUser && db) {
         listenToActiveCharacter();
-    } else {
-        const loaded = JSON.parse(localStorage.getItem('character_data_' + charId));
-        if (loaded) characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...loaded };
-        else characterData = JSON.parse(JSON.stringify(initialCharacterData));
-        migrateData(characterData);
-        document.getElementById('header-name-input').value = characterData.name;
-        window.renderContent();
-        lucide.createIcons();
     }
     window.setTab('campaignNotes');
     window.hideCharacterModal();

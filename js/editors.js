@@ -82,7 +82,7 @@ window.recalculateBuildScores = function() {
 // --- DYNAMIC LIST MANAGEMENT ---
 window.addBackstory = function() { currentSearchQueries.backstory = ''; characterData.backstory.unshift({ id: 'b_' + Date.now(), title: 'New Lore Section', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.updateBackstory = function(bId, field, val) { const entry = characterData.backstory.find(b => b.id === bId); if(entry) entry[field] = val; if (field === 'title') window.syncMentionLabels(bId, val); window.saveData(); }
-window.deleteBackstory = function(bId) { window.showCustomConfirm('Delete Backstory Section?', 'Are you sure you want to permanently delete this backstory section?', '📜', () => { characterData.backstory = characterData.backstory.filter(b => b.id !== bId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.deleteBackstory = function(bId) { const mc = window.countMentions(bId); window.showCustomConfirm('Delete Backstory Section?', 'Are you sure you want to permanently delete this backstory section?' + mentionWarningText(mc), '📜', () => { characterData.backstory = characterData.backstory.filter(b => b.id !== bId); window.neutralizeMentions(bId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleBackstoryCollapse = function(bId) { const entry = characterData.backstory.find(b => b.id === bId); if(entry) { entry.isCollapsed = !entry.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleAllBackstory = function(collapse) { characterData.backstory.forEach(b => b.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.moveBackstory = function(bId, direction) { const arr = characterData.backstory; const index = arr.findIndex(b => b.id === bId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } }
@@ -90,7 +90,7 @@ window.filterBackstory = function(query) { currentSearchQueries.backstory = quer
 
 window.addPersonality = function() { currentSearchQueries.personality = ''; characterData.personality.unshift({ id: 'p_' + Date.now(), title: 'New Trait / Code', subtitle: 'A brief state description', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.updatePersonality = function(pId, field, val) { const entry = characterData.personality.find(p => p.id === pId); if(entry) entry[field] = val; if (field === 'title') window.syncMentionLabels(pId, val); window.saveData(); }
-window.deletePersonality = function(pId) { window.showCustomConfirm('Delete Personality Trait?', 'Are you sure you want to permanently delete this personality section?', '🧠', () => { characterData.personality = characterData.personality.filter(p => p.id !== pId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.deletePersonality = function(pId) { const mc = window.countMentions(pId); window.showCustomConfirm('Delete Personality Trait?', 'Are you sure you want to permanently delete this personality section?' + mentionWarningText(mc), '🧠', () => { characterData.personality = characterData.personality.filter(p => p.id !== pId); window.neutralizeMentions(pId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.togglePersonalityCollapse = function(pId) { const entry = characterData.personality.find(p => p.id === pId); if(entry) { entry.isCollapsed = !entry.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleAllPersonality = function(collapse) { characterData.personality.forEach(p => p.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.movePersonality = function(pId, direction) { const arr = characterData.personality; const index = arr.findIndex(p => p.id === pId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } }
@@ -98,7 +98,7 @@ window.filterPersonality = function(query) { currentSearchQueries.personality = 
 
 window.addSession = function() { currentSearchQueries.sessionNotes = ''; characterData.campaignNotes.sessionNotes.unshift({ id: 'sess_' + Date.now(), title: '', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.updateSession = function(sessId, field, val) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) sess[field] = val; if (field === 'title') window.syncMentionLabels(sessId, val); window.saveData(); }
-window.deleteSession = function(sessId) { window.showCustomConfirm('Delete Session Log?', 'Are you sure you want to permanently delete this session log entry?', '🗑️', () => { characterData.campaignNotes.sessionNotes = characterData.campaignNotes.sessionNotes.filter(s => s.id !== sessId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.deleteSession = function(sessId) { const mc = window.countMentions(sessId); window.showCustomConfirm('Delete Session Log?', 'Are you sure you want to permanently delete this session log entry?' + mentionWarningText(mc), '🗑️', () => { characterData.campaignNotes.sessionNotes = characterData.campaignNotes.sessionNotes.filter(s => s.id !== sessId); window.neutralizeMentions(sessId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleSessionCollapse = function(sessId) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) { sess.isCollapsed = !sess.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleAllSessions = function(collapse) { characterData.campaignNotes.sessionNotes.forEach(s => s.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.moveSession = function(sessId, direction) { const arr = characterData.campaignNotes.sessionNotes; const index = arr.findIndex(s => s.id === sessId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
@@ -230,6 +230,9 @@ window.toggleThreadResolved = function(id) {
 
 window.deleteThread = function(id) {
     characterData.campaignNotes.threads = (characterData.campaignNotes.threads || []).filter(function(t) { return t.id !== id; });
+    // Threads can't be @mentioned today, so this is a no-op safety sweep that
+    // keeps deletion correct if threads ever become mention targets.
+    window.neutralizeMentions(id);
     window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
 };
 
@@ -516,26 +519,90 @@ window.syncMentionLabels = function(itemId, newLabel) {
             var updated = rewriteMentionLabelsInHtml(obj[key], itemId, label);
             if (updated !== obj[key]) { obj[key] = updated; changed = true; }
         }
-        characterData.backstory.forEach(function(b) { sweepField(b, 'notes'); });
-        characterData.personality.forEach(function(p) { sweepField(p, 'notes'); });
-        var cn = characterData.campaignNotes;
-        cn.sessionNotes.forEach(function(s) { sweepField(s, 'notes'); });
-        cn.quests.forEach(function(qst) { sweepField(qst, 'notes'); });
-        cn.locations.forEach(function(l) { sweepField(l, 'notes'); });
-        cn.npcs.forEach(function(f) { (f.members || []).forEach(function(n) { sweepField(n, 'notes'); }); });
-        (cn.threads || []).forEach(function(t) { sweepField(t, 'text'); });
-        if (typeof cn.misc === 'string') sweepField(cn, 'misc');
-        if (characterData.build) {
-            if (typeof characterData.build.features === 'string') sweepField(characterData.build, 'features');
-            if (typeof characterData.build.equipment === 'string') sweepField(characterData.build, 'equipment');
-        }
+        forEachMentionField(sweepField);
         if (changed) window.saveData();
     }, 400);
 };
 
+// --- MENTION CLEANUP ON DELETE ---
+// Enumerates every field that can hold @mention HTML — the single source of
+// truth shared by syncMentionLabels (rename), countMentions and
+// neutralizeMentions (delete). Add any future notes field HERE only.
+function forEachMentionField(visit) {
+    characterData.backstory.forEach(function(b) { visit(b, 'notes'); });
+    characterData.personality.forEach(function(p) { visit(p, 'notes'); });
+    var cn = characterData.campaignNotes;
+    cn.sessionNotes.forEach(function(s) { visit(s, 'notes'); });
+    cn.quests.forEach(function(qst) { visit(qst, 'notes'); });
+    cn.locations.forEach(function(l) { visit(l, 'notes'); });
+    cn.npcs.forEach(function(f) { (f.members || []).forEach(function(n) { visit(n, 'notes'); }); });
+    (cn.threads || []).forEach(function(t) { visit(t, 'text'); });
+    if (typeof cn.misc === 'string') visit(cn, 'misc');
+    if (characterData.build) {
+        if (typeof characterData.build.features === 'string') visit(characterData.build, 'features');
+        if (typeof characterData.build.equipment === 'string') visit(characterData.build, 'equipment');
+    }
+}
+
+// Count @mention anchors across ALL notes that point at any of the given
+// entry ids. Accepts a single id or an array (faction cascades pass the
+// faction id plus every member id).
+window.countMentions = function(itemIds) {
+    var ids = (Array.isArray(itemIds) ? itemIds : [itemIds]).filter(function(id) { return !!id; });
+    if (ids.length === 0) return 0;
+    var total = 0;
+    forEachMentionField(function(obj, key) {
+        var html = obj[key];
+        if (!html) return;
+        // Cheap pre-check before paying for DOM parsing.
+        if (!ids.some(function(id) { return html.indexOf(id) !== -1; })) return;
+        var d = document.createElement('div');
+        d.innerHTML = html;
+        ids.forEach(function(id) {
+            total += d.querySelectorAll('a[onclick*="\'' + id + '\'"]').length;
+        });
+    });
+    return total;
+};
+
+// Replace every @mention anchor pointing at the given ids with an inert
+// <span> that keeps the visible "@Name" text, so notes read exactly the same
+// but no dead links remain. Mutates characterData only — the calling delete
+// handler is responsible for saveData() + renderContent() afterwards.
+window.neutralizeMentions = function(itemIds) {
+    var ids = (Array.isArray(itemIds) ? itemIds : [itemIds]).filter(function(id) { return !!id; });
+    if (ids.length === 0) return 0;
+    var replaced = 0;
+    forEachMentionField(function(obj, key) {
+        var html = obj[key];
+        if (!html) return;
+        if (!ids.some(function(id) { return html.indexOf(id) !== -1; })) return;
+        var d = document.createElement('div');
+        d.innerHTML = html;
+        var changed = false;
+        ids.forEach(function(id) {
+            d.querySelectorAll('a[onclick*="\'' + id + '\'"]').forEach(function(a) {
+                var span = document.createElement('span');
+                span.textContent = a.textContent; // keep the visible "@Name"
+                a.parentNode.replaceChild(span, a);
+                changed = true;
+                replaced++;
+            });
+        });
+        if (changed) obj[key] = d.innerHTML;
+    });
+    return replaced;
+};
+
+// Sentence appended to delete confirms when the entry is mentioned somewhere.
+function mentionWarningText(count) {
+    if (!count) return '';
+    return ' It is linked from ' + count + ' @mention' + (count === 1 ? '' : 's') + ' in your notes; deleting will turn ' + (count === 1 ? 'that link' : 'those links') + ' into plain text.';
+}
+
 window.addQuest = function() { currentSearchQueries.quests = ''; characterData.campaignNotes.quests.unshift({ id: 'quest_' + Date.now(), title: '', subtitle: '', notes: '', isCompleted: false, isUrgent: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.updateQuest = function(questId, field, val) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) quest[field] = val; if (field === 'title') window.syncMentionLabels(questId, val); window.saveData(); }
-window.deleteQuest = function(questId) { window.showCustomConfirm('Delete Quest?', 'Are you sure you want to permanently remove this quest objective?', '⚔️', () => { characterData.campaignNotes.quests = characterData.campaignNotes.quests.filter(q => q.id !== questId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.deleteQuest = function(questId) { const mc = window.countMentions(questId); window.showCustomConfirm('Delete Quest?', 'Are you sure you want to permanently remove this quest objective?' + mentionWarningText(mc), '⚔️', () => { characterData.campaignNotes.quests = characterData.campaignNotes.quests.filter(q => q.id !== questId); window.neutralizeMentions(questId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleQuestUrgency = function(questId) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) { quest.isUrgent = !quest.isUrgent; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleQuestCompletion = function(questId) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) { quest.isCompleted = !quest.isCompleted; if(quest.isCompleted) quest.isUrgent = false; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleQuestSectionCollapse = function(section) { questSectionsState[section] = !questSectionsState[section]; window.renderContent(); if (window.lucide) lucide.createIcons(); }
@@ -544,7 +611,7 @@ window.filterQuests = function(query) { currentSearchQueries.quests = query; con
 
 window.addLocation = function() { currentSearchQueries.locations = ''; characterData.campaignNotes.locations.unshift({ id: 'loc_' + Date.now(), title: '', subtitle: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.updateLocation = function(locId, field, val) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) loc[field] = val; if (field === 'title') window.syncMentionLabels(locId, val); window.saveData(); }
-window.deleteLocation = function(locId) { window.showCustomConfirm('Delete Location?', 'Are you sure you want to permanently remove this location?', '📍', () => { characterData.campaignNotes.locations = characterData.campaignNotes.locations.filter(l => l.id !== locId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.deleteLocation = function(locId) { const mc = window.countMentions(locId); window.showCustomConfirm('Delete Location?', 'Are you sure you want to permanently remove this location?' + mentionWarningText(mc), '📍', () => { characterData.campaignNotes.locations = characterData.campaignNotes.locations.filter(l => l.id !== locId); window.neutralizeMentions(locId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleLocationCollapse = function(locId) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) { loc.isCollapsed = !loc.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleAllLocations = function(collapse) { characterData.campaignNotes.locations.forEach(l => l.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.moveLocation = function(locId, direction) { const arr = characterData.campaignNotes.locations; const index = arr.findIndex(l => l.id === locId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
@@ -552,7 +619,7 @@ window.filterLocations = function(query) { currentSearchQueries.locations = quer
 
 window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: '', isCollapsed: false, members: [] }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.updateFaction = function(facId, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.name = val; window.syncMentionLabels(facId, val); window.saveData(); }
-window.deleteFaction = function(facId) { window.showCustomConfirm('Delete Faction?', 'Are you sure you want to delete this faction, its members, and all related logs?', '🛡️', () => { characterData.campaignNotes.npcs = characterData.campaignNotes.npcs.filter(f => f.id !== facId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.deleteFaction = function(facId) { const facRef = characterData.campaignNotes.npcs.find(f => f.id === facId); const cascadeIds = [facId].concat(facRef && Array.isArray(facRef.members) ? facRef.members.map(n => n.id) : []); const mc = window.countMentions(cascadeIds); window.showCustomConfirm('Delete Faction?', 'Are you sure you want to delete this faction, its members, and all related logs?' + mentionWarningText(mc), '🛡️', () => { characterData.campaignNotes.npcs = characterData.campaignNotes.npcs.filter(f => f.id !== facId); window.neutralizeMentions(cascadeIds); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleFactionCollapse = function(facId) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if (fac) { fac.isCollapsed = !fac.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } };
 window.toggleAllFactions = function(collapse) {
     characterData.campaignNotes.npcs.forEach(f => {
@@ -584,7 +651,7 @@ window.updateNPCRelationship = function(facId, npcId, val) {
         }
     }
 };
-window.deleteNPC = function(facId, npcId) { window.showCustomConfirm('Delete Character?', 'Are you sure you want to permanently remove this NPC?', '👤', () => { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.members = fac.members.filter(n => n.id !== npcId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.deleteNPC = function(facId, npcId) { const mc = window.countMentions(npcId); window.showCustomConfirm('Delete Character?', 'Are you sure you want to permanently remove this NPC?' + mentionWarningText(mc), '👤', () => { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.members = fac.members.filter(n => n.id !== npcId); window.neutralizeMentions(npcId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
 window.toggleNpcCollapse = function(facId, npcId) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if (fac) { const npc = fac.members.find(n => n.id === npcId); if (npc) { npc.isCollapsed = !npc.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
 window.moveNPC = function(facId, npcId, direction) { const faction = characterData.campaignNotes.npcs.find(f => f.id === facId); if (!faction) return; const arr = faction.members; const index = arr.findIndex(n => n.id === npcId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
 

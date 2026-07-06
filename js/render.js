@@ -905,7 +905,7 @@ window.renderContent = function() {
             const isFirst = idx === 0;
             const isLast = idx === characterData.backstory.length - 1;
             contentHtml += `
-                <div id="${b.id}" class="backstory-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(b.title)} ${escapeHtml(b.notes)}">
+                <div id="${b.id}" class="backstory-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(b.title)} ${escapeHtml(stripHtmlToText(b.notes))}">
                     <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                         <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                             <button onclick="window.toggleBackstoryCollapse('${b.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${isCollapsed ? 'collapsed' : ''}"></i></button>
@@ -929,7 +929,7 @@ window.renderContent = function() {
 
         characterData.personality.forEach((p, idx) => {
             contentHtml += `
-                <div id="${p.id}" class="personality-block mb-4 border rounded-xl shadow-sm overflow-hidden bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800" data-searchable="${escapeHtml(p.title)} ${escapeHtml(p.subtitle)} ${escapeHtml(p.notes)}">
+                <div id="${p.id}" class="personality-block mb-4 border rounded-xl shadow-sm overflow-hidden bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800" data-searchable="${escapeHtml(p.title)} ${escapeHtml(p.subtitle)} ${escapeHtml(stripHtmlToText(p.notes))}">
                     <div class="bg-stone-50/40 dark:bg-stone-800/40 border-b border-stone-200/50 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                         <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                             <button onclick="window.togglePersonalityCollapse('${p.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${p.isCollapsed ? 'collapsed' : ''}"></i></button>
@@ -1180,7 +1180,7 @@ window.renderContent = function() {
             if (characterData.campaignNotes.sessionNotes.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No sessions added yet.</p>`;
             characterData.campaignNotes.sessionNotes.forEach((sess, idx) => {
                 contentHtml += `
-                    <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(sess.title)} ${escapeHtml(sess.date)} ${escapeHtml(sess.notes)} ${escapeHtml((sess.tags || []).join(' '))}">
+                    <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(sess.title)} ${escapeHtml(sess.date)} ${escapeHtml(stripHtmlToText(sess.notes))} ${escapeHtml((sess.tags || []).join(' '))}">
                         <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                             <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${sess.isCollapsed ? 'collapsed' : ''}"></i></button>
@@ -1227,7 +1227,7 @@ window.renderContent = function() {
                         : 'bg-stone-50 dark:bg-stone-950 border-stone-100 dark:border-stone-800';
 
                     sectionHtml += `
-                        <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border ${cardBorder} rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(quest.title)} ${escapeHtml(quest.subtitle)} ${escapeHtml(quest.notes)} ${escapeHtml((quest.tags || []).join(' '))}">
+                        <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border ${cardBorder} rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(quest.title)} ${escapeHtml(quest.subtitle)} ${escapeHtml(stripHtmlToText(quest.notes))} ${escapeHtml((quest.tags || []).join(' '))}">
                             <div class="${leftBg} px-4 py-5 flex flex-col items-center justify-start space-y-3 border-r">
                                 <button onclick="window.toggleQuestCompletion('${quest.id}')" class="text-stone-300 dark:text-stone-600 hover:text-emerald-500 transition-colors focus:outline-none" title="Mark complete">
                                     ${quest.isCompleted ? `<i data-lucide="check-square" class="w-6 h-6 text-emerald-500"></i>` : `<i data-lucide="square" class="w-6 h-6 hover:text-emerald-400"></i>`}
@@ -1268,7 +1268,7 @@ window.renderContent = function() {
             if (characterData.campaignNotes.locations.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No locations added yet.</p>`;
             characterData.campaignNotes.locations.forEach((loc, idx) => {
                 contentHtml += `
-                    <div id="${loc.id}" class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(loc.title)} ${escapeHtml(loc.subtitle)} ${escapeHtml(loc.notes)} ${escapeHtml((loc.tags || []).join(' '))}">
+                    <div id="${loc.id}" class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(loc.title)} ${escapeHtml(loc.subtitle)} ${escapeHtml(stripHtmlToText(loc.notes))} ${escapeHtml((loc.tags || []).join(' '))}">
                         <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                             <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <button onclick="window.toggleLocationCollapse('${loc.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${loc.isCollapsed ? 'collapsed' : ''}"></i></button>
@@ -1304,7 +1304,7 @@ window.renderContent = function() {
                         <div class="collapsible-content ${faction.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
                             <div class="p-4 space-y-4">
                                 ${faction.members.map((npc, nIdx) => `
-                                    <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.subtitle || '')} ${escapeHtml(npc.notes)} ${escapeHtml((npc.tags || []).join(' '))}">
+                                    <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.subtitle || '')} ${escapeHtml(stripHtmlToText(npc.notes))} ${escapeHtml((npc.tags || []).join(' '))}">
                                         <div class="flex-shrink-0 flex flex-col items-center gap-2 mt-1">
                                             <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group shadow-inner transition-all animate-fade-in" title="Character avatar">
                                                 ${npc.avatar ? `
