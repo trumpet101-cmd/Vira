@@ -15,6 +15,7 @@ window.renderCharacterModalList = function() {
 
     listContainer.innerHTML = filtered.map(char => {
         const isActive = char.id === currentCharacterId;
+        const isLocked = window.isCharacterLocked(char.id);
         const borderClass = isActive ? 'border-emerald-500 bg-emerald-50/50' : 'border-stone-200 dark:border-stone-800 hover:border-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 bg-white dark:bg-stone-900';
         const activeBadge = isActive ? `<span class="px-2.5 py-0.5 text-[10px] font-bold bg-emerald-600 text-white rounded-full uppercase tracking-wider shadow-sm flex items-center space-x-1"><i data-lucide="check" class="w-3 h-3"></i><span>Active</span></span>` : '';
         const titleColor = isActive ? 'text-emerald-900 dark:text-emerald-400 font-extrabold' : 'text-stone-800 dark:text-stone-100 font-bold';
@@ -32,9 +33,12 @@ window.renderCharacterModalList = function() {
                 </div>
                 <div class="flex items-center space-x-2 flex-shrink-0 ml-4">
                     ${activeBadge}
-                    <button onclick="window.deleteCharacter(event, '${char.id}')" class="text-stone-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-stone-800 transition-colors" title="Delete Sheet">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <button onclick="window.toggleCharacterLock(event, '${char.id}')" class="${isLocked ? 'text-amber-500 hover:text-amber-600 bg-amber-50 dark:bg-amber-950/30' : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100 dark:hover:bg-stone-800'} p-1.5 rounded-lg transition-colors" title="${isLocked ? 'Locked \u2014 click to unlock' : 'Lock to prevent deletion'}">
+                        <i data-lucide="${isLocked ? 'lock' : 'lock-open'}" class="w-4 h-4"></i>
                     </button>
+                    ${isLocked ? '' : `<button onclick="window.deleteCharacter(event, '${char.id}')" class="text-stone-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-stone-800 transition-colors" title="Delete Sheet">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>`}
                 </div>
             </div>`;
     }).join('');
@@ -42,6 +46,37 @@ window.renderCharacterModalList = function() {
 };
 
 window.filterCharacterModalList = function() { window.renderCharacterModalList(); };
+
+// --- VAULT DELETION LOCKS (device-local guard against accidental deletion) ---
+// Lock state lives in THIS browser (localStorage), kept fully separate from the
+// synced character data. A locked character hides its delete button and is
+// refused by deleteCharacter; unlocking requires typing "unlock".
+function getVaultLocks() {
+    try { return JSON.parse(localStorage.getItem('vault_locks')) || []; }
+    catch (e) { return []; }
+}
+window.isCharacterLocked = function(charId) { return getVaultLocks().indexOf(charId) !== -1; };
+function setVaultLock(charId, locked) {
+    var locks = getVaultLocks();
+    var idx = locks.indexOf(charId);
+    if (locked && idx === -1) locks.push(charId);
+    else if (!locked && idx !== -1) locks.splice(idx, 1);
+    localStorage.setItem('vault_locks', JSON.stringify(locks));
+}
+window.toggleCharacterLock = function(event, charId) {
+    event.stopPropagation();
+    var targetChar = characterList.find(function(c) { return c.id === charId; });
+    var charName = targetChar ? targetChar.name : "this character";
+    if (window.isCharacterLocked(charId)) {
+        window.showCustomConfirm('Unlock Character?', 'Type "unlock" to remove deletion protection from "' + charName + '".', '\uD83D\uDD13', function() {
+            setVaultLock(charId, false);
+            window.renderCharacterModalList();
+        }, "unlock");
+    } else {
+        setVaultLock(charId, true);
+        window.renderCharacterModalList();
+    }
+};
 
 window.createNewCharacter = async function() {
     const name = document.getElementById('new-char-name').value.trim();
@@ -93,13 +128,18 @@ window.switchCharacter = function(charId) {
 
 window.deleteCharacter = function(event, charId) {
     event.stopPropagation();
+    if (window.isCharacterLocked(charId)) {
+        const lockedChar = characterList.find(c => c.id === charId);
+        window.showCustomAlert("Character Locked", `"${lockedChar ? lockedChar.name : 'This character'}" is locked to prevent deletion. Unlock it from the vault first.`, "\uD83D\uDD12");
+        return;
+    }
     if (characterList.length <= 1) { window.showCustomAlert("Cannot Delete", "You must keep at least one character in your vault.", "🚫"); return; }
     const targetChar = characterList.find(c => c.id === charId);
     const charName = targetChar ? targetChar.name : "this character";
 
     window.showCustomConfirm('Delete Character?', `Are you absolutely sure you want to delete "${charName}"? This will remove all associated notes, stats, and builds.`, '🗑️', () => {
         setTimeout(() => {
-            window.showCustomConfirm('Double Verification Required', `This is your final warning. To permanently erase "${charName}" and purge all campaign files from cloud nodes, type the word "Delete" below.`, '🔥', async () => {
+            window.showCustomConfirm('Double Verification Required', `This is your final warning. To permanently erase "${charName}" and purge all campaign files from cloud nodes, type "Delete ${charName}" below.`, '🔥', async () => {
                 characterList = characterList.filter(c => c.id !== charId);
                 localStorage.setItem('character_list', JSON.stringify(characterList));
                 localStorage.removeItem('character_data_' + charId);
@@ -110,7 +150,7 @@ window.deleteCharacter = function(event, charId) {
                 }
                 if (charId === currentCharacterId) window.switchCharacter(characterList[0].id);
                 else window.renderCharacterModalList();
-            }, "Delete");
+            }, `Delete ${charName}`);
         }, 300);
     });
 };
