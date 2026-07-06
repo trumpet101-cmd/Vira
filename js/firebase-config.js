@@ -17,6 +17,19 @@ var appId = 'vira-dnd-notes';
 var appInstance = firebase.initializeApp(firebaseConfig);
 var auth = firebase.auth();
 var db = firebase.firestore();
+
+// --- OFFLINE PERSISTENCE ---
+// Queued writes survive tab close/reload and resend automatically when the
+// connection returns, closing the "typed a note, killed the tab within a
+// second" data-loss window. synchronizeTabs lets multiple open tabs share
+// the same cache instead of the second tab failing to acquire it.
+// Failure is safe: 'failed-precondition' (another tab already owns the
+// cache in an SDK without multi-tab support) or 'unimplemented' (browser
+// lacks IndexedDB) simply leaves the app running exactly as before.
+db.enablePersistence({ synchronizeTabs: true }).catch(function(e) {
+    console.warn('Firestore persistence unavailable:', e && e.code ? e.code : e);
+});
+
 var storage = firebase.storage();
 
 // Cloud sync state vars (used across cloud.js)
