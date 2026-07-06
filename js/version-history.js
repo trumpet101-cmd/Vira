@@ -167,12 +167,13 @@ async function takeCloudSnapshot(charId, todayDate) {
             .collection('characters').doc(charId);
         var snapshotsRef = charDocRef.collection('snapshots');
 
-        // 1. Write the full snapshot doc
-        await snapshotsRef.doc(docId).set({
-            timestamp: ts,
-            characterId: charId,
-            data: dataClone
-        });
+        // 1. Write the full snapshot doc (data compressed to stay under 1 MiB)
+        var snapPayload = (typeof window.compressPayload === 'function') ? window.compressPayload(dataClone) : null;
+        await snapshotsRef.doc(docId).set(
+            snapPayload !== null
+                ? { timestamp: ts, characterId: charId, _cv: 1, data: snapPayload }
+                : { timestamp: ts, characterId: charId, data: dataClone }
+        );
 
         // 2. Read the current index (tiny doc), add the new entry, prune
         var indexRef = snapshotsRef.doc('_index');
@@ -379,7 +380,14 @@ window.restoreSnapshot = async function(source, key) {
                 return;
             }
             var d = docSnap.data();
-            snapshotData = d.data;
+            var raw = (d._cv && typeof window.decompressPayload === 'function') ? window.decompressPayload(d.data) : d.data;
+            if (!raw) {
+                if (typeof showCustomAlert === 'function') {
+                    showCustomAlert('Restore Failed', 'This cloud snapshot could not be read. It may be corrupted.', '\u274C');
+                }
+                return;
+            }
+            snapshotData = raw;
             snapshotTs = d.timestamp || Date.now();
         } catch(e) {
             console.error('Cloud snapshot fetch failed:', e);
@@ -413,7 +421,7 @@ window.restoreSnapshot = async function(source, key) {
                 db.collection('artifacts').doc(appId)
                   .collection('users').doc(cloudUser.uid)
                   .collection('characters').doc(currentCharacterId)
-                  .set(characterData)
+                  .set((typeof window.toCloudDoc === 'function') ? window.toCloudDoc(characterData) : characterData)
                   .catch(function(e) { console.error("Restore cloud sync failed:", e); });
             }
 

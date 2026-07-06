@@ -60,7 +60,7 @@ window.createNewCharacter = async function() {
     if (isCloudReady && cloudUser && db) {
         updateCloudUIStatus("Creating Character...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
         try {
-            await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId).set(newCharData);
+            await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId).set(toCloudDoc(newCharData));
             window.switchCharacter(newCharId);
         } catch (e) { console.error("Failed to write new character to cloud: ", e); handleSyncError(e); }
     } else {

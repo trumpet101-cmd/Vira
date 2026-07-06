@@ -72,13 +72,13 @@ function listenToCharactersList() {
                         updateCloudUIStatus("Migrating Legacy Notes...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
                         const legacyData = legacySnap.data();
                         const newCharId = 'char_' + Date.now();
-                        await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId).set(legacyData);
+                        await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId).set(toCloudDoc(legacyData));
                         currentCharacterId = newCharId;
                         localStorage.setItem('current_character_id', currentCharacterId);
                         await legacyDocRef.delete();
                     } else {
                         const defaultId = 'char_' + Date.now();
-                        await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(defaultId).set(JSON.parse(JSON.stringify(initialCharacterData)));
+                        await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(defaultId).set(toCloudDoc(JSON.parse(JSON.stringify(initialCharacterData))));
                         currentCharacterId = defaultId;
                         localStorage.setItem('current_character_id', currentCharacterId);
                     }
@@ -108,7 +108,7 @@ function listenToActiveCharacter() {
         if (Date.now() - lastLocalEditTime < 4000) return;
         
         if (docSnap.exists) {
-            characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...docSnap.data() };
+            characterData = { ...JSON.parse(JSON.stringify(initialCharacterData)), ...fromCloudDoc(docSnap.data()) };
             migrateData(characterData);
             localStorage.setItem('character_data_' + currentCharacterId, JSON.stringify(characterData));
             document.getElementById('header-name-input').value = characterData.name;
@@ -178,6 +178,64 @@ var pendingCloudWrite = false;
 
 // The actual Firestore write, extracted from saveData so it can be invoked
 // immediately (flush) as well as on the debounce timer.
+// =========================================================================
+// CLOUD PAYLOAD COMPRESSION
+// =========================================================================
+// Characters are stored in Firestore as a compressed payload so a large
+// campaign stays well under the 1 MiB per-document limit. A little metadata
+// (name, race, class) is kept in plain fields so the sidebar list can read it
+// without decompressing every doc. Reads are tolerant: an older uncompressed
+// document (no _cv marker) is returned as-is, so existing data still loads and
+// simply gets rewritten compressed on its next save. This covers the CLOUD
+// copy only -- localStorage stays uncompressed.
+
+function compressPayload(obj) {
+    try {
+        if (typeof LZString === 'undefined') return null;
+        return LZString.compressToBase64(JSON.stringify(obj));
+    } catch (e) { console.warn('Compression failed, storing plain:', e); return null; }
+}
+
+function decompressPayload(str) {
+    try {
+        if (typeof LZString === 'undefined') return null;
+        var json = LZString.decompressFromBase64(str);
+        return json ? JSON.parse(json) : null;
+    } catch (e) { console.warn('Decompression failed:', e); return null; }
+}
+
+// Wrap a character object into the shape written to a Firestore character doc.
+function toCloudDoc(charObj) {
+    var payload = compressPayload(charObj);
+    if (payload === null) {
+        // Library missing/failed -> store the plain object so saving never breaks.
+        return JSON.parse(JSON.stringify(charObj));
+    }
+    return {
+        _cv: 1,
+        name: charObj.name || 'Unnamed Character',
+        basics: {
+            race: (charObj.basics && charObj.basics.race) || 'Unknown Race',
+            class: (charObj.basics && charObj.basics.class) || 'Unknown Class'
+        },
+        payload: payload
+    };
+}
+
+// Unwrap a Firestore character doc back into a plain character object.
+function fromCloudDoc(data) {
+    if (data && data._cv && typeof data.payload === 'string') {
+        var obj = decompressPayload(data.payload);
+        if (obj) return obj;
+    }
+    return data; // uncompressed/legacy doc, or a decompress failure
+}
+window.compressPayload = compressPayload;
+window.decompressPayload = decompressPayload;
+window.toCloudDoc = toCloudDoc;
+window.fromCloudDoc = fromCloudDoc;
+
+
 async function performCloudSave() {
     clearTimeout(saveTimeout);
     if (!pendingCloudWrite) return;
@@ -185,7 +243,7 @@ async function performCloudSave() {
     if (isCloudReady && cloudUser && db && currentCharacterId) {
         try {
             // Deep clone so we don't mutate characterData in memory
-            const dataToSave = JSON.parse(JSON.stringify(characterData));
+            const dataToSave = toCloudDoc(characterData);
             await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(currentCharacterId).set(dataToSave);
             triggerSaveIndicator();
         } catch (e) {
@@ -295,7 +353,7 @@ window.exportJSON = async function() {
         try {
             for (const char of characterList) {
                 const docSnap = await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(char.id).get();
-                if (docSnap.exists) { backupPayload.characters[char.id] = docSnap.data(); } 
+                if (docSnap.exists) { backupPayload.characters[char.id] = fromCloudDoc(docSnap.data()); } 
                 else {
                     const localData = localStorage.getItem('character_data_' + char.id);
                     if (localData) backupPayload.characters[char.id] = JSON.parse(localData);
@@ -360,7 +418,7 @@ window.importJSON = function(event) {
                         for (const [charId, charData] of Object.entries(parsedData.characters)) {
                             migrateData(charData);
                             localStorage.setItem('character_data_' + charId, JSON.stringify(charData));
-                            if (isCloudReady && cloudUser && db) await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(charId).set(charData);
+                            if (isCloudReady && cloudUser && db) await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(charId).set(toCloudDoc(charData));
                         }
                         
                         const targetId = parsedData.currentCharacterId || characterList[0]?.id || 'default';
@@ -385,7 +443,7 @@ window.importJSON = function(event) {
                         localStorage.setItem('character_list', JSON.stringify(characterList));
                         localStorage.setItem('character_data_' + newCharId, JSON.stringify(newCharData));
                         
-                        if (isCloudReady && cloudUser && db) await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId).set(newCharData);
+                        if (isCloudReady && cloudUser && db) await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(newCharId).set(toCloudDoc(newCharData));
                         window.switchCharacter(newCharId);
                         flashSuccessIndicator("Character imported successfully!");
                     }
