@@ -208,11 +208,55 @@ document.addEventListener('visibilitychange', function() {
 });
 window.addEventListener('beforeunload', function() { performCloudSave(); });
 
+// --- LOCAL SAVE GUARD (quota-safe) ---------------------------------------
+// The cloud write scheduled at the end of saveData is the durable copy, so a
+// full-storage error on the local write must never abort saveData. For the
+// main character document we also try to reclaim space once by dropping THIS
+// character's local version-history snapshots -- those are only a convenience
+// layer (cloud snapshots cover real history), so live character data wins.
+function saveCharacterDataLocal() {
+    var key = 'character_data_' + currentCharacterId;
+    try {
+        localStorage.setItem(key, JSON.stringify(characterData));
+        return true;
+    } catch (e) {
+        // Reclaim the biggest local consumer for this character, then retry once.
+        try { localStorage.removeItem('version_history_' + currentCharacterId); } catch (_) {}
+        try {
+            localStorage.setItem(key, JSON.stringify(characterData));
+            return true;
+        } catch (e2) {
+            warnLocalStorageFullOnce();
+            return false;
+        }
+    }
+}
+
+// Generic best-effort write for small keys (e.g. the character list).
+function safeSetItem(key, value) {
+    try { localStorage.setItem(key, value); return true; }
+    catch (e) { warnLocalStorageFullOnce(); return false; }
+}
+
+// One-time, honest heads-up. Message adapts to whether the cloud copy is live.
+function warnLocalStorageFullOnce() {
+    console.warn('localStorage quota exceeded -- a local copy could not be written.');
+    if (window._localSaveQuotaWarned) return;
+    window._localSaveQuotaWarned = true;
+    if (typeof window.showCustomAlert !== 'function') return;
+    var cloudOn = (typeof isCloudReady !== 'undefined' && isCloudReady &&
+                   typeof cloudUser !== 'undefined' && cloudUser);
+    var msg = cloudOn
+        ? "Your browser storage is full, so this device couldn't save a local copy of your most recent changes. They're still being saved to the cloud, so your data is safe. To restore the local backup layer, use Backup All to export, then remove characters you no longer need."
+        : "Your browser storage is full and cloud sync is off, so your most recent changes may not be saved. Please use Backup All to export your data now, then remove old characters to free up space.";
+    window.showCustomAlert('Storage Full', msg, '\u26A0\uFE0F');
+}
+
 window.saveData = function() {
     lastLocalEditTime = Date.now(); // Trip the Edit Lock to stop sync stomping
     clearTimeout(saveTimeout);
     pendingCloudWrite = true;
-    localStorage.setItem('character_data_' + currentCharacterId, JSON.stringify(characterData));
+    saveCharacterDataLocal();
 
     const index = characterList.findIndex(c => c.id === currentCharacterId);
     if (index !== -1) {
@@ -223,7 +267,7 @@ window.saveData = function() {
             characterList[index].name = characterData.name;
             characterList[index].race = characterData.basics.race;
             characterList[index].class = characterData.basics.class;
-            localStorage.setItem('character_list', JSON.stringify(characterList));
+            safeSetItem('character_list', JSON.stringify(characterList));
             window.renderCharacterModalList();
         }
     }
