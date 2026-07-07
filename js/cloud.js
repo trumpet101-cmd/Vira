@@ -128,7 +128,22 @@ function handleSyncError(error) {
     }
 }
 
-function updateCloudUIStatus(text, icon, classes) {
+// =========================================================================
+// UNIFIED CLOUD PILL (status + save feedback in one place)
+// =========================================================================
+// The old separate "Saved automatically" indicator was merged into the
+// cloud-status pill to reclaim header space. The pill has a PERSISTENT
+// state (e.g. "Cloud Sync Active", errors, "Please Sign In") set via
+// updateCloudUIStatus, and short-lived FLASH messages ("Saving...",
+// "Saved to Cloud", success toasts) that overwrite it briefly and then
+// settle back to whatever the persistent state is at that moment.
+
+var cloudPillPersistent = { text: "Local Storage Active", icon: "hard-drive", classes: "bg-stone-800 text-stone-400" };
+var cloudPillFlashTimer = null;
+
+// Low-level paint. Never call directly from feature code; use
+// updateCloudUIStatus (persistent) or flashCloudPill (temporary).
+function setCloudPill(text, icon, classes) {
     const btn = document.getElementById('cloud-status-btn');
     if(btn) {
         btn.className = `w-full flex items-center justify-center space-x-2 px-4 py-2 rounded text-sm transition-all ${classes}`;
@@ -137,39 +152,38 @@ function updateCloudUIStatus(text, icon, classes) {
     }
 }
 
-function triggerSaveIndicator() {
-    const ind = document.getElementById('save-indicator');
-    const iconWrapper = document.getElementById('save-icon-wrapper');
-    const text = document.getElementById('save-text');
-    
-    ind.classList.remove('opacity-50');
-    iconWrapper.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 text-emerald-500 animate-spin"></i>`;
-    text.innerText = "Saving...";
-    if (window.lucide) lucide.createIcons();
+function updateCloudUIStatus(text, icon, classes) {
+    cloudPillPersistent = { text: text, icon: icon, classes: classes };
+    // A real status change always wins over an in-flight flash.
+    clearTimeout(cloudPillFlashTimer);
+    cloudPillFlashTimer = null;
+    setCloudPill(text, icon, classes);
+}
 
-    setTimeout(() => {
-        iconWrapper.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>`;
-        text.innerText = isCloudReady ? "Saved to Cloud" : "Saved automatically";
-        ind.classList.add('opacity-50');
-        if (window.lucide) lucide.createIcons();
-    }, 600);
+function flashCloudPill(text, icon, classes, durationMs) {
+    clearTimeout(cloudPillFlashTimer);
+    setCloudPill(text, icon, classes);
+    cloudPillFlashTimer = setTimeout(function() {
+        cloudPillFlashTimer = null;
+        setCloudPill(cloudPillPersistent.text, cloudPillPersistent.icon, cloudPillPersistent.classes);
+    }, durationMs);
+}
+
+function triggerSaveIndicator() {
+    // Quick "Saving..." spinner, then a "Saved" check, then settle back to
+    // the persistent status (Cloud Sync Active / Local Storage Active / etc).
+    var savedText = isCloudReady ? "Saved to Cloud" : "Saved locally";
+    clearTimeout(cloudPillFlashTimer);
+    setCloudPill("Saving...", "loader-2", "bg-emerald-900/50 text-emerald-400 animate-pulse");
+    cloudPillFlashTimer = setTimeout(function() {
+        flashCloudPill(savedText, "check-circle-2", "bg-emerald-900/50 text-emerald-400", 1500);
+    }, 500);
 }
 
 function flashSuccessIndicator(textMsg) {
-    const ind = document.getElementById('save-indicator');
-    const iconWrapper = document.getElementById('save-icon-wrapper');
-    const text = document.getElementById('save-text');
-    
-    ind.classList.remove('opacity-50');
-    iconWrapper.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>`;
-    text.innerText = textMsg;
-    if (window.lucide) lucide.createIcons();
-    
-    setTimeout(() => {
-        ind.classList.add('opacity-50');
-        text.innerText = isCloudReady ? "Saved to Cloud" : "Saved automatically";
-        if (window.lucide) lucide.createIcons();
-    }, 4000);
+    // Success toasts ("Thread added!", "Version restored!", ...) flash on
+    // the cloud pill for a few seconds, then the persistent status returns.
+    flashCloudPill(textMsg, "check-circle-2", "bg-emerald-900/50 text-emerald-400", 3000);
 }
 
 // Tracks whether an edit is waiting on the debounced cloud write.
@@ -262,8 +276,9 @@ async function performCloudSave() {
         } catch (e) {
             console.error("Cloud save failed, relying on local backup", e);
             pendingCloudWrite = true; // still dirty — a later flush can retry
+            // handleSyncError puts the error state on the pill; flashing
+            // "Saved to Cloud" over it would be misleading, so don't.
             handleSyncError(e);
-            triggerSaveIndicator();
         }
     } else { triggerSaveIndicator(); }
 }

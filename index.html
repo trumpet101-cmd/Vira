@@ -181,7 +181,7 @@
                 <span>Switch Character</span>
             </button>
 
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-3 gap-2">
                 <button onclick="window.exportJSON()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export entire vault data as a single backup file">
                     <i data-lucide="download" class="w-4 h-4"></i>
                     <span class="text-[10px] font-bold uppercase tracking-wider">Backup All</span>
@@ -190,10 +190,19 @@
                     <i data-lucide="upload" class="w-4 h-4"></i>
                     <span class="text-[10px] font-bold uppercase tracking-wider">Import</span>
                 </button>
+                <button onclick="window.openVersionHistory()" class="relative flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Version History — restore an earlier snapshot of this character">
+                    <i data-lucide="history" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">History</span>
+                    <span id="version-history-badge" class="hidden absolute -top-1.5 -right-1.5 w-4 h-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none"></span>
+                </button>
                 <input type="file" id="import-json-input" accept=".json" class="hidden" onchange="window.importJSON(event)">
-                <button onclick="window.exportMarkdown()" class="col-span-2 flex items-center justify-center space-x-2 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export this character's notes as a readable Markdown document (opens in Word, Google Docs, or any text editor)">
+                <button onclick="window.exportMarkdown()" class="col-span-3 flex items-center justify-center space-x-2 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export this character's notes as a readable Markdown document (opens in Word, Google Docs, or any text editor)">
                     <i data-lucide="file-text" class="w-4 h-4"></i>
                     <span class="text-[10px] font-bold uppercase tracking-wider">Export Readable Notes</span>
+                </button>
+                <button onclick="window.handleSignOut()" class="col-span-3 flex items-center justify-center space-x-2 py-2.5 bg-red-950/40 hover:bg-red-900 rounded-lg text-red-300 transition-colors" title="Sign out of cloud sync on this device">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Sign Out</span>
                 </button>
             </div>
         </div>
@@ -212,7 +221,7 @@
                 </h2>
             </div>
             
-            <div class="relative flex-1 max-w-md mx-6 hidden sm:block">
+            <div class="relative flex-1 max-w-2xl mx-6 hidden sm:block">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <i data-lucide="search" class="w-4 h-4 text-stone-400"></i>
                 </div>
@@ -221,19 +230,6 @@
             </div>
 
             <div class="flex items-center space-x-3 flex-shrink-0">
-                <div class="flex items-center space-x-2 text-stone-400 dark:text-stone-500 bg-stone-50 dark:bg-stone-800/60 px-3 py-1.5 rounded-full border border-stone-200 dark:border-stone-800 transition-all duration-300 flex-shrink-0" id="save-indicator">
-                    <span id="save-icon-wrapper" class="flex items-center justify-center">
-                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
-                    </span>
-                    <span class="text-sm font-medium" id="save-text">Saved automatically</span>
-                </div>
-
-                <button onclick="window.openVersionHistory()" title="Version History" class="relative flex items-center justify-center space-x-2 px-3 py-1.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-sm text-stone-400 hover:text-stone-200 transition-colors flex-shrink-0">
-                    <i data-lucide="history" class="w-4 h-4"></i>
-                    <span class="hidden sm:inline">History</span>
-                    <span id="version-history-badge" class="hidden absolute -top-1.5 -right-1.5 w-4 h-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none"></span>
-                </button>
-
                 <div class="flex-shrink-0 min-w-[170px]">
                     <div id="cloud-status-btn" class="w-full flex items-center justify-center space-x-2 px-3 py-1.5 rounded-lg text-sm transition-all bg-stone-800 text-stone-400">
                         <i data-lucide="hard-drive" class="w-4 h-4"></i>
@@ -241,11 +237,7 @@
                     </div>
                 </div>
 
-                <button onclick="window.handleSignOut()" class="flex items-center justify-center space-x-2 px-3 py-1.5 bg-red-950/40 hover:bg-red-900 rounded-lg text-sm text-red-300 transition-colors flex-shrink-0">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                    <span>Sign Out</span>
-                </button>
-            </div>
+                </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar" id="scroll-area">
