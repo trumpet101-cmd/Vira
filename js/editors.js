@@ -888,7 +888,13 @@ window.handleOutlineKeyDown = function(event) {
 window.handleOutlineFocus = function(event) {
     const div = event.currentTarget;
     const html = div.innerHTML.trim();
-    if (html === "" || html === "<br>" || html === "<div><br></div>" || !div.querySelector('ul')) {
+    // Scaffold a starter bullet ONLY when the box is truly empty. The old
+    // check also fired when content existed without a <ul> (plain sentences
+    // or paragraphs, e.g. pasted or imported text), which REPLACED that
+    // content with an empty bullet on focus — silently deleting it. Any
+    // non-empty content, bulleted or not, must be left untouched.
+    const isEmpty = html === "" || html === "<br>" || html === "<div><br></div>";
+    if (isEmpty) {
         div.innerHTML = "<ul><li><br></li></ul>";
         setTimeout(() => {
             const range = document.createRange();
