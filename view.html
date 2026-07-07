@@ -81,10 +81,22 @@
             </div>
         </header>
 
-        <!-- TAB NAV -->
+        <!-- TAB NAV + SEARCH -->
         <nav class="sticky top-0 z-20 bg-stone-100/95 dark:bg-stone-950/95 backdrop-blur border-b border-stone-200 dark:border-stone-800/80">
             <div class="max-w-5xl mx-auto px-4 sm:px-6">
-                <div id="view-tabs" class="flex gap-2 overflow-x-auto py-3 custom-scrollbar"></div>
+                <div class="flex flex-col-reverse sm:flex-row sm:items-center gap-2 py-3">
+                    <div id="view-tabs" class="flex gap-2 overflow-x-auto custom-scrollbar flex-1"></div>
+                    <div class="relative sm:w-72 flex-shrink-0">
+                        <i data-lucide="search" class="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                        <input type="text" id="view-search" autocomplete="off"
+                            oninput="window.handleViewSearch(this.value)"
+                            onkeydown="window.handleViewSearchKey(event)"
+                            onblur="window.handleViewSearchBlur()"
+                            placeholder="Search the journal..."
+                            class="w-full pl-9 pr-3 py-2 text-sm border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all font-medium placeholder:text-stone-400">
+                        <ul id="view-search-dropdown" class="hidden absolute left-0 right-0 mt-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-2xl max-h-[340px] overflow-y-auto z-50 flex flex-col text-sm custom-scrollbar animate-fade-in"></ul>
+                    </div>
+                </div>
             </div>
         </nav>
 
