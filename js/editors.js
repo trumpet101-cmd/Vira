@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // --- ARMORED/SHIELD STATE ---
 window.updateAcSelection = function(index, value) {
     if (!characterData.build) characterData.build = {};
@@ -1496,4 +1497,1504 @@ document.addEventListener('mousedown', function(e) {
     if (!e.target.closest('#mention-dropdown')) {
         hideMentionDropdown();
     }
+=======
+// --- ARMORED/SHIELD STATE ---
+window.updateAcSelection = function(index, value) {
+    if (!characterData.build) characterData.build = {};
+    if (!characterData.build.acSelection) characterData.build.acSelection = [];
+    characterData.build.acSelection[index] = value;
+    characterData.build.acSelection = characterData.build.acSelection.filter(item => item !== "");
+    window.saveData(); window.renderContent();
+};
+window.toggleShieldActive = function(checked) {
+    if (!characterData.build) characterData.build = {};
+    characterData.build.shieldActive = checked;
+    window.saveData(); window.recalculateBuildScores();
+};
+window.updateAbilityPoint = function(index, field, val) {
+    const intVal = parseInt(val) || 0;
+    characterData.build.abilities[index][field] = intVal;
+    window.saveData(); window.recalculateBuildScores();
+};
+window.updateFeatName = function(key, val) {
+    if (!characterData.build.feats) characterData.build.feats = {};
+    characterData.build.feats[key] = val; window.saveData();
+};
+
+window.recalculateBuildScores = function() {
+    const abilities = characterData.build.abilities;
+    const keys = ['starting', 'species', 'lvl1', 'lvl4', 'lvl8', 'lvl12', 'lvl16', 'lvl19', 'lvl20'];
+    const cumulativeScores = { starting: {}, species: {}, lvl1: {}, lvl4: {}, lvl8: {}, lvl12: {}, lvl16: {}, lvl19: {}, lvl20: {} };
+
+    abilities.forEach((ability, aIdx) => {
+        let currentVal = 0;
+        keys.forEach((key) => {
+            const cellVal = parseInt(ability[key]) || 0;
+            currentVal += cellVal;
+            cumulativeScores[key][ability.name] = currentVal;
+            const scoreCell = document.getElementById(`score-cell-${aIdx}-${key}`);
+            if (scoreCell) {
+                const mod = Math.floor((currentVal - 10) / 2);
+                const modStr = (mod >= 0 ? '+' : '') + mod;
+                scoreCell.innerHTML = `<span class="font-extrabold text-stone-800 dark:text-stone-200 text-sm">${currentVal}</span><span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold ml-1">(${modStr})</span>`;
+            }
+        });
+    });
+
+    const selectedArmors = (characterData.build.acSelection || []).filter(item => item !== "");
+    const showBlank = selectedArmors.length < 5;
+    const totalRows = selectedArmors.length + (showBlank ? 1 : 0);
+    const shieldBonus = (characterData.build.shieldActive) ? 2 : 0;
+    const levelKeys = keys.slice(2);
+
+    for (let rIdx = 0; rIdx < totalRows; rIdx++) {
+        const armorKey = selectedArmors[rIdx] || "";
+        levelKeys.forEach(colKey => {
+            const dex = cumulativeScores[colKey]["Dexterity"] || 10;
+            const con = cumulativeScores[colKey]["Constitution"] || 10;
+            const wis = cumulativeScores[colKey]["Wisdom"] || 10;
+            const dexMod = Math.floor((dex - 10) / 2);
+            const conMod = Math.floor((con - 10) / 2);
+            const wisMod = Math.floor((wis - 10) / 2);
+
+            let acVal = "-";
+            if (armorKey !== "") {
+                let baseAc = 10, dexContribution = dexMod, conContribution = 0, wisContribution = 0;
+                if (armorKey === "unarmored") { conContribution = conMod; } 
+                else if (armorKey === "unarmored_monk") { wisContribution = wisMod; } 
+                else if (armorKey === "studded") { baseAc = 12; } 
+                else if (armorKey === "chainshirt") { baseAc = 13; dexContribution = Math.min(2, dexMod); } 
+                else if (armorKey === "scalemail") { baseAc = 14; dexContribution = Math.min(2, dexMod); } 
+                else if (armorKey === "breastplate") { baseAc = 14; dexContribution = Math.min(2, dexMod); } 
+                else if (armorKey === "halfplate") { baseAc = 15; dexContribution = Math.min(2, dexMod); } 
+                else if (armorKey === "chainmail") { baseAc = 16; dexContribution = 0; } 
+                else if (armorKey === "splint") { baseAc = 17; dexContribution = 0; } 
+                else if (armorKey === "plate") { baseAc = 18; dexContribution = 0; }
+                acVal = baseAc + dexContribution + conContribution + wisContribution + shieldBonus;
+            }
+
+            const valEl = document.getElementById(`ac-val-${rIdx}-${colKey}`);
+            if (valEl) valEl.innerText = acVal;
+        });
+    }
+};
+
+// --- DYNAMIC LIST MANAGEMENT ---
+window.addBackstory = function() { currentSearchQueries.backstory = ''; characterData.backstory.unshift({ id: 'b_' + Date.now(), title: 'New Lore Section', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.updateBackstory = function(bId, field, val) { const entry = characterData.backstory.find(b => b.id === bId); if(entry) entry[field] = val; if (field === 'title') window.syncMentionLabels(bId, val); window.saveData(); }
+window.deleteBackstory = function(bId) { const mc = window.countMentions(bId); window.showCustomConfirm('Delete Backstory Section?', 'Are you sure you want to permanently delete this backstory section?' + mentionWarningText(mc), '📜', () => { characterData.backstory = characterData.backstory.filter(b => b.id !== bId); window.neutralizeMentions(bId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.toggleBackstoryCollapse = function(bId) { const entry = characterData.backstory.find(b => b.id === bId); if(entry) { entry.isCollapsed = !entry.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
+window.toggleAllBackstory = function(collapse) { characterData.backstory.forEach(b => b.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.moveBackstory = function(bId, direction) { const arr = characterData.backstory; const index = arr.findIndex(b => b.id === bId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } }
+window.filterBackstory = function(query) { currentSearchQueries.backstory = query; const q = query.toLowerCase(); document.querySelectorAll('.backstory-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
+
+window.addPersonality = function() { currentSearchQueries.personality = ''; characterData.personality.unshift({ id: 'p_' + Date.now(), title: 'New Trait / Code', subtitle: 'A brief state description', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.updatePersonality = function(pId, field, val) { const entry = characterData.personality.find(p => p.id === pId); if(entry) entry[field] = val; if (field === 'title') window.syncMentionLabels(pId, val); window.saveData(); }
+window.deletePersonality = function(pId) { const mc = window.countMentions(pId); window.showCustomConfirm('Delete Personality Trait?', 'Are you sure you want to permanently delete this personality section?' + mentionWarningText(mc), '🧠', () => { characterData.personality = characterData.personality.filter(p => p.id !== pId); window.neutralizeMentions(pId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.togglePersonalityCollapse = function(pId) { const entry = characterData.personality.find(p => p.id === pId); if(entry) { entry.isCollapsed = !entry.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
+window.toggleAllPersonality = function(collapse) { characterData.personality.forEach(p => p.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.movePersonality = function(pId, direction) { const arr = characterData.personality; const index = arr.findIndex(p => p.id === pId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } }
+window.filterPersonality = function(query) { currentSearchQueries.personality = query; const q = query.toLowerCase(); document.querySelectorAll('.personality-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
+
+window.addSession = function() { currentSearchQueries.sessionNotes = ''; characterData.campaignNotes.sessionNotes.unshift({ id: 'sess_' + Date.now(), title: '', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.updateSession = function(sessId, field, val) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) sess[field] = val; if (field === 'title') window.syncMentionLabels(sessId, val); window.saveData(); }
+window.deleteSession = function(sessId) { const mc = window.countMentions(sessId); window.showCustomConfirm('Delete Session Log?', 'Are you sure you want to permanently delete this session log entry?' + mentionWarningText(mc), '🗑️', () => { characterData.campaignNotes.sessionNotes = characterData.campaignNotes.sessionNotes.filter(s => s.id !== sessId); window.neutralizeMentions(sessId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.toggleSessionCollapse = function(sessId) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) { sess.isCollapsed = !sess.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
+window.toggleAllSessions = function(collapse) { characterData.campaignNotes.sessionNotes.forEach(s => s.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.moveSession = function(sessId, direction) { const arr = characterData.campaignNotes.sessionNotes; const index = arr.findIndex(s => s.id === sessId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
+window.filterSessions = function(query) { currentSearchQueries.sessionNotes = query; const q = query.toLowerCase(); document.querySelectorAll('.session-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
+
+// --- COPY SESSION AS TEXT ---
+// Converts a session's outline HTML into shareable plain text (markdown-style
+// bullets with indentation) and puts it on the clipboard — for pasting recaps
+// into Discord etc. @mention anchors flatten to their visible "@Name" text.
+function htmlToPlainOutline(html) {
+    var container = document.createElement('div');
+    container.innerHTML = html || '';
+    var lines = [];
+
+    // Inline text of a node, excluding any nested ULs (handled recursively).
+    function inlineTextOf(node) {
+        var clone = node.cloneNode(true);
+        clone.querySelectorAll && clone.querySelectorAll('ul, ol').forEach(function(u) { u.remove(); });
+        return (clone.textContent || '').replace(/\u00A0/g, ' ').trim();
+    }
+
+    function walk(node, depth) {
+        var buffer = '';
+        function flushBuffer() {
+            var t = buffer.replace(/\u00A0/g, ' ').trim();
+            if (t) lines.push(t);
+            buffer = '';
+        }
+        Array.prototype.forEach.call(node.childNodes, function(child) {
+            if (child.nodeType === Node.TEXT_NODE) { buffer += child.textContent; return; }
+            if (child.nodeType !== Node.ELEMENT_NODE) return;
+            var tag = child.tagName;
+            if (tag === 'UL' || tag === 'OL') {
+                flushBuffer();
+                Array.prototype.forEach.call(child.children, function(li) {
+                    if (li.tagName !== 'LI') return;
+                    var text = inlineTextOf(li);
+                    if (text) lines.push(new Array(depth + 1).join('  ') + '- ' + text);
+                    // Recurse into nested lists inside this li
+                    Array.prototype.forEach.call(li.children, function(sub) {
+                        if (sub.tagName === 'UL' || sub.tagName === 'OL') {
+                            var wrapper = document.createElement('div');
+                            wrapper.appendChild(sub.cloneNode(true));
+                            walk(wrapper, depth + 1);
+                        }
+                    });
+                });
+            } else if (tag === 'BR') {
+                flushBuffer();
+            } else if (tag === 'DIV' || tag === 'P') {
+                flushBuffer();
+                walk(child, depth);
+            } else {
+                // Inline elements (spans, mention anchors, bold, etc.) — take their text
+                buffer += child.textContent;
+            }
+        });
+        flushBuffer();
+    }
+
+    walk(container, 0);
+    return lines.join('\n');
+}
+
+window.copySessionAsText = function(sessId) {
+    var sess = characterData.campaignNotes.sessionNotes.find(function(s) { return s.id === sessId; });
+    if (!sess) return;
+    var header = (sess.title || 'Untitled Session') + (sess.date ? ' — ' + sess.date : '');
+    var body = htmlToPlainOutline(sess.notes);
+    var output = '**' + header + '**' + (body ? '\n' + body : '\n(No notes yet)');
+
+    function onCopied() {
+        if (typeof flashSuccessIndicator === 'function') flashSuccessIndicator('Session copied as text!');
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(output).then(onCopied).catch(function() { legacyCopy(output, onCopied); });
+    } else {
+        legacyCopy(output, onCopied);
+    }
+    function legacyCopy(text, cb) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); cb(); } catch(e) { console.error('Copy failed', e); }
+        document.body.removeChild(ta);
+    }
+};
+
+// --- OPEN THREADS ---
+// Tracks collapse state of the resolved section (module-level, ephemeral — does not persist).
+// Defined here so editors.js toggleThreadsResolved can flip it and render.js can read it.
+var threadsResolvedCollapsed = true;
+
+// Pending blur-commit guard: null means no pending commit.
+var threadAddPending = null;
+// Set to true by the Enter-key path so the ensuing blur doesn't double-commit.
+var threadAddJustCommitted = false;
+
+window.addThread = function(html) {
+    var cn = characterData.campaignNotes;
+    if (!Array.isArray(cn.threads)) cn.threads = [];
+    // Strip to plain text to check for truly empty input (handles "<br>" etc.)
+    var plain = html ? html.replace(/<[^>]+>/g, '').trim() : '';
+    if (!plain) return;
+    cn.threads.push({
+        id: 'thread_' + Date.now(),
+        text: html,
+        tags: [],
+        resolved: false,
+        resolution: ''
+    });
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+
+window.updateThreadText = function(id, html) {
+    var t = (characterData.campaignNotes.threads || []).find(function(t) { return t.id === id; });
+    if (t) t.text = html;
+    window.saveData();
+};
+
+window.toggleThreadResolved = function(id) {
+    var t = (characterData.campaignNotes.threads || []).find(function(t) { return t.id === id; });
+    if (!t) return;
+    t.resolved = !t.resolved;
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+
+window.deleteThread = function(id) {
+    characterData.campaignNotes.threads = (characterData.campaignNotes.threads || []).filter(function(t) { return t.id !== id; });
+    // Threads can't be @mentioned today, so this is a no-op safety sweep that
+    // keeps deletion correct if threads ever become mention targets.
+    window.neutralizeMentions(id);
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+
+window.promoteThreadToQuest = function(id) {
+    var threads = characterData.campaignNotes.threads || [];
+    var t = threads.find(function(t) { return t.id === id; });
+    if (!t) return;
+    // Derive plain-text title from HTML; fall back gracefully.
+    var plainTitle = '';
+    try {
+        var scratchDiv = document.createElement('div');
+        scratchDiv.innerHTML = t.text;
+        plainTitle = (scratchDiv.innerText || scratchDiv.textContent || '').trim().slice(0, 100);
+    } catch(e) { plainTitle = t.text.replace(/<[^>]+>/g, '').slice(0, 100); }
+    if (!plainTitle) plainTitle = 'Promoted thread';
+    var notesHtml = t.text + '<br><em style="color:#78716c;font-size:0.85em">— Promoted from Open Thread</em>';
+    characterData.campaignNotes.quests.unshift({
+        id: 'quest_' + Date.now(),
+        title: plainTitle,
+        subtitle: '',
+        notes: notesHtml,
+        isCompleted: false,
+        isUrgent: false,
+        tags: []
+    });
+    characterData.campaignNotes.threads = threads.filter(function(t) { return t.id !== id; });
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+
+window.toggleThreadsResolved = function() {
+    threadsResolvedCollapsed = !threadsResolvedCollapsed;
+    window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+
+// --- Thread add-row event handlers ---
+// These power the always-visible "+ Add a thread" row at the bottom of the panel.
+// They mirror the pin-slot approach: detect @-mentions and show the picker,
+// commit on Enter or blur (with a 160ms delay guard against mention-picker clicks).
+
+window.handleThreadAddKeyDown = function(event) {
+    // Delegate to handleKeyDown first if the mention dropdown is open
+    var dropdown = document.getElementById('mention-dropdown');
+    if (dropdown && !dropdown.classList.contains('hidden') && mentionContext) {
+        if (event.key === 'Tab' || event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            window.handleKeyDown(event);
+            return;
+        }
+    }
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        var div = event.target;
+        var html = (div.innerHTML || '').trim();
+        if (html && html !== '<br>') {
+            // Flag BEFORE addThread so the ensuing detach-blur is ignored.
+            threadAddJustCommitted = true;
+            threadAddPending = null;
+            window.addThread(html);  // calls renderContent — div is destroyed after this
+        }
+    }
+};
+
+window.handleThreadAddInput = function(event) {
+    var div = event.target;
+    var selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    var range = selection.getRangeAt(0);
+    var node = range.startContainer;
+    if (node.nodeType === Node.TEXT_NODE) {
+        var textUpToCursor = node.textContent.substring(0, range.startOffset);
+        var match = textUpToCursor.match(/(?:\s|^)(@[a-zA-Z0-9_\-\' ]{0,40})$/);
+        if (match) {
+            var matchString = match[1];
+            var query = matchString.substring(1);
+            var endOffset = range.startOffset;
+            var startOffset = endOffset - matchString.length;
+            showMentionDropdown(div, query, node, startOffset, endOffset);
+        } else { hideMentionDropdown(); }
+    } else { hideMentionDropdown(); }
+};
+
+window.handleThreadAddBlur = function(event) {
+    // If Enter already committed this input, the detach-blur fires here — ignore it.
+    if (threadAddJustCommitted) { threadAddJustCommitted = false; return; }
+    var html = (event.target.innerHTML || '').trim();
+    if (!html || html === '<br>') return;
+    threadAddPending = html;
+    // Delay so a mention suggestion's mousedown (which inserts via insertMention) can fire first.
+    setTimeout(function() {
+        if (threadAddPending === null) return; // already committed by another path
+        var c = threadAddPending;
+        threadAddPending = null;
+        window.addThread(c);
+    }, 160);
+};
+
+// --- EXPORT CHARACTER AS MARKDOWN ---
+// Produces a human-readable .md document of the current character: basics,
+// backstory, personality, build summary, and all campaign notes. Markdown is
+// plain text (safe as a long-term backup) and imports cleanly into Word,
+// Google Docs, Discord, and Obsidian. Empty sections are skipped entirely.
+window.exportMarkdown = function() {
+    var md = [];
+    var cd = characterData;
+
+    function section(text) { if (text) md.push(text); }
+    function notesBlock(html) {
+        var t = htmlToPlainOutline(html);
+        return t ? t + '\n' : '';
+    }
+    function tagSuffix(entry) {
+        return (entry.tags && entry.tags.length) ? '  `#' + entry.tags.join('` `#') + '`' : '';
+    }
+
+    // --- Header ---
+    md.push('# ' + (cd.name || 'Unnamed Character') + '\n');
+    var b = cd.basics || {};
+    var subtitleBits = [b.race, b.class].filter(Boolean).join(' \u2014 ');
+    if (subtitleBits) md.push('*' + subtitleBits + '*\n');
+    var basicLines = [];
+    if (b.age) basicLines.push('**Age:** ' + b.age);
+    if (b.background) basicLines.push('**Background:** ' + b.background);
+    if (b.tribe) basicLines.push('**Tribe/Origin:** ' + b.tribe);
+    if (b.familiar) basicLines.push('**Familiar:** ' + b.familiar);
+    if (basicLines.length) md.push(basicLines.join('  \n') + '\n');
+    md.push('*Exported ' + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) + '*\n');
+
+    // --- Backstory ---
+    var backstory = (cd.backstory || []).filter(function(s) { return (s.notes || '').trim(); });
+    if (backstory.length) {
+        md.push('## Backstory\n');
+        backstory.forEach(function(s) {
+            md.push('### ' + (s.title || 'Untitled') + '\n');
+            section(notesBlock(s.notes));
+        });
+    }
+
+    // --- Personality ---
+    var personality = (cd.personality || []).filter(function(p) { return (p.notes || '').trim(); });
+    if (personality.length) {
+        md.push('## Personality\n');
+        personality.forEach(function(p) {
+            md.push('### ' + (p.title || 'Untitled') + (p.subtitle ? ' \u2014 ' + p.subtitle : '') + '\n');
+            section(notesBlock(p.notes));
+        });
+    }
+
+    // --- Build ---
+    var build = cd.build || {};
+    var buildLines = [];
+    if (Array.isArray(build.abilities) && build.abilities.length) {
+        var abilityParts = build.abilities.map(function(a) {
+            var total = ['starting', 'species', 'lvl1', 'lvl4', 'lvl8', 'lvl12', 'lvl16', 'lvl19', 'lvl20']
+                .reduce(function(sum, k) { return sum + (Number(a[k]) || 0); }, 0);
+            return '- **' + a.name + ':** ' + total;
+        });
+        buildLines.push('### Ability Scores\n' + abilityParts.join('\n') + '\n');
+    }
+    if (build.feats) {
+        var featOrder = [['lvl1', 'Level 1'], ['lvl4', 'Level 4'], ['lvl8', 'Level 8'], ['lvl12', 'Level 12'], ['lvl16', 'Level 16'], ['lvl19', 'Level 19'], ['lvl20', 'Level 20']];
+        var featLines = featOrder.filter(function(f) { return (build.feats[f[0]] || '').trim(); })
+            .map(function(f) { return '- **' + f[1] + ':** ' + build.feats[f[0]]; });
+        if (featLines.length) buildLines.push('### Feats\n' + featLines.join('\n') + '\n');
+    }
+    if ((build.features || '').trim && (build.features || '').trim()) buildLines.push('### Features\n' + notesBlock(build.features));
+    if ((build.equipment || '').trim && (build.equipment || '').trim()) buildLines.push('### Equipment\n' + notesBlock(build.equipment));
+    if (buildLines.length) { md.push('## Build\n'); buildLines.forEach(section); }
+
+    // --- Campaign Notes ---
+    var cn = cd.campaignNotes || {};
+    var hasCampaign = (cn.threads || []).length || (cn.sessionNotes || []).length || (cn.quests || []).length || (cn.npcs || []).some(function(f) { return (f.members || []).length; }) || (cn.locations || []).length || (cn.misc || '').trim();
+    if (hasCampaign) md.push('## Campaign Notes\n');
+
+    if ((cn.threads || []).length) {
+        md.push('### Open Threads\n');
+        md.push(cn.threads.map(function(t) {
+            var text = htmlToPlainOutline(t.text).replace(/\n+/g, ' ');
+            return '- ' + text + tagSuffix(t);
+        }).join('\n') + '\n');
+    }
+
+    if ((cn.sessionNotes || []).length) {
+        md.push('### Session Notes\n');
+        cn.sessionNotes.forEach(function(s) {
+            md.push('#### ' + (s.title || 'Untitled Session') + (s.date ? ' \u2014 ' + s.date : '') + tagSuffix(s) + '\n');
+            section(notesBlock(s.notes));
+        });
+    }
+
+    if ((cn.quests || []).length) {
+        md.push('### Quests\n');
+        [['Urgent', function(q) { return q.isUrgent && !q.isCompleted; }],
+         ['In Progress', function(q) { return !q.isUrgent && !q.isCompleted; }],
+         ['Completed', function(q) { return q.isCompleted; }]].forEach(function(cat) {
+            var list = cn.quests.filter(cat[1]);
+            if (!list.length) return;
+            md.push('#### ' + cat[0] + '\n');
+            list.forEach(function(q) {
+                md.push('**' + (q.title || 'Untitled Quest') + '**' + (q.subtitle ? ' \u2014 ' + q.subtitle : '') + tagSuffix(q) + '\n');
+                section(notesBlock(q.notes));
+            });
+        });
+    }
+
+    var factionsWithMembers = (cn.npcs || []).filter(function(f) { return (f.members || []).length; });
+    if (factionsWithMembers.length) {
+        md.push('### NPCs\n');
+        factionsWithMembers.forEach(function(f) {
+            md.push('#### ' + (f.name || 'Unnamed Faction') + '\n');
+            f.members.forEach(function(n) {
+                var rel = (typeof NPC_RELATIONSHIPS !== 'undefined' && NPC_RELATIONSHIPS[n.relationship]) ? NPC_RELATIONSHIPS[n.relationship].label : '';
+                var headline = '**' + (n.name || 'Unnamed') + '**';
+                if (n.subtitle) headline += ' \u2014 ' + n.subtitle;
+                if (rel && rel !== 'Unknown') headline += ' *(' + rel + ')*';
+                headline += tagSuffix(n);
+                md.push(headline + '\n');
+                section(notesBlock(n.notes));
+            });
+        });
+    }
+
+    if ((cn.locations || []).length) {
+        md.push('### Locations\n');
+        cn.locations.forEach(function(l) {
+            md.push('#### ' + (l.title || 'Untitled Location') + (l.subtitle ? ' \u2014 ' + l.subtitle : '') + tagSuffix(l) + '\n');
+            section(notesBlock(l.notes));
+        });
+    }
+
+    if ((cn.misc || '').trim()) {
+        md.push('### Misc & Loot\n');
+        section(notesBlock(cn.misc));
+    }
+
+    // --- Download ---
+    var output = md.join('\n');
+    var safeName = (cd.name || 'character').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase();
+    var blob = new Blob([output], { type: 'text/markdown;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = safeName + '_notes_' + new Date().toISOString().slice(0, 10) + '.md';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    if (typeof flashSuccessIndicator === 'function') flashSuccessIndicator('Readable notes exported!');
+};
+
+// --- MENTION LABEL SYNC ON RENAME ---
+// @mention anchors snapshot the entry's name at insert time. When an entry is
+// renamed, this sweeps every notes field and rewrites matching anchors to the
+// new name (the deep link itself uses itemId and never breaks). Anchors store
+// the target id inside their onclick attribute, e.g. setTab('tab','npc_123'),
+// so we match on a[onclick*="'itemId'"]. Visible anchors in the DOM update
+// instantly; the data sweep is debounced per-entry to stay cheap while typing.
+var mentionSyncTimers = {};
+
+function rewriteMentionLabelsInHtml(html, itemId, newLabel) {
+    if (!html || html.indexOf(itemId) === -1) return html;
+    var d = document.createElement('div');
+    d.innerHTML = html;
+    var anchors = d.querySelectorAll('a[onclick*="\'' + itemId + '\'"]');
+    if (anchors.length === 0) return html;
+    anchors.forEach(function(a) { a.textContent = '@' + newLabel; });
+    return d.innerHTML;
+}
+
+window.syncMentionLabels = function(itemId, newLabel) {
+    var label = (newLabel || '').trim();
+    if (!label || !itemId) return; // mid-edit empty name -- wait for real text
+
+    // 1. Instant cosmetic update of any anchors currently rendered on screen
+    document.querySelectorAll('a[onclick*="\'' + itemId + '\'"]').forEach(function(a) {
+        a.textContent = '@' + label;
+    });
+
+    // 2. Debounced sweep of the data model (runs after the user pauses typing)
+    clearTimeout(mentionSyncTimers[itemId]);
+    mentionSyncTimers[itemId] = setTimeout(function() {
+        var changed = false;
+        function sweepField(obj, key) {
+            var updated = rewriteMentionLabelsInHtml(obj[key], itemId, label);
+            if (updated !== obj[key]) { obj[key] = updated; changed = true; }
+        }
+        forEachMentionField(sweepField);
+        if (changed) window.saveData();
+    }, 400);
+};
+
+// --- MENTION CLEANUP ON DELETE ---
+// Enumerates every field that can hold @mention HTML — the single source of
+// truth shared by syncMentionLabels (rename), countMentions and
+// neutralizeMentions (delete). Add any future notes field HERE only.
+function forEachMentionField(visit) {
+    characterData.backstory.forEach(function(b) { visit(b, 'notes'); });
+    characterData.personality.forEach(function(p) { visit(p, 'notes'); });
+    var cn = characterData.campaignNotes;
+    cn.sessionNotes.forEach(function(s) { visit(s, 'notes'); });
+    cn.quests.forEach(function(qst) { visit(qst, 'notes'); });
+    cn.locations.forEach(function(l) { visit(l, 'notes'); });
+    cn.npcs.forEach(function(f) { (f.members || []).forEach(function(n) { visit(n, 'notes'); }); });
+    (cn.threads || []).forEach(function(t) { visit(t, 'text'); });
+    if (typeof cn.misc === 'string') visit(cn, 'misc');
+    if (characterData.build) {
+        if (typeof characterData.build.features === 'string') visit(characterData.build, 'features');
+        if (typeof characterData.build.equipment === 'string') visit(characterData.build, 'equipment');
+    }
+}
+
+// Count @mention anchors across ALL notes that point at any of the given
+// entry ids. Accepts a single id or an array (faction cascades pass the
+// faction id plus every member id).
+window.countMentions = function(itemIds) {
+    var ids = (Array.isArray(itemIds) ? itemIds : [itemIds]).filter(function(id) { return !!id; });
+    if (ids.length === 0) return 0;
+    var total = 0;
+    forEachMentionField(function(obj, key) {
+        var html = obj[key];
+        if (!html) return;
+        // Cheap pre-check before paying for DOM parsing.
+        if (!ids.some(function(id) { return html.indexOf(id) !== -1; })) return;
+        var d = document.createElement('div');
+        d.innerHTML = html;
+        ids.forEach(function(id) {
+            total += d.querySelectorAll('a[onclick*="\'' + id + '\'"]').length;
+        });
+    });
+    return total;
+};
+
+// Replace every @mention anchor pointing at the given ids with an inert
+// <span> that keeps the visible "@Name" text, so notes read exactly the same
+// but no dead links remain. Mutates characterData only — the calling delete
+// handler is responsible for saveData() + renderContent() afterwards.
+window.neutralizeMentions = function(itemIds) {
+    var ids = (Array.isArray(itemIds) ? itemIds : [itemIds]).filter(function(id) { return !!id; });
+    if (ids.length === 0) return 0;
+    var replaced = 0;
+    forEachMentionField(function(obj, key) {
+        var html = obj[key];
+        if (!html) return;
+        if (!ids.some(function(id) { return html.indexOf(id) !== -1; })) return;
+        var d = document.createElement('div');
+        d.innerHTML = html;
+        var changed = false;
+        ids.forEach(function(id) {
+            d.querySelectorAll('a[onclick*="\'' + id + '\'"]').forEach(function(a) {
+                var span = document.createElement('span');
+                span.textContent = a.textContent; // keep the visible "@Name"
+                a.parentNode.replaceChild(span, a);
+                changed = true;
+                replaced++;
+            });
+        });
+        if (changed) obj[key] = d.innerHTML;
+    });
+    return replaced;
+};
+
+// Sentence appended to delete confirms when the entry is mentioned somewhere.
+function mentionWarningText(count) {
+    if (!count) return '';
+    return ' It is linked from ' + count + ' @mention' + (count === 1 ? '' : 's') + ' in your notes; deleting will turn ' + (count === 1 ? 'that link' : 'those links') + ' into plain text.';
+}
+
+window.addQuest = function() { currentSearchQueries.quests = ''; characterData.campaignNotes.quests.unshift({ id: 'quest_' + Date.now(), title: '', subtitle: '', notes: '', isCompleted: false, isUrgent: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.updateQuest = function(questId, field, val) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) quest[field] = val; if (field === 'title') window.syncMentionLabels(questId, val); window.saveData(); }
+window.deleteQuest = function(questId) { const mc = window.countMentions(questId); window.showCustomConfirm('Delete Quest?', 'Are you sure you want to permanently remove this quest objective?' + mentionWarningText(mc), '⚔️', () => { characterData.campaignNotes.quests = characterData.campaignNotes.quests.filter(q => q.id !== questId); window.neutralizeMentions(questId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.toggleQuestUrgency = function(questId) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) { quest.isUrgent = !quest.isUrgent; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
+window.toggleQuestCompletion = function(questId) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) { quest.isCompleted = !quest.isCompleted; if(quest.isCompleted) quest.isUrgent = false; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
+window.toggleQuestSectionCollapse = function(section) { questSectionsState[section] = !questSectionsState[section]; window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.moveQuest = function(questId, direction) { const arr = characterData.campaignNotes.quests; const index = arr.findIndex(q => q.id === questId); if (index === -1) return; const isCompleted = arr[index].isCompleted; let targetIdx = -1; if (direction === -1) { for (let i = index - 1; i >= 0; i--) if (arr[i].isCompleted === isCompleted) { targetIdx = i; break; } } else { for (let i = index + 1; i < arr.length; i++) if (arr[i].isCompleted === isCompleted) { targetIdx = i; break; } } if (targetIdx !== -1) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } };
+window.filterQuests = function(query) { currentSearchQueries.quests = query; const q = query.toLowerCase(); document.querySelectorAll('.quest-section').forEach(section => { let visibleQuests = 0; section.querySelectorAll('.quest-card').forEach(quest => { if (quest.dataset.searchable.toLowerCase().includes(q)) { quest.classList.remove('hidden'); visibleQuests++; } else { quest.classList.add('hidden'); } }); const contentDiv = section.querySelector('.collapsible-content'); const chevron = section.querySelector('.chevron'); if (q.length > 0 && visibleQuests > 0) { contentDiv.classList.remove('collapsed'); if(chevron) chevron.classList.remove('collapsed'); } else if (q.length === 0) { const isCollapsed = section.dataset.sectionType === 'inProgress' ? questSectionsState.inProgressCollapsed : questSectionsState.completedCollapsed; if(isCollapsed) { contentDiv.classList.add('collapsed'); if(chevron) chevron.classList.add('collapsed'); } } }); }
+
+window.addLocation = function() { currentSearchQueries.locations = ''; characterData.campaignNotes.locations.unshift({ id: 'loc_' + Date.now(), title: '', subtitle: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.updateLocation = function(locId, field, val) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) loc[field] = val; if (field === 'title') window.syncMentionLabels(locId, val); window.saveData(); }
+window.deleteLocation = function(locId) { const mc = window.countMentions(locId); window.showCustomConfirm('Delete Location?', 'Are you sure you want to permanently remove this location?' + mentionWarningText(mc), '📍', () => { characterData.campaignNotes.locations = characterData.campaignNotes.locations.filter(l => l.id !== locId); window.neutralizeMentions(locId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.toggleLocationCollapse = function(locId) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) { loc.isCollapsed = !loc.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
+window.toggleAllLocations = function(collapse) { characterData.campaignNotes.locations.forEach(l => l.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.moveLocation = function(locId, direction) { const arr = characterData.campaignNotes.locations; const index = arr.findIndex(l => l.id === locId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
+window.filterLocations = function(query) { currentSearchQueries.locations = query; const q = query.toLowerCase(); document.querySelectorAll('.location-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
+
+window.addFaction = function() { currentSearchQueries.npcs = ''; characterData.campaignNotes.npcs.unshift({ id: 'fac_' + Date.now(), name: '', isCollapsed: false, members: [] }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.updateFaction = function(facId, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.name = val; window.syncMentionLabels(facId, val); window.saveData(); }
+window.deleteFaction = function(facId) { const facRef = characterData.campaignNotes.npcs.find(f => f.id === facId); const cascadeIds = [facId].concat(facRef && Array.isArray(facRef.members) ? facRef.members.map(n => n.id) : []); const mc = window.countMentions(cascadeIds); window.showCustomConfirm('Delete Faction?', 'Are you sure you want to delete this faction, its members, and all related logs?' + mentionWarningText(mc), '🛡️', () => { characterData.campaignNotes.npcs = characterData.campaignNotes.npcs.filter(f => f.id !== facId); window.neutralizeMentions(cascadeIds); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.toggleFactionCollapse = function(facId) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if (fac) { fac.isCollapsed = !fac.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } };
+window.toggleAllFactions = function(collapse) {
+    characterData.campaignNotes.npcs.forEach(f => {
+        f.isCollapsed = collapse;
+        if (f.members && Array.isArray(f.members)) {
+            f.members.forEach(npc => { npc.isCollapsed = collapse; });
+        }
+    });
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+};
+window.moveFaction = function(facId, direction) { const arr = characterData.campaignNotes.npcs; const index = arr.findIndex(f => f.id === facId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
+
+window.addNPC = function(facId) { currentSearchQueries.npcs = ''; const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { fac.members.push({ id: 'npc_' + Date.now(), name: '', subtitle: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
+window.updateNPC = function(facId, npcId, field, val) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) { const npc = fac.members.find(n => n.id === npcId); if(npc) npc[field] = val; } if (field === 'name') window.syncMentionLabels(npcId, val); window.saveData(); }
+window.updateNPCRelationship = function(facId, npcId, val) {
+    const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+    if (!fac) return;
+    const npc = fac.members.find(n => n.id === npcId);
+    if (!npc) return;
+    npc.relationship = val;
+    window.saveData();
+    // Update badge styling in place without a full re-render
+    const wrapper = document.getElementById('rel-wrapper-' + npcId);
+    if (wrapper && typeof NPC_RELATIONSHIPS !== 'undefined') {
+        const select = wrapper.querySelector('select');
+        const rel = NPC_RELATIONSHIPS[val] || NPC_RELATIONSHIPS.unknown;
+        if (select) {
+            select.className = `appearance-none text-[11px] font-bold pl-2 pr-6 py-0.5 rounded-full border cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${rel.classes}`;
+        }
+    }
+};
+window.deleteNPC = function(facId, npcId) { const mc = window.countMentions(npcId); window.showCustomConfirm('Delete Character?', 'Are you sure you want to permanently remove this NPC?' + mentionWarningText(mc), '👤', () => { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if(fac) fac.members = fac.members.filter(n => n.id !== npcId); window.neutralizeMentions(npcId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.toggleNpcCollapse = function(facId, npcId) { const fac = characterData.campaignNotes.npcs.find(f => f.id === facId); if (fac) { const npc = fac.members.find(n => n.id === npcId); if (npc) { npc.isCollapsed = !npc.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
+window.moveNPC = function(facId, npcId, direction) { const faction = characterData.campaignNotes.npcs.find(f => f.id === facId); if (!faction) return; const arr = faction.members; const index = arr.findIndex(n => n.id === npcId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
+
+// --- MOVE NPC BETWEEN FACTIONS ---
+// Powers the folder-input picker on each NPC card. Reassigns the NPC to the
+// chosen faction (or to a freshly created one via the '__new__' sentinel,
+// which the user can then rename inline). The NPC keeps its id, so existing
+// @mention deep-links and backlinks keep working after the move.
+window.moveNPCToFaction = function(sourceFacId, npcId, targetFacId) {
+    if (!targetFacId) return;
+    var npcs = characterData.campaignNotes.npcs;
+    var source = npcs.find(function(f) { return f.id === sourceFacId; });
+    if (!source) return;
+    var idx = source.members.findIndex(function(n) { return n.id === npcId; });
+    if (idx === -1) return;
+
+    var target;
+    if (targetFacId === '__new__') {
+        target = { id: 'fac_' + Date.now(), name: 'New Faction', isCollapsed: false, members: [] };
+        npcs.unshift(target);
+    } else {
+        target = npcs.find(function(f) { return f.id === targetFacId; });
+    }
+    if (!target) return;
+
+    var npc = source.members.splice(idx, 1)[0];
+    target.members.push(npc);
+    target.isCollapsed = false; // expand destination so the NPC doesn't silently vanish
+
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+    if (typeof flashSuccessIndicator === 'function') {
+        flashSuccessIndicator('Moved "' + (npc.name || 'NPC') + '" to ' + (target.name || 'faction') + '!');
+    }
+};
+
+window.filterNPCs = function(query) {
+    currentSearchQueries.npcs = query;
+    const q = query.toLowerCase();
+    document.querySelectorAll('.npc-faction-block').forEach(faction => {
+        const facName = faction.dataset.factionName.toLowerCase();
+        let factionHasMatch = facName.includes(q), visibleNpcs = 0;
+        faction.querySelectorAll('.npc-card').forEach(npc => {
+            const hasMatch = npc.dataset.searchable.toLowerCase().includes(q) || factionHasMatch;
+            if (hasMatch) { 
+                npc.classList.remove('hidden'); 
+                visibleNpcs++; 
+                const cardContent = npc.querySelector('.collapsible-content');
+                const cardChevron = npc.querySelector('.chevron');
+                if (q.length > 0 && cardContent) {
+                    cardContent.classList.remove('collapsed');
+                    if (cardChevron) cardChevron.classList.remove('collapsed');
+                } else if (q.length === 0 && cardContent) {
+                    const facId = faction.id;
+                    const npcId = npc.id;
+                    const fRef = characterData.campaignNotes.npcs.find(f => f.id === facId);
+                    if (fRef) {
+                        const nRef = fRef.members.find(n => n.id === npcId);
+                        if (nRef && nRef.isCollapsed) {
+                            cardContent.classList.add('collapsed');
+                            if (cardChevron) cardChevron.classList.add('collapsed');
+                        }
+                    }
+                }
+            } 
+            else { npc.classList.add('hidden'); }
+        });
+        
+        const contentDiv = faction.querySelector('.collapsible-content');
+        const chevron = faction.querySelector('.chevron');
+        if (q.length > 0 && (visibleNpcs > 0 || factionHasMatch)) {
+            if (contentDiv) contentDiv.classList.remove('collapsed');
+            if (chevron) chevron.classList.remove('collapsed');
+        } else if (q.length === 0) {
+            const facId = faction.id;
+            const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+            if (fac) {
+                if (fac.isCollapsed) {
+                    if (contentDiv) contentDiv.classList.add('collapsed');
+                    if (chevron) chevron.classList.add('collapsed');
+                } else {
+                    if (contentDiv) contentDiv.classList.remove('collapsed');
+                    if (chevron) chevron.classList.remove('collapsed');
+                }
+            }
+        }
+        if (visibleNpcs > 0 || factionHasMatch) faction.classList.remove('hidden');
+        else faction.classList.add('hidden');
+    });
+}
+
+// --- KEYBOARD OUTLINE HANDLERS (VANILLA DOM TREE MUTATIONS REPLACING EXECCOMMAND) ---
+window.handleOutlineKeyDown = function(event) {
+    const div = event.currentTarget;
+    const dropdown = document.getElementById('mention-dropdown');
+    
+    if (dropdown && !dropdown.classList.contains('hidden') && mentionContext) {
+        if (event.key === 'Tab' || event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            window.handleKeyDown(event);
+            return;
+        }
+    }
+    
+    if (event.key === 'Tab') {
+        event.preventDefault();
+        
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            
+            // Insert a temporary tracking bookmark to secure layout focus
+            const marker = document.createElement('span');
+            marker.id = 'caret-marker';
+            range.insertNode(marker);
+
+            let currentLi = marker.closest('li');
+            if (currentLi) {
+                let parentUl = currentLi.parentElement;
+                let parentLi = parentUl ? parentUl.closest('li') : null;
+                
+                if (event.shiftKey && !parentLi) {
+                    // BASE-LEVEL OUTDENT: Convert active list item into a regular plain text row line block
+                    const plainDiv = document.createElement('div');
+                    plainDiv.className = "mb-1";
+                    while (currentLi.firstChild) {
+                        plainDiv.appendChild(currentLi.firstChild);
+                    }
+                    
+                    // Split the trailing UL list elements cleanly if we unwrap a row right out of the middle
+                    if (currentLi.nextElementSibling) {
+                        const splitUl = document.createElement('ul');
+                        while (currentLi.nextElementSibling) {
+                            splitUl.appendChild(currentLi.nextElementSibling);
+                        }
+                        parentUl.parentNode.insertBefore(splitUl, parentUl.nextSibling);
+                    }
+                    
+                    parentUl.parentNode.insertBefore(plainDiv, parentUl.nextSibling);
+                    currentLi.remove();
+                    if (parentUl.children.length === 0) parentUl.remove();
+                } else {
+                    if (event.shiftKey) {
+                        // STANDARD LAYER OUTDENT: Move active row up one nested level higher in list layout
+                        if (parentUl && parentUl.tagName === 'UL' && parentLi) {
+                            parentLi.parentNode.insertBefore(currentLi, parentLi.nextSibling);
+                            if (parentUl.children.length === 0) {
+                                parentUl.remove();
+                            }
+                        }
+                    } else {
+                        // STANDARD LAYER INDENT: Group active row inside previous sibling element's sublist
+                        let prevLi = currentLi.previousElementSibling;
+                        if (prevLi && prevLi.tagName === 'LI') {
+                            let subUl = prevLi.querySelector('ul');
+                            if (!subUl) {
+                                subUl = document.createElement('ul');
+                                prevLi.appendChild(subUl);
+                            }
+                            subUl.appendChild(currentLi);
+                        }
+                    }
+                }
+            } else {
+                // HOTKEY LINE CONVERSION: User hit Tab while free-typing outside of any list frame arrays!
+                if (!event.shiftKey) {
+                    // Find the top-level boundary wrapper housing the active line
+                    let topLevelNode = marker;
+                    while (topLevelNode.parentNode && topLevelNode.parentNode !== div) {
+                        topLevelNode = topLevelNode.parentNode;
+                    }
+
+                    const newUl = document.createElement('ul');
+                    const newLi = document.createElement('li');
+                    newUl.appendChild(newLi);
+
+                    if (topLevelNode !== marker && (topLevelNode.tagName === 'DIV' || topLevelNode.tagName === 'P')) {
+                        // Scenario A: The browser wrapped the free text in a block element
+                        while (topLevelNode.firstChild) {
+                            newLi.appendChild(topLevelNode.firstChild);
+                        }
+                        topLevelNode.parentNode.replaceChild(newUl, topLevelNode);
+                    } else {
+                        // Scenario B: The browser is using raw inline nodes and line-break tags
+                        let nodesToWrap = [marker];
+                        
+                        let prev = marker.previousSibling;
+                        while (prev && prev.tagName !== 'BR' && prev.tagName !== 'UL' && prev.tagName !== 'DIV' && prev.tagName !== 'P') {
+                            nodesToWrap.unshift(prev);
+                            prev = prev.previousSibling;
+                        }
+                        
+                        let next = marker.nextSibling;
+                        while (next && next.tagName !== 'BR' && next.tagName !== 'UL' && next.tagName !== 'DIV' && next.tagName !== 'P') {
+                            nodesToWrap.push(next);
+                            next = next.nextSibling;
+                        }
+
+                        // RELATIVE PARENT INSERTION: Dynamically hook insertion into the specific node's actual parent wrapper
+                        nodesToWrap[0].parentNode.insertBefore(newUl, nodesToWrap[0]);
+                        nodesToWrap.forEach(n => newLi.appendChild(n));
+                        
+                        // Clean up trailing line breaks to prevent structural double spacing
+                        if (next && next.tagName === 'BR') next.remove();
+                        if (prev && prev.tagName === 'BR' && !prev.previousSibling) prev.remove();
+                    }
+                }
+            }
+
+            // Restore text cursor caret selection back into place next to active bookmark node before removal
+            const foundMarker = div.querySelector('#caret-marker');
+            if (foundMarker) {
+                const restoreRange = document.createRange();
+                if (foundMarker.nextSibling && foundMarker.nextSibling.nodeType === Node.TEXT_NODE) {
+                    restoreRange.setStart(foundMarker.nextSibling, 0);
+                } else if (foundMarker.previousSibling && foundMarker.previousSibling.nodeType === Node.TEXT_NODE) {
+                    restoreRange.setStart(foundMarker.previousSibling, foundMarker.previousSibling.length);
+                } else {
+                    restoreRange.setStartBefore(foundMarker);
+                }
+                restoreRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(restoreRange);
+                foundMarker.remove();
+            }
+        }
+        
+        div.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+    }
+    window.handleKeyDown(event);
+};
+
+window.handleOutlineFocus = function(event) {
+    const div = event.currentTarget;
+    const html = div.innerHTML.trim();
+    // Scaffold a starter bullet ONLY when the box is truly empty. The old
+    // check also fired when content existed without a <ul> (plain sentences
+    // or paragraphs, e.g. pasted or imported text), which REPLACED that
+    // content with an empty bullet on focus — silently deleting it. Any
+    // non-empty content, bulleted or not, must be left untouched.
+    const isEmpty = html === "" || html === "<br>" || html === "<div><br></div>";
+    if (isEmpty) {
+        div.innerHTML = "<ul><li><br></li></ul>";
+        setTimeout(() => {
+            const range = document.createRange();
+            const sel = window.getSelection();
+            const li = div.querySelector('li');
+            if (li) { range.setStart(li, 0); range.collapse(true); sel.removeAllRanges(); sel.addRange(range); }
+        }, 0);
+        div.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+};
+
+window.handleOutlineBlur = function(event) {
+    const div = event.currentTarget;
+    if (div.innerText.trim() === "") { div.innerHTML = ""; div.dispatchEvent(new Event('input', { bubbles: true })); }
+};
+
+window.handlePaste = function(e) {
+    e.preventDefault();
+    const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+    // Using simple text injection here is safe for plain paste operations
+    document.execCommand('insertText', false, text); 
+};
+
+// --- QUICK CAPTURE MENTION HANDLERS ---
+// Defined here (not quick-capture.js) so they share editors.js's local
+// showMentionDropdown / hideMentionDropdown / mentionContext scope.
+
+window.handleQCKeyDown = function(event) {
+    var dropdown = document.getElementById('mention-dropdown');
+    if (dropdown && !dropdown.classList.contains('hidden') && mentionContext) {
+        if (event.key === 'Tab' || event.key === 'Enter' ||
+            event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            window.handleKeyDown(event);
+            return;
+        }
+    }
+    // Ctrl+Enter save is handled by the document listener in quick-capture.js.
+    // Regular Enter creates a new line inside the QC editor.
+};
+
+window.handleQCInput = function(event) {
+    var div = event.target;
+    var selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    var range = selection.getRangeAt(0);
+    var node = range.startContainer;
+    if (node.nodeType === Node.TEXT_NODE) {
+        var textUpToCursor = node.textContent.substring(0, range.startOffset);
+        var match = textUpToCursor.match(/(?:\s|^)(@[a-zA-Z0-9_\-\' ]{0,40})$/);
+        if (match) {
+            var matchString = match[1];
+            var query = matchString.substring(1);
+            var endOffset = range.startOffset;
+            var startOffset = endOffset - matchString.length;
+            showMentionDropdown(div, query, node, startOffset, endOffset);
+        } else { hideMentionDropdown(); }
+    } else { hideMentionDropdown(); }
+};
+
+// --- THE MENTION SYSTEM ---
+var mentionContext = null;
+
+function getMentionSuggestions(query) {
+    const q = query.toLowerCase();
+    let results = [];
+    // Order: NPC → Faction → Location → Quest → Session → Backstory → Personality
+    characterData.campaignNotes.npcs.forEach(fac => {
+        fac.members.forEach(npc => { if (npc.name && npc.name.toLowerCase().includes(q)) results.push({ type: 'NPC', id: 'campaign_npcs', itemId: npc.id, label: npc.name }); });
+    });
+    characterData.campaignNotes.npcs.forEach(fac => {
+        if (fac.name && fac.name.toLowerCase().includes(q)) results.push({ type: 'Faction', id: 'campaign_npcs', itemId: fac.id, label: fac.name });
+    });
+    characterData.campaignNotes.locations.forEach(loc => { if (loc.title && loc.title.toLowerCase().includes(q)) results.push({ type: 'Location', id: 'campaign_locations', itemId: loc.id, label: loc.title }); });
+    characterData.campaignNotes.quests.forEach(qItem => { if (qItem.title && qItem.title.toLowerCase().includes(q)) results.push({ type: 'Quest', id: 'campaign_quests', itemId: qItem.id, label: qItem.title }); });
+    characterData.campaignNotes.sessionNotes.forEach(s => { if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Session', id: 'campaign_sessionNotes', itemId: s.id, label: s.title }); });
+    characterData.backstory.forEach(b => { if (b.title && b.title.toLowerCase().includes(q)) results.push({ type: 'Backstory', id: 'backstory', itemId: b.id, label: b.title }); });
+    characterData.personality.forEach(p => { if (p.title && p.title.toLowerCase().includes(q)) results.push({ type: 'Personality', id: 'personality', itemId: p.id, label: p.title }); });
+    return results;
+}
+
+window.handleKeyDown = function(event) {
+    const dropdown = document.getElementById('mention-dropdown');
+    if (!dropdown || dropdown.classList.contains('hidden') || !mentionContext) return false;
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        event.stopPropagation();
+        mentionContext.selectedIndex = Math.min(mentionContext.selectedIndex + 1, mentionContext.results.length - 1);
+        renderMentionDropdownItems();
+        return true;
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        event.stopPropagation();
+        mentionContext.selectedIndex = Math.max(mentionContext.selectedIndex - 1, 0);
+        renderMentionDropdownItems();
+        return true;
+    } else if (event.key === 'Tab' || event.key === 'Enter') {
+        event.preventDefault();
+        event.stopPropagation();
+        window.selectMentionResult(mentionContext.selectedIndex);
+        return true;
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        hideMentionDropdown();
+        return true;
+    }
+    return false;
+};
+
+window.handleInput = function(event, section, field) {
+    const div = event.target;
+    
+    if (section === 'backstory') { const bEntry = characterData.backstory.find(b => b.id === field); if(bEntry) bEntry.notes = div.innerHTML; } 
+    else if (section === 'personality') { const pEntry = characterData.personality.find(p => p.id === field); if(pEntry) pEntry.notes = div.innerHTML; } 
+    else if (section === 'campaignNotes_session') { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === field); if(sess) sess.notes = div.innerHTML; } 
+    else if (section === 'campaignNotes_quest') { const quest = characterData.campaignNotes.quests.find(q => q.id === field); if(quest) quest.notes = div.innerHTML; } 
+    else if (section === 'campaignNotes_location') { const loc = characterData.campaignNotes.locations.find(l => l.id === field); if(loc) loc.notes = div.innerHTML; } 
+    else if (section === 'campaignNotes_npc') {
+        const [facId, npcId] = field.split('##');
+        const fac = characterData.campaignNotes.npcs.find(f => f.id === facId);
+        if(fac) { const npc = fac.members.find(n => n.id === npcId); if(npc) npc.notes = div.innerHTML; }
+    } else if (section === 'campaignNotes_thread') {
+        const thr = (characterData.campaignNotes.threads || []).find(t => t.id === field);
+        if (thr) thr.text = div.innerHTML;
+    } else { window.updateField(section, field, div.innerHTML); }
+    window.saveData();
+
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+    
+    if (node.nodeType === Node.TEXT_NODE) {
+        const textUpToCursor = node.textContent.substring(0, range.startOffset);
+        const match = textUpToCursor.match(/(?:\s|^)(@[a-zA-Z0-9_\-\' ]{0,40})$/);
+        
+        if (match) {
+            const matchString = match[1];
+            const query = matchString.substring(1);
+            const endOffset = range.startOffset;
+            const startOffset = endOffset - matchString.length;
+            showMentionDropdown(div, query, node, startOffset, endOffset);
+        } else { hideMentionDropdown(); }
+    } else { hideMentionDropdown(); }
+};
+
+function showMentionDropdown(div, query, textNode, startOffset, endOffset) {
+    const results = getMentionSuggestions(query);
+
+    // --- CREATE-NEW OPTIONS ---
+    // If the user has typed a real name (2+ chars), offer to create the entry
+    // on the spot — new NPCs and places show up constantly mid-session, and
+    // bouncing to another tab to add them first kills note-taking flow.
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length >= 2) {
+        const exactMatch = results.some(r => r.label.toLowerCase() === trimmedQuery.toLowerCase());
+        if (!exactMatch) {
+            results.push({ isCreate: true, createType: 'NPC', type: 'Create NPC', id: 'campaign_npcs', itemId: '', label: trimmedQuery });
+            results.push({ isCreate: true, createType: 'Location', type: 'Create Location', id: 'campaign_locations', itemId: '', label: trimmedQuery });
+        }
+    }
+
+    const dropdown = document.getElementById('mention-dropdown');
+    if (results.length === 0) { hideMentionDropdown(); return; }
+
+    mentionContext = { div, textNode, startOffset, endOffset, results, selectedIndex: 0 };
+
+    let top = 0, left = 0;
+    const divRect = div.getBoundingClientRect();
+
+    try {
+        const atRange = document.createRange();
+        atRange.setStart(textNode, startOffset);
+        atRange.setEnd(textNode, Math.min(startOffset + 1, textNode.length));
+        const rects = atRange.getClientRects();
+        if (rects && rects.length > 0) {
+            // getBoundingClientRect returns coords relative to the viewport,
+            // but the dropdown is positioned within the full document.
+            // Subtract the main scroll area's left edge to correct for the sidebar offset.
+            const scrollArea = document.getElementById('scroll-area');
+            const scrollAreaLeft = scrollArea ? scrollArea.getBoundingClientRect().left : 0;
+            top = window.scrollY + rects[0].bottom + 5;
+            left = rects[0].left - scrollAreaLeft + (scrollArea ? scrollArea.scrollLeft : 0);
+        } else {
+            // getClientRects returned nothing — estimate from div + char count
+            const scrollArea = document.getElementById('scroll-area');
+            const scrollAreaLeft = scrollArea ? scrollArea.getBoundingClientRect().left : 0;
+            const style = window.getComputedStyle(div);
+            const charWidth = (parseFloat(style.fontSize) || 14) * 0.55;
+            const textBefore = textNode.textContent.substring(0, startOffset);
+            const approxOffset = textBefore.length * charWidth + parseFloat(style.paddingLeft || 12);
+            top = window.scrollY + divRect.bottom + 5;
+            left = divRect.left - scrollAreaLeft + Math.min(approxOffset, divRect.width - 10);
+        }
+    } catch(e) {
+        const scrollArea = document.getElementById('scroll-area');
+        const scrollAreaLeft = scrollArea ? scrollArea.getBoundingClientRect().left : 0;
+        top = window.scrollY + divRect.bottom + 5;
+        left = divRect.left - scrollAreaLeft;
+    }
+
+    // Clamp so dropdown never goes off the right edge of the viewport
+    left = Math.min(left, window.scrollX + window.innerWidth - 330);
+
+    dropdown.style.top = top + 'px';
+    dropdown.style.left = left + 'px';
+    dropdown.style.width = '320px';
+    dropdown.classList.remove('hidden');
+    renderMentionDropdownItems();
+}
+
+function renderMentionDropdownItems() {
+    const dropdown = document.getElementById('mention-dropdown');
+    if (!mentionContext) return;
+    dropdown.innerHTML = mentionContext.results.map((res, i) => {
+        const isActive = i === mentionContext.selectedIndex;
+        if (res.isCreate) {
+            const activeClasses = isActive ? 'bg-emerald-100 border-l-4 border-emerald-500 dark:bg-emerald-950/40 pl-3' : 'bg-stone-50 dark:bg-stone-800/50 border-l-4 border-transparent pl-4';
+            return `<li onmousedown="event.preventDefault(); event.stopPropagation(); window.selectMentionResult(${i})" class="py-3 pr-4 cursor-pointer flex items-center gap-2 transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}"><i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0"></i><span class="flex flex-col"><span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span><span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">+ ${res.type}</span></span></li>`;
+        }
+        const activeClasses = isActive ? 'bg-emerald-100 border-l-4 border-emerald-500 dark:bg-emerald-950/40 pl-3' : 'bg-white dark:bg-stone-900 border-l-4 border-transparent pl-4';
+        return `<li onmousedown="event.preventDefault(); event.stopPropagation(); window.selectMentionResult(${i})" class="py-3 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800 last:border-0 ${activeClasses}"><span class="font-bold text-stone-800 dark:text-stone-100">${escapeHtml(res.label)}</span><span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">${res.type}</span></li>`;
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+    const activeEl = dropdown.children[mentionContext.selectedIndex];
+    if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+}
+
+// Unified selection path for both mouse and keyboard: handles existing-entry
+// inserts and create-new rows by index, sidestepping label-quoting issues.
+window.selectMentionResult = function(index) {
+    if (!mentionContext) return;
+    const res = mentionContext.results[index];
+    if (!res) return;
+    if (res.isCreate) {
+        const newId = createEntryForMention(res.createType, res.label);
+        if (newId) window.insertMention(res.id, res.label, newId);
+        else hideMentionDropdown();
+    } else {
+        window.insertMention(res.id, res.label, res.itemId);
+    }
+};
+
+// Creates the underlying entry for a create-new mention and returns its id.
+// NPCs land in the existing "Quick Capture" faction (created if missing),
+// mirroring quick-capture.js, so they're easy to triage later.
+function createEntryForMention(createType, name) {
+    if (createType === 'NPC') {
+        const npcs = characterData.campaignNotes.npcs;
+        let faction = npcs.find(f => f.name === 'Quick Capture');
+        if (!faction) {
+            faction = { id: 'fac_quickcapture', name: 'Quick Capture', isCollapsed: false, members: [] };
+            npcs.unshift(faction);
+        }
+        const npc = { id: 'npc_' + Date.now(), name: name, subtitle: '', notes: '', isCollapsed: false };
+        faction.members.push(npc);
+        window.saveData();
+        if (typeof flashSuccessIndicator === 'function') flashSuccessIndicator('NPC "' + name + '" created!');
+        return npc.id;
+    }
+    if (createType === 'Location') {
+        const loc = { id: 'loc_' + Date.now(), title: name, subtitle: '', notes: '', isCollapsed: false };
+        characterData.campaignNotes.locations.unshift(loc);
+        window.saveData();
+        if (typeof flashSuccessIndicator === 'function') flashSuccessIndicator('Location "' + name + '" created!');
+        return loc.id;
+    }
+    return null;
+}
+
+function hideMentionDropdown() { document.getElementById('mention-dropdown').classList.add('hidden'); mentionContext = null; }
+
+window.insertMention = function(targetTabId, label, itemId = '') {
+    if (!mentionContext) return;
+    const { div, textNode, startOffset, endOffset } = mentionContext;
+    const selection = window.getSelection();
+    const range = document.createRange();
+    
+    try {
+        range.setStart(textNode, startOffset);
+        range.setEnd(textNode, endOffset);
+        range.deleteContents();
+        
+        const a = document.createElement('a');
+        a.href = "#";
+        a.className = "text-emerald-700 bg-emerald-100/80 dark:text-emerald-300 dark:bg-emerald-950/60 font-bold px-1.5 py-0.5 mx-0.5 rounded shadow-sm hover:bg-emerald-200 hover:text-emerald-800 dark:hover:bg-emerald-900 dark:hover:text-emerald-200 transition-colors inline-flex items-center no-underline cursor-pointer";
+        a.contentEditable = "false";
+        a.setAttribute('onclick', `window.setTab('${targetTabId}', '${itemId}'); return false;`);
+        a.innerText = "@" + label;
+        
+        range.insertNode(a);
+        const space = document.createTextNode('\u00A0');
+        a.parentNode.insertBefore(space, a.nextSibling);
+        range.setStartAfter(space);
+        range.setEndAfter(space);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    } catch (e) { console.error("Mention insert failed: ", e); }
+    
+    hideMentionDropdown();
+    div.dispatchEvent(new Event('input', { bubbles: true }));
+};
+
+// --- DEEP LINK SCROLL ENGINE ---
+window.setTab = function(tabId, itemId = '') {
+    // Dismiss any lingering @mention hover tooltip before we navigate.
+    // The hovered link is about to be destroyed by the re-render below, so its
+    // own mouseleave never fires — without this the tooltip stays stuck on screen.
+    var lingeringTooltip = document.getElementById('mention-tooltip');
+    if (lingeringTooltip) lingeringTooltip.classList.add('hidden');
+
+    activeTab = tabId;
+    if (isMobileMenuOpen) window.toggleMobileMenu();
+    if (itemId) window.isDeepLinking = true;
+    
+    renderNavigation();
+    window.renderContent();
+    if (window.lucide) lucide.createIcons();
+    
+    if (itemId) {
+        expandElementIfNeeded(itemId);
+        setTimeout(() => {
+            const element = document.getElementById(itemId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                flashElement(element);
+                window.isDeepLinking = false;
+                setTimeout(() => { element.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 250);
+            } else {
+                window.isDeepLinking = false;
+                const scrollArea = document.getElementById('scroll-area');
+                if (scrollArea) scrollArea.scrollTop = 0;
+            }
+        }, 80);
+    } else {
+        window.isDeepLinking = false;
+        const scrollArea = document.getElementById('scroll-area');
+        if (scrollArea) scrollArea.scrollTop = 0;
+    }
+}
+
+function expandElementIfNeeded(itemId) {
+    let triggeredReRender = false;
+    const subSection = activeTab.replace('campaign_', '');
+    if (currentSearchQueries[subSection]) { currentSearchQueries[subSection] = ''; triggeredReRender = true; }
+    if (activeTab === 'backstory' && currentSearchQueries.backstory) { currentSearchQueries.backstory = ''; triggeredReRender = true; }
+    if (activeTab === 'personality' && currentSearchQueries.personality) { currentSearchQueries.personality = ''; triggeredReRender = true; }
+    
+    const backstoryEntry = characterData.backstory.find(b => b.id === itemId);
+    if (backstoryEntry && backstoryEntry.isCollapsed) { backstoryEntry.isCollapsed = false; triggeredReRender = true; }
+    
+    const personalityEntry = characterData.personality.find(p => p.id === itemId);
+    if (personalityEntry && personalityEntry.isCollapsed) { personalityEntry.isCollapsed = false; triggeredReRender = true; }
+    
+    const sessionEntry = characterData.campaignNotes.sessionNotes.find(s => s.id === itemId);
+    if (sessionEntry && sessionEntry.isCollapsed) { sessionEntry.isCollapsed = false; triggeredReRender = true; }
+    
+    const locationEntry = characterData.campaignNotes.locations.find(l => l.id === itemId);
+    if (locationEntry && locationEntry.isCollapsed) { locationEntry.isCollapsed = false; triggeredReRender = true; }
+    
+    let factionToExpand = null;
+    let npcToExpand = null;
+    const factionEntry = characterData.campaignNotes.npcs.find(f => f.id === itemId);
+    if (factionEntry) { factionToExpand = factionEntry; }
+    else {
+        characterData.campaignNotes.npcs.forEach(f => {
+            if (f.members) {
+                const foundNpc = f.members.find(npc => npc.id === itemId);
+                if (foundNpc) { factionToExpand = f; npcToExpand = foundNpc; }
+            }
+        });
+    }
+    if (factionToExpand && factionToExpand.isCollapsed) { factionToExpand.isCollapsed = false; triggeredReRender = true; }
+    if (npcToExpand && npcToExpand.isCollapsed) { npcToExpand.isCollapsed = false; triggeredReRender = true; }
+    
+    const questEntry = characterData.campaignNotes.quests.find(q => q.id === itemId);
+    if (questEntry) {
+        if (!questEntry.isCompleted && questSectionsState.inProgressCollapsed) { questSectionsState.inProgressCollapsed = false; triggeredReRender = true; }
+        if (questEntry.isCompleted && questSectionsState.completedCollapsed) { questSectionsState.completedCollapsed = false; triggeredReRender = true; }
+    }
+    
+    if (triggeredReRender) { window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+}
+
+function flashElement(element) {
+    element.classList.add('ring-4', 'ring-emerald-500/50', 'ring-offset-2', 'dark:ring-offset-stone-900', 'transition-all', 'duration-500');
+    setTimeout(() => { element.classList.remove('ring-4', 'ring-emerald-500/50', 'ring-offset-2', 'dark:ring-offset-stone-900'); }, 2000);
+}
+
+// --- GLOBAL VAULT OMNISEARCH SYSTEM ENGINE ---
+window.globalSearchContext = { query: '', results: [], selectedIndex: -1 };
+
+function cleanHtmlTags(htmlString) {
+    if (!htmlString) return '';
+    const lookupNode = document.createElement('div');
+    lookupNode.innerHTML = htmlString;
+    return lookupNode.innerText || lookupNode.textContent || '';
+}
+
+function getSearchResultSnippet(fullText, searchTerm) {
+    const plainText = cleanHtmlTags(fullText).replace(/\s+/g, ' ').trim();
+    const matchIndex = plainText.toLowerCase().indexOf(searchTerm.toLowerCase());
+    if (matchIndex === -1) return plainText.substring(0, 90);
+    
+    const startBoundary = Math.max(0, matchIndex - 40);
+    const endBoundary = Math.min(plainText.length, matchIndex + 50);
+    let snippetBlock = plainText.substring(startBoundary, endBoundary);
+    
+    if (startBoundary > 0) snippetBlock = '...' + snippetBlock;
+    if (endBoundary < plainText.length) snippetBlock = snippetBlock + '...';
+    return snippetBlock;
+}
+
+// True when any of the entry's tags contains the query substring.
+function entryTagsMatch(entry, q) {
+    return Array.isArray(entry.tags) && entry.tags.some(function(t) { return t.toLowerCase().includes(q); });
+}
+
+window.handleGlobalSearchInput = function(value) {
+    const dropdown = document.getElementById('global-search-dropdown');
+    if (!dropdown) return;
+    
+    const q = value.trim().toLowerCase();
+    if (!q) { window.hideGlobalSearchDropdown(); return; }
+    
+    let matchingEntries = [];
+
+    // 0. Tags (theme matches) — surface matching tag collections first
+    if (typeof window.rebuildTagIndex === 'function') window.rebuildTagIndex();
+    if (typeof window.getAllTagsSorted === 'function') {
+        window.getAllTagsSorted().forEach(t => {
+            if (t.key.indexOf(q) !== -1) {
+                matchingEntries.push({ isTag: true, tagName: t.display, type: 'Tag', title: t.display, snippet: t.count + ' tagged ' + (t.count === 1 ? 'entry' : 'entries') + ' \u2014 view all' });
+            }
+        });
+    }
+
+    // 1. Deep index through Session Notes
+    characterData.campaignNotes.sessionNotes.forEach(s => {
+        const textNotes = cleanHtmlTags(s.notes);
+        if (s.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (s.date && s.date.toLowerCase().includes(q)) || entryTagsMatch(s, q)) {
+            matchingEntries.push({ tabId: 'campaign_sessionNotes', itemId: s.id, type: 'Session Note', title: s.title || 'Untitled Session', snippet: getSearchResultSnippet(s.notes, q) });
+        }
+    });
+
+    // 2. Deep index through Quest Logs
+    characterData.campaignNotes.quests.forEach(quest => {
+        const textNotes = cleanHtmlTags(quest.notes);
+        if (quest.title.toLowerCase().includes(q) || quest.subtitle.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || entryTagsMatch(quest, q)) {
+            matchingEntries.push({ tabId: 'campaign_quests', itemId: quest.id, type: 'Quest', title: quest.title || 'Untitled Quest', snippet: getSearchResultSnippet(quest.subtitle + " " + quest.notes, q) });
+        }
+    });
+
+    // 3. Deep index through Locations Matrix
+    characterData.campaignNotes.locations.forEach(loc => {
+        const textNotes = cleanHtmlTags(loc.notes);
+        if (loc.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (loc.subtitle && loc.subtitle.toLowerCase().includes(q)) || entryTagsMatch(loc, q)) {
+            matchingEntries.push({ tabId: 'campaign_locations', itemId: loc.id, type: 'Location', title: loc.title || 'Untitled Location', snippet: getSearchResultSnippet(loc.subtitle + " " + loc.notes, q) });
+        }
+    });
+
+    // 4. Deep index through Factions & Nested NPCs
+    characterData.campaignNotes.npcs.forEach(faction => {
+        if (faction.name.toLowerCase().includes(q)) {
+            matchingEntries.push({ tabId: 'campaign_npcs', itemId: faction.id, type: 'Faction Group', title: faction.name, snippet: 'Faction / Group Registry Directory Entry.' });
+        }
+        if (faction.members) {
+            faction.members.forEach(npc => {
+                const textNotes = cleanHtmlTags(npc.notes);
+                if (npc.name.toLowerCase().includes(q) || (npc.subtitle && npc.subtitle.toLowerCase().includes(q)) || textNotes.toLowerCase().includes(q) || entryTagsMatch(npc, q)) {
+                    matchingEntries.push({ tabId: 'campaign_npcs', itemId: npc.id, type: 'NPC Profile', title: npc.name || 'Unnamed NPC', snippet: getSearchResultSnippet((npc.subtitle ? `[${npc.subtitle}] ` : '') + npc.notes, q) });
+                }
+            });
+        }
+    });
+
+    // 5. Deep index through Backstory Logs
+    characterData.backstory.forEach(b => {
+        const textNotes = cleanHtmlTags(b.notes);
+        if (b.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q)) {
+            matchingEntries.push({ tabId: 'backstory', itemId: b.id, type: 'Backstory', title: b.title, snippet: getSearchResultSnippet(b.notes, q) });
+        }
+    });
+
+    // 6. Deep index through Personality Core Logs
+    characterData.personality.forEach(p => {
+        const textNotes = cleanHtmlTags(p.notes);
+        if (p.title.toLowerCase().includes(q) || p.subtitle.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q)) {
+            matchingEntries.push({ tabId: 'personality', itemId: p.id, type: 'Personality Trait', title: p.title, snippet: getSearchResultSnippet(p.subtitle + " " + p.notes, q) });
+        }
+    });
+
+    // 7. Index Miscellaneous scratchpad notes section
+    if (characterData.campaignNotes.misc) {
+        const textNotes = cleanHtmlTags(characterData.campaignNotes.misc);
+        if (textNotes.toLowerCase().includes(q)) {
+            matchingEntries.push({ tabId: 'campaign_misc', itemId: '', type: 'Misc & Loot', title: 'General Scratchpad Log', snippet: getSearchResultSnippet(characterData.campaignNotes.misc, q) });
+        }
+    }
+
+    // 8. Open Threads
+    (characterData.campaignNotes.threads || []).forEach(thread => {
+        const plainText = cleanHtmlTags(thread.text);
+        if (plainText.toLowerCase().includes(q)) {
+            const snippet = getSearchResultSnippet(thread.text, q);
+            const title = plainText.slice(0, 60) || 'Open Thread';
+            matchingEntries.push({ tabId: 'campaign_sessionNotes', itemId: thread.id, type: 'Thread', title: title, snippet: snippet });
+        }
+    });
+
+    window.globalSearchContext = { query: value, results: matchingEntries, selectedIndex: matchingEntries.length > 0 ? 0 : -1 };
+    dropdown.classList.remove('hidden');
+    window.renderGlobalSearchDropdownItems();
+};
+
+window.renderGlobalSearchDropdownItems = function() {
+    const dropdown = document.getElementById('global-search-dropdown');
+    if (!dropdown) return;
+    
+    const context = window.globalSearchContext;
+    if (context.results.length === 0) {
+        dropdown.innerHTML = `<li class="py-4 px-4 text-stone-400 dark:text-stone-500 italic text-center bg-white dark:bg-stone-900 select-none">No matching notes found inside vault</li>`;
+        return;
+    }
+
+    dropdown.innerHTML = context.results.map((res, i) => {
+        const isActive = i === context.selectedIndex;
+        const activeClasses = isActive ? 'bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-emerald-500 pl-3' : 'bg-white dark:bg-stone-900 border-l-4 border-transparent pl-4';
+        return `
+        <li onmousedown="window.selectGlobalSearchResult(${i})" class="py-2.5 pr-4 cursor-pointer flex flex-col transition-all border-b border-stone-100 dark:border-stone-800/60 last:border-0 ${activeClasses}">
+            <div class="flex items-center justify-between gap-4">
+                <span class="font-bold text-stone-800 dark:text-stone-100 truncate">${escapeHtml(res.title)}</span>
+                <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest bg-emerald-100/60 dark:bg-emerald-950/60 px-2 py-0.5 rounded flex-shrink-0">${res.type}</span>
+            </div>
+            ${res.snippet ? `<span class="text-xs text-stone-400 dark:text-stone-500 truncate mt-0.5 font-medium">${escapeHtml(res.snippet)}</span>` : ''}
+        </li>`;
+    }).join('');
+
+    const activeNode = dropdown.children[context.selectedIndex];
+    if (activeNode) activeNode.scrollIntoView({ block: 'nearest' });
+};
+
+window.handleGlobalSearchKeyDown = function(event) {
+    const dropdown = document.getElementById('global-search-dropdown');
+    if (!dropdown || dropdown.classList.contains('hidden')) return;
+    
+    const context = window.globalSearchContext;
+    if (context.results.length === 0) return;
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        context.selectedIndex = Math.min(context.selectedIndex + 1, context.results.length - 1);
+        window.renderGlobalSearchDropdownItems();
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        context.selectedIndex = Math.max(context.selectedIndex - 1, 0);
+        window.renderGlobalSearchDropdownItems();
+    } else if (event.key === 'Enter') {
+        event.preventDefault();
+        if (context.selectedIndex !== -1) {
+            window.selectGlobalSearchResult(context.selectedIndex);
+        }
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+        window.hideGlobalSearchDropdown();
+        event.target.blur();
+    }
+};
+
+window.selectGlobalSearchResult = function(index) {
+    const context = window.globalSearchContext;
+    const selection = context.results[index];
+    if (selection) {
+        if (selection.isTag && typeof window.openTag === 'function') {
+            window.openTag(selection.tagName);
+        } else {
+            window.setTab(selection.tabId, selection.itemId);
+        }
+        const searchInput = document.getElementById('global-search-input');
+        if (searchInput) searchInput.value = '';
+        window.hideGlobalSearchDropdown();
+    }
+};
+
+window.hideGlobalSearchDropdown = function() {
+    const dropdown = document.getElementById('global-search-dropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+    window.globalSearchContext = { query: '', results: [], selectedIndex: -1 };
+};
+
+// Structural click-away listeners protecting both floating context dropdown boundaries simultaneously
+document.addEventListener('mousedown', function(e) {
+    if (!e.target.closest('#global-search-dropdown') && !e.target.closest('#global-search-input')) {
+        window.hideGlobalSearchDropdown();
+    }
+    if (!e.target.closest('#mention-dropdown')) {
+        hideMentionDropdown();
+    }
+>>>>>>> 90ae1d58b594e9e553c20b8ea98e5a9f12f6d4c8
 });
