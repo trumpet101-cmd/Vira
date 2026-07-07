@@ -24,16 +24,37 @@ window.closeQuickCapture = function() {
 };
 
 // --- KEYBOARD SHORTCUTS ---
+// Shared guard: true while the user is typing somewhere (input, textarea,
+// or a contenteditable note), so shortcuts never steal keystrokes.
+function qcIsTypingContext() {
+    var el = document.activeElement;
+    if (!el) return false;
+    var tag = el.tagName;
+    return el.isContentEditable ||
+        tag === 'TEXTAREA' ||
+        (tag === 'INPUT' && el.type !== 'button');
+}
+
 document.addEventListener('keydown', function(e) {
+    // "/" or Ctrl+K jumps to the global search from anywhere (retrieval
+    // counterpart to Ctrl+Space capture). Skipped while typing, and when
+    // the search bar is hidden (narrow layouts hide it below the sm
+    // breakpoint — focusing an invisible input would just eat keys).
+    var wantsSearch = (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) ||
+                      ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'k' || e.key === 'K'));
+    if (wantsSearch && !qcIsTypingContext()) {
+        var searchInput = document.getElementById('global-search-input');
+        if (searchInput && searchInput.offsetParent !== null) {
+            e.preventDefault(); // "/" would type into the box; Ctrl+K is a browser shortcut
+            searchInput.focus();
+            searchInput.select();
+        }
+        return;
+    }
+
     // Ctrl+Space to open (only when not already typing in an input/contenteditable)
     if (e.ctrlKey && e.code === 'Space') {
-        var tag = document.activeElement && document.activeElement.tagName;
-        var isEditing = document.activeElement &&
-            (document.activeElement.isContentEditable ||
-             tag === 'TEXTAREA' ||
-             (tag === 'INPUT' && document.activeElement.type !== 'button'));
-
-        if (!isEditing) {
+        if (!qcIsTypingContext()) {
             e.preventDefault();
             window.openQuickCapture();
             return;

@@ -413,6 +413,11 @@ window.exportJSON = async function() {
     a.click();
     a.remove();
     
+    // Record the download for the weekly backup nudge, and clear the banner.
+    safeSetItem('last_backup_all_ts', String(Date.now()));
+    var nudgeEl = document.getElementById('backup-nudge');
+    if (nudgeEl) nudgeEl.classList.add('hidden');
+    
     if (isCloudReady) updateCloudUIStatus("Cloud Sync Active", "cloud-lightning", "bg-emerald-900/50 text-emerald-400");
     else updateCloudUIStatus("Local Storage Active", "hard-drive", "bg-stone-800 text-stone-400");
 };
@@ -605,3 +610,57 @@ function updateCloudStatusTooltip() {
         attach();
     }
 })();
+
+// =========================================================================
+// WEEKLY BACKUP NUDGE
+// =========================================================================
+// The automatic layers (localStorage, Firestore, snapshots) all live in
+// accounts/systems outside the user's control. "Backup All" is the only copy
+// that lands on their own disk, so once the last download is more than 7
+// days old, a slim banner appears under the header. Design constraints:
+//   - never a modal, never blocks anything, one line only
+//   - "Later" snoozes it for 24h so it doesn't reappear on every reload
+//   - first ever run seeds the timestamp instead of nagging a fresh vault
+//   - checked on load and then hourly, so a tab left open for weeks still nudges
+
+var BACKUP_NUDGE_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;   // 7 days
+var BACKUP_NUDGE_SNOOZE_MS = 24 * 60 * 60 * 1000;          // "Later" = 1 day
+
+function checkBackupNudge() {
+    var el = document.getElementById('backup-nudge');
+    if (!el) return;
+
+    var last = parseInt(localStorage.getItem('last_backup_all_ts'), 10);
+    if (!last || isNaN(last)) {
+        // First run on this device: start the 7-day clock now rather than
+        // greeting a brand-new (or freshly migrated) vault with a warning.
+        safeSetItem('last_backup_all_ts', String(Date.now()));
+        return;
+    }
+
+    var age = Date.now() - last;
+    if (age < BACKUP_NUDGE_INTERVAL_MS) { el.classList.add('hidden'); return; }
+
+    var snooze = parseInt(localStorage.getItem('backup_nudge_snooze_ts'), 10);
+    if (snooze && !isNaN(snooze) && Date.now() - snooze < BACKUP_NUDGE_SNOOZE_MS) return;
+
+    var days = Math.floor(age / (24 * 60 * 60 * 1000));
+    var textEl = document.getElementById('backup-nudge-text');
+    if (textEl) textEl.textContent = 'It\'s been ' + days + ' days since your last backup download \u2014 a quick "Backup All" keeps a copy on your own disk.';
+    el.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+}
+
+window.dismissBackupNudge = function() {
+    safeSetItem('backup_nudge_snooze_ts', String(Date.now()));
+    var el = document.getElementById('backup-nudge');
+    if (el) el.classList.add('hidden');
+};
+
+// On load (after the DOM exists) and hourly thereafter.
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkBackupNudge);
+} else {
+    checkBackupNudge();
+}
+setInterval(checkBackupNudge, 60 * 60 * 1000);
