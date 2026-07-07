@@ -350,6 +350,148 @@ function selectViewTab(key) {
 }
 window.selectViewTab = selectViewTab;
 
+// --- JOURNAL SEARCH ---
+// Mirrors the main app's global search, scoped to the published data:
+// sessions, quests, NPCs (factions + members), locations, misc, and tags.
+var viewSearchResults = [];
+var viewSearchSelected = -1;
+
+function searchSnippet(text, q) {
+    var plain = (text || '').replace(/\s+/g, ' ').trim();
+    var idx = plain.toLowerCase().indexOf(q);
+    if (idx === -1) return escapeHtml(plain.slice(0, 90)) + (plain.length > 90 ? '…' : '');
+    var start = Math.max(0, idx - 35);
+    var end = Math.min(plain.length, idx + q.length + 55);
+    return (start > 0 ? '…' : '')
+        + escapeHtml(plain.slice(start, idx))
+        + '<strong class="text-emerald-600 dark:text-emerald-400">' + escapeHtml(plain.slice(idx, idx + q.length)) + '</strong>'
+        + escapeHtml(plain.slice(idx + q.length, end))
+        + (end < plain.length ? '…' : '');
+}
+
+function buildViewSearchResults(q) {
+    var out = [];
+    var cn = journal.campaignNotes;
+    function tagsMatch(entry) { return (entry.tags || []).some(function(t) { return String(t).toLowerCase().indexOf(q) !== -1; }); }
+
+    // Tags first — matching a theme surfaces the whole collection
+    sortedViewTags().forEach(function(t) {
+        if (t.key.indexOf(q) !== -1) {
+            out.push({ isTag: true, tagKey: t.key, icon: 'tag', type: 'Tag', title: t.display, snippet: escapeHtml(t.count + ' tagged ' + (t.count === 1 ? 'entry' : 'entries') + ' — view all') });
+        }
+    });
+    (cn.sessionNotes || []).forEach(function(s) {
+        var text = stripHtml(s.notes);
+        if ((s.title || '').toLowerCase().indexOf(q) !== -1 || (s.date || '').toLowerCase().indexOf(q) !== -1 || text.toLowerCase().indexOf(q) !== -1 || tagsMatch(s)) {
+            out.push({ tabId: 'campaign_sessionNotes', itemId: s.id, icon: 'scroll-text', type: 'Session', title: s.title || 'Untitled Session', snippet: searchSnippet(text, q) });
+        }
+    });
+    (cn.quests || []).forEach(function(qs) {
+        var text = stripHtml(qs.notes);
+        if ((qs.title || '').toLowerCase().indexOf(q) !== -1 || (qs.subtitle || '').toLowerCase().indexOf(q) !== -1 || text.toLowerCase().indexOf(q) !== -1 || tagsMatch(qs)) {
+            out.push({ tabId: 'campaign_quests', itemId: qs.id, icon: 'swords', type: 'Quest', title: qs.title || 'Untitled Quest', snippet: searchSnippet((qs.subtitle ? qs.subtitle + ' ' : '') + text, q) });
+        }
+    });
+    (cn.npcs || []).forEach(function(f) {
+        if ((f.name || '').toLowerCase().indexOf(q) !== -1) {
+            out.push({ tabId: 'campaign_npcs', itemId: f.id, icon: 'shield', type: 'Faction', title: f.name, snippet: escapeHtml('Faction / group') });
+        }
+        (f.members || []).forEach(function(n) {
+            var text = stripHtml(n.notes);
+            if ((n.name || '').toLowerCase().indexOf(q) !== -1 || (n.subtitle || '').toLowerCase().indexOf(q) !== -1 || text.toLowerCase().indexOf(q) !== -1 || tagsMatch(n)) {
+                out.push({ tabId: 'campaign_npcs', itemId: n.id, icon: 'users', type: 'NPC', title: n.name || 'Unnamed NPC', snippet: searchSnippet((n.subtitle ? n.subtitle + ' ' : '') + text, q) });
+            }
+        });
+    });
+    (cn.locations || []).forEach(function(l) {
+        var text = stripHtml(l.notes);
+        if ((l.title || '').toLowerCase().indexOf(q) !== -1 || (l.subtitle || '').toLowerCase().indexOf(q) !== -1 || text.toLowerCase().indexOf(q) !== -1 || tagsMatch(l)) {
+            out.push({ tabId: 'campaign_locations', itemId: l.id, icon: 'map-pin', type: 'Location', title: l.title || 'Untitled Location', snippet: searchSnippet((l.subtitle ? l.subtitle + ' ' : '') + text, q) });
+        }
+    });
+    if (cn.misc) {
+        var miscText = stripHtml(cn.misc);
+        if (miscText.toLowerCase().indexOf(q) !== -1) {
+            out.push({ tabId: 'campaign_misc', itemId: '', icon: 'package', type: 'Misc & Loot', title: 'Misc & Loot', snippet: searchSnippet(miscText, q) });
+        }
+    }
+    return out.slice(0, 30);
+}
+
+function renderViewSearchDropdown() {
+    var dd = document.getElementById('view-search-dropdown');
+    if (!viewSearchResults.length) {
+        dd.innerHTML = '<li class="px-4 py-3 text-stone-400 dark:text-stone-500 italic text-sm">No matches in the journal.</li>';
+        dd.classList.remove('hidden');
+        return;
+    }
+    dd.innerHTML = viewSearchResults.map(function(r, i) {
+        var on = i === viewSearchSelected;
+        return '<li><button onmousedown="event.preventDefault()" onclick="window.pickViewSearchResult(' + i + ')" class="w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ' + (on ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'hover:bg-stone-50 dark:hover:bg-stone-800/50') + '">'
+            + '<i data-lucide="' + r.icon + '" class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5"></i>'
+            + '<span class="min-w-0 flex-1">'
+            +   '<span class="block font-semibold text-stone-800 dark:text-stone-100 truncate">' + escapeHtml(r.title) + ' <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 ml-1">' + r.type + '</span></span>'
+            +   '<span class="block text-xs text-stone-500 dark:text-stone-400 leading-snug mt-0.5">' + r.snippet + '</span>'
+            + '</span></button></li>';
+    }).join('');
+    dd.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeViewSearch(clearInput) {
+    document.getElementById('view-search-dropdown').classList.add('hidden');
+    viewSearchResults = [];
+    viewSearchSelected = -1;
+    if (clearInput) document.getElementById('view-search').value = '';
+}
+
+window.handleViewSearch = function(value) {
+    var q = (value || '').toLowerCase().trim();
+    if (q.length < 2) { closeViewSearch(false); return; }
+    viewSearchResults = buildViewSearchResults(q);
+    viewSearchSelected = viewSearchResults.length ? 0 : -1;
+    renderViewSearchDropdown();
+};
+
+window.handleViewSearchKey = function(event) {
+    if (event.key === 'Escape') { closeViewSearch(true); event.target.blur(); return; }
+    if (!viewSearchResults.length) return;
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        viewSearchSelected = (viewSearchSelected + 1) % viewSearchResults.length;
+        renderViewSearchDropdown();
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        viewSearchSelected = (viewSearchSelected - 1 + viewSearchResults.length) % viewSearchResults.length;
+        renderViewSearchDropdown();
+    } else if (event.key === 'Enter') {
+        event.preventDefault();
+        window.pickViewSearchResult(viewSearchSelected >= 0 ? viewSearchSelected : 0);
+    }
+};
+
+window.handleViewSearchBlur = function() {
+    // Delay so a result's onclick can fire before the dropdown disappears.
+    setTimeout(function() { closeViewSearch(false); }, 150);
+};
+
+window.pickViewSearchResult = function(i) {
+    var r = viewSearchResults[i];
+    if (!r) return;
+    closeViewSearch(true);
+    if (r.isTag) { window.openTag(r.tagKey); return; }
+    window.setTab(r.tabId, r.itemId);
+};
+
+// Press "/" anywhere to jump to the search box (matches the main app's shortcut).
+document.addEventListener('keydown', function(e) {
+    if (e.key === '/' && document.activeElement && document.activeElement.tagName !== 'INPUT') {
+        e.preventDefault();
+        var inp = document.getElementById('view-search');
+        if (inp) inp.focus();
+    }
+});
+
 // --- BOOT ---
 function showViewError(title, message) {
     document.getElementById('view-loading').classList.add('hidden');
@@ -362,7 +504,9 @@ function formatPublishedDate(ts) {
     if (!ts) return 'Published';
     try {
         var d = new Date(ts);
-        return 'Published ' + d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        var dateStr = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        var timeStr = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        return 'Published ' + dateStr + ' · ' + timeStr;
     } catch (e) { return 'Published'; }
 }
 
