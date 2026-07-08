@@ -164,17 +164,6 @@
         <nav class="flex-1 p-4 space-y-2 overflow-y-auto" id="nav-container"></nav>
 
         <div class="p-4 border-t border-stone-800 space-y-3">
-            
-            <button onclick="window.toggleDarkMode()" class="w-full flex items-center justify-between px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold rounded-xl transition-all border border-stone-700/50 text-sm">
-                <div class="flex items-center space-x-2">
-                    <i data-lucide="moon" class="w-4.5 h-4.5 text-amber-400" id="dark-mode-moon-icon"></i>
-                    <i data-lucide="sun" class="w-4.5 h-4.5 text-amber-400 hidden" id="dark-mode-sun-icon"></i>
-                    <span id="dark-mode-text">Dark Mode</span>
-                </div>
-                <div class="w-8 h-4 bg-stone-600 rounded-full relative transition-all duration-200 border border-stone-500">
-                    <div id="dark-mode-switch-dot" class="w-3 h-3 bg-stone-100 rounded-full absolute top-[1px] left-[1px] transition-all duration-200"></div>
-                </div>
-            </button>
 
             <button onclick="window.openCharacterModal()" class="w-full flex items-center justify-center space-x-2 py-2.5 bg-emerald-900/50 hover:bg-emerald-800 text-emerald-100 font-bold rounded-xl transition-all shadow-md shadow-emerald-950/40 border border-emerald-700/50 text-sm">
                 <i data-lucide="users" class="w-4.5 h-4.5"></i>
@@ -206,10 +195,6 @@
                 <button onclick="window.exportMarkdown()" class="col-span-3 flex items-center justify-center space-x-2 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export this character's notes as a readable Markdown document (opens in Word, Google Docs, or any text editor)">
                     <i data-lucide="file-text" class="w-4 h-4"></i>
                     <span class="text-[10px] font-bold uppercase tracking-wider">Export Readable Notes</span>
-                </button>
-                <button onclick="window.handleSignOut()" class="col-span-3 flex items-center justify-center space-x-2 py-2.5 bg-red-950/40 hover:bg-red-900 rounded-lg text-red-300 transition-colors" title="Sign out of cloud sync on this device">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                    <span class="text-[10px] font-bold uppercase tracking-wider">Sign Out</span>
                 </button>
             </div>
         </div>
@@ -249,7 +234,15 @@
                     </div>
                 </div>
 
-                </div>
+                <button onclick="window.toggleDarkMode()" class="w-9 h-9 flex items-center justify-center rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-300 transition-colors flex-shrink-0" title="Toggle dark mode">
+                    <i data-lucide="moon" class="w-4 h-4" id="dark-mode-moon-icon"></i>
+                    <i data-lucide="sun" class="w-4 h-4 hidden" id="dark-mode-sun-icon"></i>
+                </button>
+
+                <button onclick="window.handleSignOut()" class="w-9 h-9 flex items-center justify-center rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-red-100 dark:hover:bg-red-950/60 text-stone-500 dark:text-stone-300 hover:text-red-600 dark:hover:text-red-400 transition-colors flex-shrink-0" title="Sign out of cloud sync on this device">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar" id="scroll-area">
