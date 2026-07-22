@@ -96,13 +96,25 @@ window.toggleAllPersonality = function(collapse) { characterData.personality.for
 window.movePersonality = function(pId, direction) { const arr = characterData.personality; const index = arr.findIndex(p => p.id === pId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } }
 window.filterPersonality = function(query) { currentSearchQueries.personality = query; const q = query.toLowerCase(); document.querySelectorAll('.personality-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
-window.addSession = function() { currentSearchQueries.sessionNotes = ''; characterData.campaignNotes.sessionNotes.unshift({ id: 'sess_' + Date.now(), title: '', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
-window.updateSession = function(sessId, field, val) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) sess[field] = val; if (field === 'title') window.syncMentionLabels(sessId, val); window.saveData(); }
-window.deleteSession = function(sessId) { const mc = window.countMentions(sessId); window.showCustomConfirm('Delete Session Log?', 'Are you sure you want to permanently delete this session log entry?' + mentionWarningText(mc), '🗑️', () => { characterData.campaignNotes.sessionNotes = characterData.campaignNotes.sessionNotes.filter(s => s.id !== sessId); window.neutralizeMentions(sessId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
-window.toggleSessionCollapse = function(sessId) { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === sessId); if(sess) { sess.isCollapsed = !sess.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
-window.toggleAllSessions = function(collapse) { characterData.campaignNotes.sessionNotes.forEach(s => s.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
-window.moveSession = function(sessId, direction) { const arr = characterData.campaignNotes.sessionNotes; const index = arr.findIndex(s => s.id === sessId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
-window.filterSessions = function(query) { currentSearchQueries.sessionNotes = query; const q = query.toLowerCase(); document.querySelectorAll('.session-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
+window.addSession = function() {
+    // Adds to whichever journal section is active (Session Notes / Main Campaign / Backstory Quest).
+    var key = getActiveJournalKey();
+    var cfg = JOURNAL_SECTIONS[key];
+    currentSearchQueries[key] = '';
+    characterData.campaignNotes[key].unshift({
+        id: cfg.idPrefix + '_' + Date.now(),
+        title: '',
+        date: cfg.autoDate ? new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+        notes: '', isCollapsed: false, tags: []
+    });
+    window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons();
+}
+window.updateSession = function(sessId, field, val) { const hit = findJournalEntry(sessId); if(hit) hit.entry[field] = val; if (field === 'title') window.syncMentionLabels(sessId, val); window.saveData(); }
+window.deleteSession = function(sessId) { const hit = findJournalEntry(sessId); if (!hit) return; const noun = JOURNAL_SECTIONS[hit.key].deleteNoun; const mc = window.countMentions(sessId); window.showCustomConfirm('Delete Entry?', 'Are you sure you want to permanently delete this ' + noun + '?' + mentionWarningText(mc), '🗑️', () => { characterData.campaignNotes[hit.key] = characterData.campaignNotes[hit.key].filter(s => s.id !== sessId); window.neutralizeMentions(sessId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
+window.toggleSessionCollapse = function(sessId) { const hit = findJournalEntry(sessId); if(hit) { hit.entry.isCollapsed = !hit.entry.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
+window.toggleAllSessions = function(collapse) { characterData.campaignNotes[getActiveJournalKey()].forEach(s => s.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+window.moveSession = function(sessId, direction) { const hit = findJournalEntry(sessId); if (!hit) return; const arr = hit.arr; const index = arr.findIndex(s => s.id === sessId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
+window.filterSessions = function(query) { currentSearchQueries[getActiveJournalKey()] = query; const q = query.toLowerCase(); document.querySelectorAll('.session-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
 
 // --- COPY SESSION AS TEXT ---
 // Converts a session's outline HTML into shareable plain text (markdown-style
@@ -164,9 +176,10 @@ function htmlToPlainOutline(html) {
 }
 
 window.copySessionAsText = function(sessId) {
-    var sess = characterData.campaignNotes.sessionNotes.find(function(s) { return s.id === sessId; });
-    if (!sess) return;
-    var header = (sess.title || 'Untitled Session') + (sess.date ? ' — ' + sess.date : '');
+    var hit = findJournalEntry(sessId);
+    if (!hit) return;
+    var sess = hit.entry;
+    var header = (sess.title || 'Untitled Entry') + (sess.date ? ' — ' + sess.date : '');
     var body = htmlToPlainOutline(sess.notes);
     var output = '**' + header + '**' + (body ? '\n' + body : '\n(No notes yet)');
 
@@ -404,7 +417,7 @@ window.exportMarkdown = function() {
 
     // --- Campaign Notes ---
     var cn = cd.campaignNotes || {};
-    var hasCampaign = (cn.threads || []).length || (cn.sessionNotes || []).length || (cn.quests || []).length || (cn.npcs || []).some(function(f) { return (f.members || []).length; }) || (cn.locations || []).length || (cn.misc || '').trim();
+    var hasCampaign = (cn.threads || []).length || (cn.sessionNotes || []).length || (cn.mainQuests || []).length || (cn.backstoryQuests || []).length || (cn.quests || []).length || (cn.npcs || []).some(function(f) { return (f.members || []).length; }) || (cn.locations || []).length || (cn.misc || '').trim();
     if (hasCampaign) md.push('## Campaign Notes\n');
 
     if ((cn.threads || []).length) {
@@ -415,6 +428,16 @@ window.exportMarkdown = function() {
         }).join('\n') + '\n');
     }
 
+    [['mainQuests', 'Main Campaign'], ['backstoryQuests', 'Backstory Quest']].forEach(function(pair) {
+        if ((cn[pair[0]] || []).length) {
+            md.push('### ' + pair[1] + '\n');
+            cn[pair[0]].forEach(function(s) {
+                md.push('#### ' + (s.title || 'Untitled Entry') + (s.date ? ' \u2014 ' + s.date : '') + tagSuffix(s) + '\n');
+                section(notesBlock(s.notes));
+            });
+        }
+    });
+
     if ((cn.sessionNotes || []).length) {
         md.push('### Session Notes\n');
         cn.sessionNotes.forEach(function(s) {
@@ -424,7 +447,7 @@ window.exportMarkdown = function() {
     }
 
     if ((cn.quests || []).length) {
-        md.push('### Quests\n');
+        md.push('### Side Quests\n');
         [['Urgent', function(q) { return q.isUrgent && !q.isCompleted; }],
          ['In Progress', function(q) { return !q.isUrgent && !q.isCompleted; }],
          ['Completed', function(q) { return q.isCompleted; }]].forEach(function(cat) {
@@ -533,6 +556,8 @@ function forEachMentionField(visit) {
     characterData.personality.forEach(function(p) { visit(p, 'notes'); });
     var cn = characterData.campaignNotes;
     cn.sessionNotes.forEach(function(s) { visit(s, 'notes'); });
+    (cn.mainQuests || []).forEach(function(s) { visit(s, 'notes'); });
+    (cn.backstoryQuests || []).forEach(function(s) { visit(s, 'notes'); });
     cn.quests.forEach(function(qst) { visit(qst, 'notes'); });
     cn.locations.forEach(function(l) { visit(l, 'notes'); });
     cn.npcs.forEach(function(f) { (f.members || []).forEach(function(n) { visit(n, 'notes'); }); });
@@ -971,6 +996,8 @@ function getMentionSuggestions(query) {
     });
     characterData.campaignNotes.locations.forEach(loc => { if (loc.title && loc.title.toLowerCase().includes(q)) results.push({ type: 'Location', id: 'campaign_locations', itemId: loc.id, label: loc.title }); });
     characterData.campaignNotes.quests.forEach(qItem => { if (qItem.title && qItem.title.toLowerCase().includes(q)) results.push({ type: 'Quest', id: 'campaign_quests', itemId: qItem.id, label: qItem.title }); });
+    characterData.campaignNotes.mainQuests.forEach(s => { if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Main Quest', id: 'campaign_mainQuests', itemId: s.id, label: s.title }); });
+    characterData.campaignNotes.backstoryQuests.forEach(s => { if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Backstory Quest', id: 'campaign_backstoryQuests', itemId: s.id, label: s.title }); });
     characterData.campaignNotes.sessionNotes.forEach(s => { if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Session', id: 'campaign_sessionNotes', itemId: s.id, label: s.title }); });
     characterData.backstory.forEach(b => { if (b.title && b.title.toLowerCase().includes(q)) results.push({ type: 'Backstory', id: 'backstory', itemId: b.id, label: b.title }); });
     characterData.personality.forEach(p => { if (p.title && p.title.toLowerCase().includes(q)) results.push({ type: 'Personality', id: 'personality', itemId: p.id, label: p.title }); });
@@ -1012,7 +1039,7 @@ window.handleInput = function(event, section, field) {
     
     if (section === 'backstory') { const bEntry = characterData.backstory.find(b => b.id === field); if(bEntry) bEntry.notes = div.innerHTML; } 
     else if (section === 'personality') { const pEntry = characterData.personality.find(p => p.id === field); if(pEntry) pEntry.notes = div.innerHTML; } 
-    else if (section === 'campaignNotes_session') { const sess = characterData.campaignNotes.sessionNotes.find(s => s.id === field); if(sess) sess.notes = div.innerHTML; } 
+    else if (section === 'campaignNotes_session') { const hit = findJournalEntry(field); if(hit) hit.entry.notes = div.innerHTML; } 
     else if (section === 'campaignNotes_quest') { const quest = characterData.campaignNotes.quests.find(q => q.id === field); if(quest) quest.notes = div.innerHTML; } 
     else if (section === 'campaignNotes_location') { const loc = characterData.campaignNotes.locations.find(l => l.id === field); if(loc) loc.notes = div.innerHTML; } 
     else if (section === 'campaignNotes_npc') {
@@ -1252,8 +1279,8 @@ function expandElementIfNeeded(itemId) {
     const personalityEntry = characterData.personality.find(p => p.id === itemId);
     if (personalityEntry && personalityEntry.isCollapsed) { personalityEntry.isCollapsed = false; triggeredReRender = true; }
     
-    const sessionEntry = characterData.campaignNotes.sessionNotes.find(s => s.id === itemId);
-    if (sessionEntry && sessionEntry.isCollapsed) { sessionEntry.isCollapsed = false; triggeredReRender = true; }
+    const journalHit = findJournalEntry(itemId);
+    if (journalHit && journalHit.entry.isCollapsed) { journalHit.entry.isCollapsed = false; triggeredReRender = true; }
     
     const locationEntry = characterData.campaignNotes.locations.find(l => l.id === itemId);
     if (locationEntry && locationEntry.isCollapsed) { locationEntry.isCollapsed = false; triggeredReRender = true; }
@@ -1341,6 +1368,16 @@ window.handleGlobalSearchInput = function(value) {
         if (s.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (s.date && s.date.toLowerCase().includes(q)) || entryTagsMatch(s, q)) {
             matchingEntries.push({ tabId: 'campaign_sessionNotes', itemId: s.id, type: 'Session Note', title: s.title || 'Untitled Session', snippet: getSearchResultSnippet(s.notes, q) });
         }
+    });
+
+    // 1b. Deep index through Main Campaign & Backstory Quest journals
+    [['mainQuests', 'campaign_mainQuests', 'Main Campaign'], ['backstoryQuests', 'campaign_backstoryQuests', 'Backstory Quest']].forEach(function(cfg) {
+        (characterData.campaignNotes[cfg[0]] || []).forEach(s => {
+            const textNotes = cleanHtmlTags(s.notes);
+            if (s.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (s.date && s.date.toLowerCase().includes(q)) || entryTagsMatch(s, q)) {
+                matchingEntries.push({ tabId: cfg[1], itemId: s.id, type: cfg[2], title: s.title || 'Untitled Entry', snippet: getSearchResultSnippet(s.notes, q) });
+            }
+        });
     });
 
     // 2. Deep index through Quest Logs

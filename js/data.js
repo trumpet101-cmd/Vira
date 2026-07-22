@@ -27,7 +27,7 @@ var initialCharacterData = {
         features: [ "Barbarian (World Tree)", "Speed: 35 feet", "Darkvision: 60 feet", "Fey Ancestry: Advantage on Charm saves", "Trance: 4 hour long rest", "Origin Feat: Magic Initiate (Wizard) - Find Familiar, Message, Mending" ],
         equipment: []
     },
-    campaignNotes: { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "", threads: [] }
+    campaignNotes: { sessionNotes: [], mainQuests: [], backstoryQuests: [], quests: [], npcs: [], locations: [], misc: "", threads: [] }
 };
 
 // --- DYNAMIC BLANK SLATE MAKER ---
@@ -59,7 +59,7 @@ function getCleanCharacterData(name, race, charClass) {
             feats: { lvl1: "", lvl4: "", lvl8: "", lvl12: "", lvl16: "", lvl19: "", lvl20: "" },
             features: "", equipment: "", acSelection: ["unarmored", ""], shieldActive: false
         },
-        campaignNotes: { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "", threads: [] }
+        campaignNotes: { sessionNotes: [], mainQuests: [], backstoryQuests: [], quests: [], npcs: [], locations: [], misc: "", threads: [] }
     };
 }
 
@@ -75,9 +75,11 @@ function migrateData(data) {
     }
 
     if (!data.campaignNotes || typeof data.campaignNotes !== 'object') {
-        data.campaignNotes = { sessionNotes: [], quests: [], npcs: [], locations: [], misc: "", threads: [] };
+        data.campaignNotes = { sessionNotes: [], mainQuests: [], backstoryQuests: [], quests: [], npcs: [], locations: [], misc: "", threads: [] };
     }
     if (!Array.isArray(data.campaignNotes.sessionNotes)) data.campaignNotes.sessionNotes = [];
+    if (!Array.isArray(data.campaignNotes.mainQuests)) data.campaignNotes.mainQuests = [];
+    if (!Array.isArray(data.campaignNotes.backstoryQuests)) data.campaignNotes.backstoryQuests = [];
     if (!Array.isArray(data.campaignNotes.quests)) data.campaignNotes.quests = [];
     if (!Array.isArray(data.campaignNotes.npcs)) data.campaignNotes.npcs = [];
     if (!Array.isArray(data.campaignNotes.locations)) data.campaignNotes.locations = [];
@@ -128,6 +130,18 @@ function migrateData(data) {
         if (typeof s.date !== 'string') s.date = "";
         if (typeof s.notes !== 'string') s.notes = "";
         if (!Array.isArray(s.tags)) s.tags = [];
+    });
+    // Main Campaign & Backstory Quest entries share the session shape and the
+    // same string-field guards (search/mention sweep call .toLowerCase() unguarded).
+    [['mainQuests', 'mainq'], ['backstoryQuests', 'bkq']].forEach(function(pair) {
+        data.campaignNotes[pair[0]].forEach(function(s, sIdx) {
+            if (!s.id) s.id = pair[1] + '_migrated_' + sIdx + '_' + Date.now();
+            if (typeof s.title !== 'string') s.title = "";
+            if (typeof s.date !== 'string') s.date = "";
+            if (typeof s.notes !== 'string') s.notes = "";
+            if (s.isCollapsed === undefined) s.isCollapsed = false;
+            if (!Array.isArray(s.tags)) s.tags = [];
+        });
     });
     data.campaignNotes.quests.forEach((q, qIdx) => {
         if (!q.id) q.id = 'quest_migrated_' + qIdx + '_' + Date.now();

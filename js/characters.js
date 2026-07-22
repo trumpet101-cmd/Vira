@@ -120,7 +120,7 @@ window.switchCharacter = function(charId) {
 
     currentCharacterId = charId;
     localStorage.setItem('current_character_id', currentCharacterId);
-    currentSearchQueries = { sessionNotes: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
+    currentSearchQueries = { sessionNotes: '', mainQuests: '', backstoryQuests: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
     // Reset per-character snapshot timers so version history doesn't fire
     // against the wrong character.
     if (typeof window.refreshVersionHistoryForCharacter === 'function') window.refreshVersionHistoryForCharacter();

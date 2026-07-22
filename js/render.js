@@ -53,12 +53,14 @@ var BACKLINK_COLLAPSED = 4;          // how many rows show before "Show all"
 var BACKLINK_FILTER_TYPE = 'session'; // which type exposes the text filter
 
 var BACKLINK_TYPES = [
-    { key: 'session',  label: 'Sessions',  icon: 'scroll-text', tab: 'campaign_sessionNotes' },
-    { key: 'quest',    label: 'Quests',    icon: 'swords',      tab: 'campaign_quests' },
-    { key: 'location', label: 'Locations', icon: 'map-pin',     tab: 'campaign_locations' },
-    { key: 'thread',   label: 'Threads',   icon: 'help-circle', tab: 'campaign_sessionNotes' }
+    { key: 'session',   label: 'Sessions',      icon: 'scroll-text', tab: 'campaign_sessionNotes' },
+    { key: 'mainquest', label: 'Main Campaign', icon: 'crown',       tab: 'campaign_mainQuests' },
+    { key: 'bkquest',   label: 'Backstory Q.',  icon: 'sprout',      tab: 'campaign_backstoryQuests' },
+    { key: 'quest',     label: 'Side Quests',   icon: 'swords',      tab: 'campaign_quests' },
+    { key: 'location',  label: 'Locations',     icon: 'map-pin',     tab: 'campaign_locations' },
+    { key: 'thread',    label: 'Threads',       icon: 'help-circle', tab: 'campaign_sessionNotes' }
 ];
-var BACKLINK_ICONS = { session: 'scroll-text', quest: 'swords', location: 'map-pin', thread: 'help-circle' };
+var BACKLINK_ICONS = { session: 'scroll-text', mainquest: 'crown', bkquest: 'sprout', quest: 'swords', location: 'map-pin', thread: 'help-circle' };
 
 // targetEntryId -> [ { tabId, sourceId, sourceType, title, meta, snippet, mentionText } ]
 var backlinkIndex = {};
@@ -69,7 +71,7 @@ var backlinkState = {};
 function getBacklinkState(entryId) {
     if (!backlinkState[entryId]) {
         backlinkState[entryId] = {
-            active: { session: false, quest: true, location: true, thread: true }, // global default
+            active: { session: false, mainquest: true, bkquest: true, quest: true, location: true, thread: true }, // global default
             expanded: false,
             query: ''
         };
@@ -124,6 +126,8 @@ window.rebuildBacklinkIndex = function() {
     }
 
     (cn.sessionNotes || []).forEach(function(s) { addSource(s.notes, s.id, 'session',  'campaign_sessionNotes', s.title || 'Untitled session', s.date || ''); });
+    (cn.mainQuests || []).forEach(function(s)      { addSource(s.notes, s.id, 'mainquest', 'campaign_mainQuests',      s.title || 'Untitled entry', 'Main Campaign'); });
+    (cn.backstoryQuests || []).forEach(function(s) { addSource(s.notes, s.id, 'bkquest',   'campaign_backstoryQuests', s.title || 'Untitled entry', 'Backstory Quest'); });
     (cn.quests || []).forEach(function(q)       { addSource(q.notes, q.id, 'quest',    'campaign_quests',       q.title || 'Untitled quest', 'Quest'); });
     (cn.locations || []).forEach(function(l)    { addSource(l.notes, l.id, 'location', 'campaign_locations',    l.title || 'Untitled location', 'Location'); });
     (cn.threads || []).forEach(function(t)      { addSource(t.text,  t.id, 'thread',   'campaign_sessionNotes', stripHtmlToText(t.text).slice(0, 60) || 'Open thread', 'Thread'); });
@@ -210,7 +214,7 @@ function renderBacklinksPanel(entryId) {
     if (!all.length) return '';
 
     var st = getBacklinkState(entryId);
-    var counts = { session: 0, quest: 0, location: 0, thread: 0 };
+    var counts = { session: 0, mainquest: 0, bkquest: 0, quest: 0, location: 0, thread: 0 };
     all.forEach(function(b) { if (counts[b.sourceType] !== undefined) counts[b.sourceType]++; });
 
     var chips = BACKLINK_TYPES.filter(function(t) { return counts[t.key] > 0; }).map(function(t) {
@@ -303,13 +307,15 @@ window.filterBacklinks = function(entryId, value) {
 // ============================================================
 
 var TAG_TYPES = {
-    session:  { tab: 'campaign_sessionNotes', icon: 'scroll-text', label: 'Sessions' },
-    quest:    { tab: 'campaign_quests',        icon: 'swords',      label: 'Quests' },
-    npc:      { tab: 'campaign_npcs',           icon: 'users',       label: 'NPCs' },
-    location: { tab: 'campaign_locations',      icon: 'map-pin',     label: 'Locations' },
-    thread:   { tab: 'campaign_sessionNotes',   icon: 'help-circle', label: 'Threads' }
+    session:   { tab: 'campaign_sessionNotes',    icon: 'scroll-text', label: 'Sessions' },
+    mainquest: { tab: 'campaign_mainQuests',      icon: 'crown',       label: 'Main Campaign' },
+    bkquest:   { tab: 'campaign_backstoryQuests', icon: 'sprout',      label: 'Backstory Quest' },
+    quest:     { tab: 'campaign_quests',           icon: 'swords',      label: 'Side Quests' },
+    npc:       { tab: 'campaign_npcs',              icon: 'users',       label: 'NPCs' },
+    location:  { tab: 'campaign_locations',         icon: 'map-pin',     label: 'Locations' },
+    thread:    { tab: 'campaign_sessionNotes',      icon: 'help-circle', label: 'Threads' }
 };
-var TAG_TYPE_ORDER = ['session', 'quest', 'npc', 'location', 'thread'];
+var TAG_TYPE_ORDER = ['session', 'mainquest', 'bkquest', 'quest', 'npc', 'location', 'thread'];
 
 var tagIndex = {};                 // tagKey -> { display, entries: [ {type, tabId, itemId, title, meta} ] }
 var tagUiState = {};               // entryId -> { adding } (ephemeral header add-input state)
@@ -325,6 +331,10 @@ function findTaggableEntry(entryId) {
     if (!cn) return null;
     var hit = null;
     (cn.sessionNotes || []).forEach(function(s) { if (s.id === entryId) hit = { entry: s, type: 'session' }; });
+    if (hit) return hit;
+    (cn.mainQuests || []).forEach(function(s) { if (s.id === entryId) hit = { entry: s, type: 'mainquest' }; });
+    if (hit) return hit;
+    (cn.backstoryQuests || []).forEach(function(s) { if (s.id === entryId) hit = { entry: s, type: 'bkquest' }; });
     if (hit) return hit;
     (cn.quests || []).forEach(function(q) { if (q.id === entryId) hit = { entry: q, type: 'quest' }; });
     if (hit) return hit;
@@ -349,6 +359,8 @@ window.rebuildTagIndex = function() {
         });
     }
     (cn.sessionNotes || []).forEach(function(s) { add(s, 'session', s.title || 'Untitled session', s.date || ''); });
+    (cn.mainQuests || []).forEach(function(s) { add(s, 'mainquest', s.title || 'Untitled entry', s.date || 'Main Campaign'); });
+    (cn.backstoryQuests || []).forEach(function(s) { add(s, 'bkquest', s.title || 'Untitled entry', s.date || 'Backstory Quest'); });
     (cn.quests || []).forEach(function(q) { add(q, 'quest', q.title || 'Untitled quest', q.subtitle || 'Quest'); });
     (cn.locations || []).forEach(function(l) { add(l, 'location', l.title || 'Untitled location', l.subtitle || 'Location'); });
     (cn.npcs || []).forEach(function(fac) { (fac.members || []).forEach(function(n) { add(n, 'npc', n.name || 'Unnamed NPC', n.subtitle || ''); }); });
@@ -662,22 +674,52 @@ function renderTocCard(title, targetTab, icon, description) {
     return `<div onclick="window.setTab('${targetTab}')" class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800/80 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-md cursor-pointer transition-all group flex flex-col h-full"><div class="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 group-hover:scale-110 transition-transform"><i data-lucide="${icon}"></i></div><h4 class="text-lg font-bold text-stone-800 dark:text-stone-100 mb-2">${title}</h4><p class="text-sm text-stone-500 dark:text-stone-400 flex-grow">${description}</p><div class="mt-4 text-emerald-600 dark:text-emerald-400 text-sm font-medium flex items-center opacity-0 group-hover:opacity-100 transition-opacity"><span>Open</span><i data-lucide="chevron-right" class="w-4 h-4 ml-1"></i></div></div>`;
 }
 
+function renderNavItemHtml(item, isSubItem) {
+    const isActive = activeTab === item.id;
+    const paddingClass = isSubItem ? 'pl-11 pr-4 py-2.5 text-sm' : 'px-4 py-3';
+    const iconSize = isSubItem ? 'w-4 h-4 opacity-70' : 'w-5 h-5';
+    const activeColors = isActive ? 'bg-emerald-800 text-white shadow-md' : 'hover:bg-stone-800 text-stone-400 hover:text-stone-200';
+    return `<button onclick="window.setTab('${item.id}')" class="w-full flex items-center space-x-3 rounded-lg transition-colors mb-1 ${paddingClass} ${activeColors}">
+        <i data-lucide="${item.icon}" class="${iconSize}"></i>
+        <span class="font-medium">${item.label}</span>
+    </button>`;
+}
+
 function renderNavigation() {
     const container = document.getElementById('nav-container');
-    container.innerHTML = navItems.map((item, index) => {
-        const isActive = activeTab === item.id;
-        const isNextSubItem = navItems[index + 1]?.isSubItem;
-        const paddingClass = item.isSubItem ? 'pl-11 pr-4 py-2.5 text-sm' : 'px-4 py-3';
-        const iconSize = item.isSubItem ? 'w-4 h-4 opacity-70' : 'w-5 h-5';
-        const marginClass = (item.isSubItem && !isNextSubItem) ? 'mb-4' : 'mb-1';
-        const activeColors = isActive ? 'bg-emerald-800 text-white shadow-md' : 'hover:bg-stone-800 text-stone-400 hover:text-stone-200';
-        
-        return `<button onclick="window.setTab('${item.id}')" class="w-full flex items-center space-x-3 rounded-lg transition-colors ${paddingClass} ${marginClass} ${activeColors}">
-            <i data-lucide="${item.icon}" class="${iconSize}"></i>
-            <span class="font-medium">${item.label}</span>
+
+    // A group holding the active tab is always shown expanded, so the emerald
+    // highlight can never be hidden behind a collapsed header (deep links,
+    // search jumps, and @mentions land inside groups all the time).
+    navItems.forEach(entry => {
+        if (entry.group && entry.items.some(i => i.id === activeTab) && navGroupCollapsed[entry.group]) {
+            navGroupCollapsed[entry.group] = false;
+            saveNavGroupState();
+        }
+    });
+
+    container.innerHTML = navItems.map(entry => {
+        if (!entry.group) return renderNavItemHtml(entry, false);
+
+        const collapsed = !!navGroupCollapsed[entry.group];
+        const header = `<button onclick="window.toggleNavGroup('${entry.group}')" class="w-full flex items-center justify-between px-4 py-2 mt-2 mb-1 rounded-lg text-stone-500 hover:text-stone-300 transition-colors">
+            <span class="flex items-center space-x-2">
+                <i data-lucide="${entry.icon}" class="w-4 h-4"></i>
+                <span class="text-[11px] font-black uppercase tracking-widest">${entry.label}</span>
+            </span>
+            <i data-lucide="chevron-down" class="w-4 h-4 chevron ${collapsed ? 'collapsed' : ''}"></i>
         </button>`;
+        const children = entry.items.map(i => renderNavItemHtml(i, true)).join('');
+        return header + `<div class="collapsible-content ${collapsed ? 'collapsed' : ''} mb-2">${children}</div>`;
     }).join('');
 }
+
+window.toggleNavGroup = function(groupKey) {
+    navGroupCollapsed[groupKey] = !navGroupCollapsed[groupKey];
+    saveNavGroupState();
+    renderNavigation();
+    if (window.lucide) lucide.createIcons();
+};
 
 // ============================================================
 // --- OPEN THREADS PANEL ---
@@ -1157,7 +1199,7 @@ window.renderContent = function() {
             '<div class="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 p-5">'
           +   '<div class="flex items-center gap-2 mb-2">'
           +     '<i data-lucide="swords" class="w-5 h-5 text-emerald-600"></i>'
-          +     '<span class="font-bold text-stone-800 dark:text-stone-100">Quests</span>'
+          +     '<span class="font-bold text-stone-800 dark:text-stone-100">Side Quests</span>'
           +     '<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400">' + activeQuests.length + ' active</span>'
           +   '</div>'
           +   '<div class="space-y-0.5">' + questsBody + '</div>'
@@ -1172,29 +1214,33 @@ window.renderContent = function() {
     }
     else if (activeTab.startsWith('campaign_')) {
         const subSection = activeTab.replace('campaign_', '');
-        const titleMap = { sessionNotes: { title: 'Session Notes', icon: 'scroll-text' }, quests: { title: 'Quests', icon: 'swords' }, npcs: { title: 'NPCs', icon: 'users' }, locations: { title: 'Locations', icon: 'map-pin' }, misc: { title: 'Misc & Loot', icon: 'package' } };
+        const titleMap = { sessionNotes: { title: 'Session Notes', icon: 'scroll-text' }, mainQuests: { title: 'Main Campaign', icon: 'crown' }, backstoryQuests: { title: 'Backstory Quest', icon: 'sprout' }, quests: { title: 'Side Quests', icon: 'swords' }, npcs: { title: 'NPCs', icon: 'users' }, locations: { title: 'Locations', icon: 'map-pin' }, misc: { title: 'Misc & Loot', icon: 'package' } };
         let contentHtml = '';
 
-        if (subSection === 'sessionNotes') {
-            contentHtml = renderSectionHeader('session-search', 'Search sessions...', 'filterSessions', 'toggleAllSessions', 'addSession') + renderThreadsPanel();
-            if (characterData.campaignNotes.sessionNotes.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No sessions added yet.</p>`;
-            characterData.campaignNotes.sessionNotes.forEach((sess, idx) => {
+        if (JOURNAL_SECTIONS[subSection]) {
+            // Session Notes, Main Campaign, and Backstory Quest all share this
+            // layout: the shared Open Threads panel on top, then the entry list.
+            const journalCfg = JOURNAL_SECTIONS[subSection];
+            const journalArr = characterData.campaignNotes[subSection];
+            contentHtml = renderSectionHeader('session-search', journalCfg.searchPlaceholder, 'filterSessions', 'toggleAllSessions', 'addSession') + renderThreadsPanel();
+            if (journalArr.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">${journalCfg.emptyMsg}</p>`;
+            journalArr.forEach((sess, idx) => {
                 contentHtml += `
                     <div id="${sess.id}" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(sess.title)} ${escapeHtml(sess.date)} ${escapeHtml(stripHtmlToText(sess.notes))} ${escapeHtml((sess.tags || []).join(' '))}">
                         <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                             <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${sess.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                <input type="text" id="input-sess-title-${sess.id}" oninput="window.updateSession('${sess.id}', 'title', this.value)" value="${escapeHtml(sess.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Session Title">
-                                <input type="text" id="input-sess-date-${sess.id}" oninput="window.updateSession('${sess.id}', 'date', this.value)" value="${escapeHtml(sess.date)}" class="seamless-input text-sm text-stone-500 bg-transparent px-2 py-1 w-full sm:w-auto rounded placeholder-stone-400" placeholder="Date">
+                                <input type="text" id="input-sess-title-${sess.id}" oninput="window.updateSession('${sess.id}', 'title', this.value)" value="${escapeHtml(sess.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400" placeholder="${subSection === 'sessionNotes' ? 'Session Title' : 'Entry Title'}">
+                                <input type="text" id="input-sess-date-${sess.id}" oninput="window.updateSession('${sess.id}', 'date', this.value)" value="${escapeHtml(sess.date)}" class="seamless-input text-sm text-stone-500 bg-transparent px-2 py-1 w-full sm:w-auto rounded placeholder-stone-400" placeholder="${subSection === 'sessionNotes' ? 'Date' : 'Date (optional)'}">
                             </div>
                             <div class="flex items-center space-x-1 ml-2">
-                                <button onclick="window.copySessionAsText('${sess.id}')" class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800" title="Copy session as text"><i data-lucide="copy" class="w-4 h-4"></i></button>
-                                ${renderActionButtons('Session', sess.id, idx === 0, idx === characterData.campaignNotes.sessionNotes.length - 1)}
+                                <button onclick="window.copySessionAsText('${sess.id}')" class="text-stone-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800" title="Copy entry as text"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                                ${renderActionButtons('Session', sess.id, idx === 0, idx === journalArr.length - 1)}
                             </div>
                         </div>
                         ${renderTagRow(sess.id, 'px-5 pb-3')}
                         <div class="collapsible-content ${sess.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
-                            <div class="p-5">${getOutlineNotesEditor('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]', 'Start typing your session notes... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.')}</div>
+                            <div class="p-5">${getOutlineNotesEditor('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]', subSection === 'sessionNotes' ? 'Start typing your session notes... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.' : 'Major information, handouts, lore... Enter starts a bullet, Tab indents, @ to link. Next steps belong in Open Threads above.')}</div>
                         </div>
                     </div>`;
             });
@@ -1377,7 +1423,8 @@ window.renderContent = function() {
 
     if (activeTab === 'build') window.recalculateBuildScores();
 
-    if (activeTab === 'campaign_sessionNotes' && currentSearchQueries.sessionNotes) { document.getElementById('session-search').value = currentSearchQueries.sessionNotes; window.filterSessions(currentSearchQueries.sessionNotes); }
+    var journalRestoreKey = activeTab.startsWith('campaign_') ? activeTab.replace('campaign_', '') : null;
+    if (journalRestoreKey && JOURNAL_SECTIONS[journalRestoreKey] && currentSearchQueries[journalRestoreKey]) { document.getElementById('session-search').value = currentSearchQueries[journalRestoreKey]; window.filterSessions(currentSearchQueries[journalRestoreKey]); }
     else if (activeTab === 'campaign_quests' && currentSearchQueries.quests) { document.getElementById('quest-search').value = currentSearchQueries.quests; window.filterQuests(currentSearchQueries.quests); }
     else if (activeTab === 'campaign_locations' && currentSearchQueries.locations) { document.getElementById('location-search').value = currentSearchQueries.locations; window.filterLocations(currentSearchQueries.locations); }
     else if (activeTab === 'campaign_npcs' && currentSearchQueries.npcs) { document.getElementById('npc-search').value = currentSearchQueries.npcs; window.filterNPCs(currentSearchQueries.npcs); }

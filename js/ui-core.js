@@ -170,6 +170,12 @@ document.addEventListener('mouseover', function(event) {
     if (targetTabId === 'campaign_sessionNotes') {
         const row = characterData.campaignNotes.sessionNotes.find(s => s.id === targetItemId);
         if (row) { previewContent = row.notes; categoryLabel = 'Session Notes'; }
+    } else if (targetTabId === 'campaign_mainQuests') {
+        const row = (characterData.campaignNotes.mainQuests || []).find(s => s.id === targetItemId);
+        if (row) { previewContent = row.notes; categoryLabel = 'Main Campaign'; }
+    } else if (targetTabId === 'campaign_backstoryQuests') {
+        const row = (characterData.campaignNotes.backstoryQuests || []).find(s => s.id === targetItemId);
+        if (row) { previewContent = row.notes; categoryLabel = 'Backstory Quest'; }
     } else if (targetTabId === 'campaign_quests') {
         const row = characterData.campaignNotes.quests.find(q => q.id === targetItemId);
         if (row) { previewContent = row.notes; categoryLabel = 'Quest Log'; }

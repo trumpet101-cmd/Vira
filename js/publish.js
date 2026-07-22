@@ -73,12 +73,16 @@ function buildPublishedSnapshot() {
     var cn = (cd && cd.campaignNotes) ? cd.campaignNotes : {};
     var snap = JSON.parse(JSON.stringify({
         sessionNotes: cn.sessionNotes || [],
+        mainQuests: cn.mainQuests || [],
+        backstoryQuests: cn.backstoryQuests || [],
         quests: cn.quests || [],
         npcs: cn.npcs || [],
         locations: cn.locations || [],
         misc: (typeof cn.misc === 'string') ? cn.misc : ''
     }));
     snap.sessionNotes.forEach(function(s) { s.notes = sanitizePublishedHtml(s.notes); });
+    snap.mainQuests.forEach(function(s) { s.notes = sanitizePublishedHtml(s.notes); });
+    snap.backstoryQuests.forEach(function(s) { s.notes = sanitizePublishedHtml(s.notes); });
     snap.quests.forEach(function(q) { q.notes = sanitizePublishedHtml(q.notes); });
     snap.locations.forEach(function(l) { l.notes = sanitizePublishedHtml(l.notes); });
     snap.npcs.forEach(function(f) {
@@ -103,7 +107,7 @@ window.publishCampaignJournal = function() {
     }
     window.showCustomConfirm(
         'Publish Campaign Journal?',
-        'This puts a read-only snapshot of this character\'s Campaign Notes — Sessions, Quests, NPCs, Locations, Misc & Loot, and their tags — at a public link anyone can view. Backstory, Personality, Character Build, and Open Threads are never included. Publishing again later replaces the public copy with your latest notes.',
+        'This puts a read-only snapshot of this character\'s Campaign Notes — Sessions, Main Campaign, Backstory Quest, Side Quests, NPCs, Locations, Misc & Loot, and their tags — at a public link anyone can view. Backstory, Personality, Character Build, and Open Threads are never included. Publishing again later replaces the public copy with your latest notes.',
         '🌐',
         async function() {
             updateCloudUIStatus('Publishing Journal...', 'loader-2', 'bg-amber-900/50 text-amber-400 animate-pulse');

@@ -53,7 +53,9 @@ var NPC_RELATIONSHIPS = {
 
 var VIEW_TABS = [
     { key: 'sessions',  label: 'Sessions',    icon: 'scroll-text' },
-    { key: 'quests',    label: 'Quests',      icon: 'swords' },
+    { key: 'mainquests', label: 'Main Campaign', icon: 'crown' },
+    { key: 'bkquests',  label: 'Backstory',   icon: 'sprout' },
+    { key: 'quests',    label: 'Side Quests', icon: 'swords' },
     { key: 'npcs',      label: 'NPCs',        icon: 'users' },
     { key: 'locations', label: 'Locations',   icon: 'map-pin' },
     { key: 'misc',      label: 'Misc & Loot', icon: 'package' },
@@ -63,6 +65,8 @@ var VIEW_TABS = [
 // Maps the app's tab ids (baked into @mention onclick attributes) to viewer tabs.
 var APP_TAB_MAP = {
     campaign_sessionNotes: 'sessions',
+    campaign_mainQuests: 'mainquests',
+    campaign_backstoryQuests: 'bkquests',
     campaign_quests: 'quests',
     campaign_npcs: 'npcs',
     campaign_locations: 'locations',
@@ -144,6 +148,8 @@ function rebuildViewTagIndex() {
         });
     }
     (cn.sessionNotes || []).forEach(function(s) { add(s, 'scroll-text', 'campaign_sessionNotes', s.title || 'Untitled Session', s.date || 'Session'); });
+    (cn.mainQuests || []).forEach(function(s) { add(s, 'crown', 'campaign_mainQuests', s.title || 'Untitled Entry', s.date || 'Main Campaign'); });
+    (cn.backstoryQuests || []).forEach(function(s) { add(s, 'sprout', 'campaign_backstoryQuests', s.title || 'Untitled Entry', s.date || 'Backstory Quest'); });
     (cn.quests || []).forEach(function(q) { add(q, 'swords', 'campaign_quests', q.title || 'Untitled Quest', q.isCompleted ? 'Completed quest' : 'Quest'); });
     (cn.npcs || []).forEach(function(f) {
         (f.members || []).forEach(function(n) { add(n, 'users', 'campaign_npcs', n.name || 'Unnamed NPC', f.name || 'NPC'); });
@@ -190,24 +196,33 @@ function sectionHeader(icon, title, subtitle) {
 }
 
 // --- SECTION RENDERERS ---
-function renderSessions() {
-    var list = journal.campaignNotes.sessionNotes || [];
-    var html = sectionHeader('scroll-text', 'Session Notes', 'The adventure log, session by session.');
-    if (!list.length) return html + emptyState('No sessions have been published yet.');
+function renderJournalList(listKey, icon, title, subtitle, emptyMsg, untitledLabel) {
+    var list = journal.campaignNotes[listKey] || [];
+    var html = sectionHeader(icon, title, subtitle);
+    if (!list.length) return html + emptyState(emptyMsg);
     list.forEach(function(s) {
         var header = '<div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">'
-            + '<span class="font-bold text-stone-800 dark:text-stone-100 truncate">' + escapeHtml(s.title || 'Untitled Session') + '</span>'
+            + '<span class="font-bold text-stone-800 dark:text-stone-100 truncate">' + escapeHtml(s.title || untitledLabel) + '</span>'
             + (s.date ? '<span class="text-xs font-semibold text-stone-400 dark:text-stone-500 flex-shrink-0">' + escapeHtml(s.date) + '</span>' : '')
             + '</div>';
         html += card(s.id, header, tagChips(s) + notesBlock(s.notes));
     });
     return html;
 }
+function renderSessions() {
+    return renderJournalList('sessionNotes', 'scroll-text', 'Session Notes', 'The adventure log, session by session.', 'No sessions have been published yet.', 'Untitled Session');
+}
+function renderMainQuests() {
+    return renderJournalList('mainQuests', 'crown', 'Main Campaign', 'The central quest \u2014 major information, handouts, and lore.', 'Nothing has been published here yet.', 'Untitled Entry');
+}
+function renderBackstoryQuests() {
+    return renderJournalList('backstoryQuests', 'sprout', 'Backstory Quest', 'The personal quest \u2014 major information, handouts, and lore.', 'Nothing has been published here yet.', 'Untitled Entry');
+}
 
 function renderQuests() {
     var list = journal.campaignNotes.quests || [];
-    var html = sectionHeader('swords', 'Quests', 'Objectives urgent, ongoing, and complete.');
-    if (!list.length) return html + emptyState('No quests have been published yet.');
+    var html = sectionHeader('swords', 'Side Quests', 'Objectives urgent, ongoing, and complete.');
+    if (!list.length) return html + emptyState('No side quests have been published yet.');
     var groups = [
         { label: 'Urgent',      badge: 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400',           filter: function(q) { return q.isUrgent && !q.isCompleted; } },
         { label: 'In Progress', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400', filter: function(q) { return !q.isUrgent && !q.isCompleted; } },
@@ -314,6 +329,8 @@ function renderTags() {
 function tabCount(key) {
     var cn = journal.campaignNotes;
     if (key === 'sessions')  return (cn.sessionNotes || []).length;
+    if (key === 'mainquests') return (cn.mainQuests || []).length;
+    if (key === 'bkquests')  return (cn.backstoryQuests || []).length;
     if (key === 'quests')    return (cn.quests || []).length;
     if (key === 'npcs')      return (cn.npcs || []).reduce(function(sum, f) { return sum + (f.members || []).length; }, 0);
     if (key === 'locations') return (cn.locations || []).length;
@@ -336,7 +353,7 @@ function renderViewTabs() {
 }
 
 function renderViewContent() {
-    var renderers = { sessions: renderSessions, quests: renderQuests, npcs: renderNPCs, locations: renderLocations, misc: renderMisc, tags: renderTags };
+    var renderers = { sessions: renderSessions, mainquests: renderMainQuests, bkquests: renderBackstoryQuests, quests: renderQuests, npcs: renderNPCs, locations: renderLocations, misc: renderMisc, tags: renderTags };
     document.getElementById('view-content').innerHTML =
         '<div class="animate-fade-in">' + renderers[activeViewTab]() + '</div>';
     renderViewTabs();
@@ -385,6 +402,14 @@ function buildViewSearchResults(q) {
         if ((s.title || '').toLowerCase().indexOf(q) !== -1 || (s.date || '').toLowerCase().indexOf(q) !== -1 || text.toLowerCase().indexOf(q) !== -1 || tagsMatch(s)) {
             out.push({ tabId: 'campaign_sessionNotes', itemId: s.id, icon: 'scroll-text', type: 'Session', title: s.title || 'Untitled Session', snippet: searchSnippet(text, q) });
         }
+    });
+    [['mainQuests', 'campaign_mainQuests', 'crown', 'Main Campaign'], ['backstoryQuests', 'campaign_backstoryQuests', 'sprout', 'Backstory Quest']].forEach(function(cfg) {
+        (cn[cfg[0]] || []).forEach(function(s) {
+            var text = stripHtml(s.notes);
+            if ((s.title || '').toLowerCase().indexOf(q) !== -1 || (s.date || '').toLowerCase().indexOf(q) !== -1 || text.toLowerCase().indexOf(q) !== -1 || tagsMatch(s)) {
+                out.push({ tabId: cfg[1], itemId: s.id, icon: cfg[2], type: cfg[3], title: s.title || 'Untitled Entry', snippet: searchSnippet(text, q) });
+            }
+        });
     });
     (cn.quests || []).forEach(function(qs) {
         var text = stripHtml(qs.notes);
