@@ -702,10 +702,10 @@ function renderNavigation() {
         if (!entry.group) return renderNavItemHtml(entry, false);
 
         const collapsed = !!navGroupCollapsed[entry.group];
-        const header = `<button onclick="window.toggleNavGroup('${entry.group}')" class="w-full flex items-center justify-between px-4 py-2 mt-2 mb-1 rounded-lg text-stone-500 hover:text-stone-300 transition-colors">
-            <span class="flex items-center space-x-2">
-                <i data-lucide="${entry.icon}" class="w-4 h-4"></i>
-                <span class="text-[11px] font-black uppercase tracking-widest">${entry.label}</span>
+        const header = `<button onclick="window.toggleNavGroup('${entry.group}')" class="w-full flex items-center justify-between px-4 py-3 mb-1 rounded-lg text-stone-400 hover:text-stone-200 hover:bg-stone-800 transition-colors">
+            <span class="flex items-center space-x-3">
+                <i data-lucide="${entry.icon}" class="w-5 h-5"></i>
+                <span class="font-medium">${entry.label}</span>
             </span>
             <i data-lucide="chevron-down" class="w-4 h-4 chevron ${collapsed ? 'collapsed' : ''}"></i>
         </button>`;
@@ -1151,7 +1151,7 @@ window.renderContent = function() {
           +   '<div class="space-y-0.5">' + threadsBody + '</div>'
           + '</div>';
 
-        // --- Last session (left) ---
+        // --- Last session (full width) ---
         var sessionCard;
         if (latestSession) {
             var sTitle = escapeHtml(latestSession.title || 'Untitled session');
@@ -1173,7 +1173,56 @@ window.renderContent = function() {
               + '</div>';
         }
 
-        // --- Active quests (right) ---
+        // --- Shared card shell for the three quest boxes ---
+        // Clicking the header row opens the section page; rows deep-link to entries.
+        function dashListCard(icon, title, tabId, countLabel, bodyHtml) {
+            return '<div class="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 p-5">'
+              +   '<div onclick="window.setTab(\'' + tabId + '\')" class="flex items-center gap-2 mb-2 cursor-pointer group/hd" title="Open ' + title + '">'
+              +     '<i data-lucide="' + icon + '" class="w-5 h-5 text-emerald-600"></i>'
+              +     '<span class="font-bold text-stone-800 dark:text-stone-100 group-hover/hd:text-emerald-600 dark:group-hover/hd:text-emerald-400 transition-colors">' + title + '</span>'
+              +     (countLabel ? '<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400">' + countLabel + '</span>' : '')
+              +     '<i data-lucide="chevron-right" class="w-4 h-4 text-stone-300 dark:text-stone-600 ml-auto opacity-0 group-hover/hd:opacity-100 transition-opacity"></i>'
+              +   '</div>'
+              +   '<div class="space-y-0.5">' + bodyHtml + '</div>'
+              + '</div>';
+        }
+
+        // --- Main Campaign / Backstory journal rows ---
+        function dashJournalBody(listKey, tabId, emptyText) {
+            var list = cn[listKey] || [];
+            var shown = list.slice(0, DASH_CAP);
+            var more = list.length - shown.length;
+            if (!shown.length) {
+                return '<p class="px-2 py-6 text-center text-sm text-stone-400 dark:text-stone-500">' + emptyText
+                    + ' <button onclick="window.setTab(\'' + tabId + '\')" class="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">Open →</button></p>';
+            }
+            var body = '';
+            shown.forEach(function(e) {
+                var eTitle = escapeHtml(e.title || 'Untitled entry');
+                var eDate = e.date ? '<span class="text-[10px] text-stone-400 dark:text-stone-500 flex-shrink-0">' + escapeHtml(e.date) + '</span>' : '';
+                body +=
+                    '<div onclick="window.setTab(\'' + tabId + '\', \'' + e.id + '\')" class="group flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-800/60 cursor-pointer transition-colors">'
+                  +   '<span class="flex-1 min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200 truncate">' + eTitle + '</span>'
+                  +   eDate
+                  +   '<i data-lucide="chevron-right" class="w-4 h-4 text-stone-300 dark:text-stone-600 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"></i>'
+                  + '</div>';
+            });
+            if (more > 0) {
+                body += '<button onclick="window.setTab(\'' + tabId + '\')" class="w-full text-left px-2 py-1.5 text-xs font-semibold text-stone-500 dark:text-stone-400 hover:underline">+ ' + more + ' more →</button>';
+            }
+            return body;
+        }
+
+        var mainCount = (cn.mainQuests || []).length;
+        var bkCount = (cn.backstoryQuests || []).length;
+        var mainCard = dashListCard('crown', 'Main Campaign', 'campaign_mainQuests',
+            mainCount ? mainCount + (mainCount === 1 ? ' entry' : ' entries') : '',
+            dashJournalBody('mainQuests', 'campaign_mainQuests', 'No entries yet.'));
+        var bkCard = dashListCard('sprout', 'Backstory', 'campaign_backstoryQuests',
+            bkCount ? bkCount + (bkCount === 1 ? ' entry' : ' entries') : '',
+            dashJournalBody('backstoryQuests', 'campaign_backstoryQuests', 'No entries yet.'));
+
+        // --- Active side quests ---
         var questsBody = '';
         if (questsShown.length > 0) {
             questsShown.forEach(function(q) {
@@ -1194,22 +1243,15 @@ window.renderContent = function() {
         } else {
             questsBody = '<p class="px-2 py-6 text-center text-sm text-stone-400 dark:text-stone-500">No active quests right now.</p>';
         }
-
-        var questsCard =
-            '<div class="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 p-5">'
-          +   '<div class="flex items-center gap-2 mb-2">'
-          +     '<i data-lucide="swords" class="w-5 h-5 text-emerald-600"></i>'
-          +     '<span class="font-bold text-stone-800 dark:text-stone-100">Side Quests</span>'
-          +     '<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400">' + activeQuests.length + ' active</span>'
-          +   '</div>'
-          +   '<div class="space-y-0.5">' + questsBody + '</div>'
-          + '</div>';
+        var questsCard = dashListCard('swords', 'Side Quests', 'campaign_quests',
+            activeQuests.length + ' active', questsBody);
 
         html =
             '<div class="space-y-5 animate-fade-in">'
           +   headerHtml
           +   threadsCard
-          +   '<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">' + sessionCard + questsCard + '</div>'
+          +   sessionCard
+          +   '<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">' + mainCard + bkCard + questsCard + '</div>'
           + '</div>';
     }
     else if (activeTab.startsWith('campaign_')) {
