@@ -157,8 +157,7 @@ window.saveQuickCapture = function() {
         // otherwise a thread added via the dashboard's "New" button wouldn't
         // appear until the next render.
         var dashboardTypes = ['thread', 'session', 'quest'];
-        if (activeTab === tabMap[type] ||
-            (activeTab === 'campaignNotes' && dashboardTypes.indexOf(type) !== -1)) {
+        if (activeTab === tabMap[type]) {
             window.renderContent();
             if (window.lucide) lucide.createIcons();
         }

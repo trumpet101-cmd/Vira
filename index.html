@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,14 +13,7 @@
             darkMode: 'class'
         };
 
-        // Synchronously check local storage active theme state
-        // (Must stay inline to run before paint — prevents flash of light theme.)
-        var isCurrentlyDark = localStorage.getItem('dark_mode_active') === 'true';
-        if (isCurrentlyDark) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+        // Dark only: the 'dark' class is set on <html> and never removed.
     </script>
     
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -170,32 +163,40 @@
                 <span>Switch Character</span>
             </button>
 
-            <div class="grid grid-cols-3 gap-2">
-                <button onclick="window.exportJSON()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export entire vault data as a single backup file">
-                    <i data-lucide="download" class="w-4 h-4"></i>
-                    <span class="text-[10px] font-bold uppercase tracking-wider">Backup All</span>
+            <div class="relative" id="settings-menu-wrap">
+                <button id="settings-menu-btn" onclick="window.toggleSettingsMenu()" aria-haspopup="true" aria-expanded="false" class="w-full flex items-center justify-center space-x-2 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-xl text-stone-300 transition-colors text-sm font-semibold">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                    <span>Backup &amp; Settings</span>
                 </button>
-                <button onclick="document.getElementById('import-json-input').click()" class="flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Import a vault backup or a single character sheet">
-                    <i data-lucide="upload" class="w-4 h-4"></i>
-                    <span class="text-[10px] font-bold uppercase tracking-wider">Import</span>
-                </button>
-                <button onclick="window.openVersionHistory()" class="relative flex flex-col items-center justify-center space-y-1 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Version History — restore an earlier snapshot of this character">
-                    <i data-lucide="history" class="w-4 h-4"></i>
-                    <span class="text-[10px] font-bold uppercase tracking-wider">History</span>
-                    <span id="version-history-badge" class="hidden absolute -top-1.5 -right-1.5 w-4 h-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none"></span>
-                </button>
+                <div id="settings-menu" class="hidden absolute bottom-full left-0 right-0 mb-2 p-1.5 bg-stone-800 border border-stone-700 rounded-xl shadow-2xl z-40">
+                    <button onclick="window.closeSettingsMenu(); window.exportJSON()" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-stone-300 hover:bg-stone-700 hover:text-white transition-colors text-left" title="Export entire vault data as a single backup file">
+                        <i data-lucide="download" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="flex-1">Backup all</span>
+                    </button>
+                    <button onclick="window.closeSettingsMenu(); document.getElementById('import-json-input').click()" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-stone-300 hover:bg-stone-700 hover:text-white transition-colors text-left" title="Import a vault backup or a single character sheet">
+                        <i data-lucide="upload" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="flex-1">Import</span>
+                    </button>
+                    <button onclick="window.closeSettingsMenu(); window.openVersionHistory()" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-stone-300 hover:bg-stone-700 hover:text-white transition-colors text-left" title="Restore an earlier snapshot of this character">
+                        <i data-lucide="history" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="flex-1">Version history</span>
+                        <span id="version-history-badge" class="hidden w-4 h-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none"></span>
+                    </button>
+                    <button onclick="window.closeSettingsMenu(); window.exportMarkdown()" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-stone-300 hover:bg-stone-700 hover:text-white transition-colors text-left" title="Export this character's notes as a readable Markdown document">
+                        <i data-lucide="file-text" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="flex-1">Export readable notes</span>
+                    </button>
+                    <div class="my-1 border-t border-stone-700"></div>
+                    <button onclick="window.closeSettingsMenu(); window.publishCampaignJournal()" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-stone-300 hover:bg-stone-700 hover:text-white transition-colors text-left" title="Publish a read-only public snapshot of this character's Campaign Notes">
+                        <i data-lucide="globe" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="flex-1">Publish journal</span>
+                    </button>
+                    <button onclick="window.closeSettingsMenu(); window.unpublishCampaignJournal()" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-stone-300 hover:bg-stone-700 hover:text-white transition-colors text-left" title="Delete the public snapshot; the share link stops working immediately">
+                        <i data-lucide="globe-lock" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="flex-1">Unpublish journal</span>
+                    </button>
+                </div>
                 <input type="file" id="import-json-input" accept=".json" class="hidden" onchange="window.importJSON(event)">
-                <button onclick="window.publishCampaignJournal()" class="col-span-2 flex items-center justify-center space-x-2 py-2.5 bg-emerald-950/60 hover:bg-emerald-900 rounded-lg text-emerald-300 transition-colors border border-emerald-800/40" title="Publish a read-only public snapshot of this character's Campaign Notes (sessions, quests, NPCs, locations, misc & loot, tags)">
-                    <i data-lucide="globe" class="w-4 h-4"></i>
-                    <span class="text-[10px] font-bold uppercase tracking-wider">Publish Journal</span>
-                </button>
-                <button onclick="window.unpublishCampaignJournal()" class="col-span-1 flex items-center justify-center py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-400 transition-colors" title="Delete the public snapshot — the share link stops working immediately">
-                    <span class="text-[10px] font-bold uppercase tracking-wider">Unpublish</span>
-                </button>
-                <button onclick="window.exportMarkdown()" class="col-span-3 flex items-center justify-center space-x-2 py-2.5 bg-stone-800 hover:bg-stone-700 rounded-lg text-stone-300 transition-colors" title="Export this character's notes as a readable Markdown document (opens in Word, Google Docs, or any text editor)">
-                    <i data-lucide="file-text" class="w-4 h-4"></i>
-                    <span class="text-[10px] font-bold uppercase tracking-wider">Export Readable Notes</span>
-                </button>
             </div>
         </div>
     </aside>
@@ -233,11 +234,6 @@
                         <span>Local Storage Active</span>
                     </div>
                 </div>
-
-                <button onclick="window.toggleDarkMode()" class="w-9 h-9 flex items-center justify-center rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-300 transition-colors flex-shrink-0" title="Toggle dark mode">
-                    <i data-lucide="moon" class="w-4 h-4" id="dark-mode-moon-icon"></i>
-                    <i data-lucide="sun" class="w-4 h-4 hidden" id="dark-mode-sun-icon"></i>
-                </button>
 
                 <button onclick="window.handleSignOut()" class="w-9 h-9 flex items-center justify-center rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-red-100 dark:hover:bg-red-950/60 text-stone-500 dark:text-stone-300 hover:text-red-600 dark:hover:text-red-400 transition-colors flex-shrink-0" title="Sign out of cloud sync on this device">
                     <i data-lucide="log-out" class="w-4 h-4"></i>

@@ -1,30 +1,27 @@
-// --- DARK MODE LOGIC COHESIVE SYSTEM ---
-window.toggleDarkMode = function() {
-    const html = document.documentElement;
-    const isDark = html.classList.toggle('dark');
-    localStorage.setItem('dark_mode_active', isDark ? 'true' : 'false');
-    window.updateDarkModeUI();
-};
+// --- DARK ONLY ---
+// Light mode was removed; <html> always carries the 'dark' class. This stub
+// stays because renderContent() still calls it.
+window.updateDarkModeUI = function() {};
 
-window.updateDarkModeUI = function() {
-    const isDark = document.documentElement.classList.contains('dark');
-    const labelText = document.getElementById('dark-mode-text');
-    const dot = document.getElementById('dark-mode-switch-dot');
-    const moonIcon = document.getElementById('dark-mode-moon-icon');
-    const sunIcon = document.getElementById('dark-mode-sun-icon');
-    
-    if (isDark) {
-        if (labelText) labelText.innerText = "Dark Mode";
-        if (dot) { dot.style.transform = "translateX(16px)"; dot.classList.remove('bg-stone-100'); dot.classList.add('bg-emerald-400'); }
-        if (moonIcon) moonIcon.classList.add('hidden');
-        if (sunIcon) sunIcon.classList.remove('hidden');
-    } else {
-        if (labelText) labelText.innerText = "Light Mode";
-        if (dot) { dot.style.transform = "translateX(0px)"; dot.classList.remove('bg-emerald-400'); dot.classList.add('bg-stone-100'); }
-        if (moonIcon) moonIcon.classList.remove('hidden');
-        if (sunIcon) sunIcon.classList.add('hidden');
-    }
+// --- BACKUP & SETTINGS MENU (sidebar) ---
+window.toggleSettingsMenu = function() {
+    var menu = document.getElementById('settings-menu');
+    var btn = document.getElementById('settings-menu-btn');
+    if (!menu) return;
+    var open = menu.classList.toggle('hidden') === false;
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open && window.lucide) lucide.createIcons();
 };
+window.closeSettingsMenu = function() {
+    var menu = document.getElementById('settings-menu');
+    var btn = document.getElementById('settings-menu-btn');
+    if (menu) menu.classList.add('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+};
+document.addEventListener('mousedown', function(e) {
+    if (!e.target.closest('#settings-menu-wrap')) window.closeSettingsMenu();
+});
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') window.closeSettingsMenu(); });
 
 // --- CUSTOM MODAL DIALOG CONTROLLERS ---
 window.showCustomConfirm = function(title, message, icon, onConfirm, requiredInputText = null) {
