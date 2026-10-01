@@ -30,6 +30,36 @@ var initialCharacterData = {
     campaignNotes: { sessionNotes: [], mainQuests: [], backstoryQuests: [], quests: [], npcs: [], locations: [], misc: "", threads: [] }
 };
 
+// --- QUEST TYPES (schema v3) ---
+// Every quest carries exactly one type. Main Campaign and Backstory Quest
+// entries used to live in their own arrays (campaignNotes.mainQuests /
+// .backstoryQuests); they now live in campaignNotes.quests with a type.
+// The two old arrays are kept as EMPTY arrays so an un-updated tab on another
+// device never crashes on a missing field.
+var VAULT_SCHEMA_VERSION = 3;
+var QUEST_TYPE_KEYS = ['main', 'backstory', 'side'];
+
+// Moves entries out of the two legacy arrays into campaignNotes.quests.
+// Safe to run repeatedly: ids are never changed, notes are never touched,
+// and an entry whose id is already in quests is left alone.
+function mergeLegacyQuestArrays(cn) {
+    var moved = [];
+    var have = {};
+    cn.quests.forEach(function(q) { if (q && q.id) have[q.id] = true; });
+    [['mainQuests', 'main'], ['backstoryQuests', 'backstory']].forEach(function(pair) {
+        (cn[pair[0]] || []).forEach(function(e) {
+            if (!e || (e.id && have[e.id])) return;
+            e.type = pair[1];
+            if (e.id) have[e.id] = true;
+            moved.push(e);
+        });
+        cn[pair[0]] = [];
+    });
+    // Main first, then backstory, then the existing side quests.
+    if (moved.length) cn.quests = moved.concat(cn.quests);
+    return moved.length;
+}
+
 // --- DYNAMIC BLANK SLATE MAKER ---
 function getCleanCharacterData(name, race, charClass) {
     return {
@@ -64,8 +94,24 @@ function getCleanCharacterData(name, race, charClass) {
 }
 
 // --- ROBUST LORE & DATA MIGRATION ENGINE ---
-function migrateData(data) {
+function migrateData(data, charId) {
     if (!data) return;
+
+    // --- SAFETY COPY before the v3 quest merge ---
+    // Stored once per character, before anything is changed, and never
+    // overwritten, so the untouched pre-merge data can always be recovered
+    // from localStorage key 'pre_v3_backup_<characterId>'.
+    try {
+        var lcn = data.campaignNotes;
+        var hasLegacy = lcn && typeof lcn === 'object' &&
+            ((Array.isArray(lcn.mainQuests) && lcn.mainQuests.length) || (Array.isArray(lcn.backstoryQuests) && lcn.backstoryQuests.length));
+        if (hasLegacy && typeof localStorage !== 'undefined') {
+            var bkId = charId || (typeof currentCharacterId !== 'undefined' ? currentCharacterId : 'default');
+            var bkKey = 'pre_v3_backup_' + bkId;
+            if (!localStorage.getItem(bkKey)) localStorage.setItem(bkKey, JSON.stringify(data));
+        }
+    } catch (e) { console.warn('Could not store pre-v3 safety copy:', e); }
+
     if (!data.name) data.name = "Unnamed Character";
     if (!data.basics || typeof data.basics !== 'object') {
         data.basics = { race: "", class: "", age: "", background: "", tribe: "", familiar: "" };
@@ -143,7 +189,14 @@ function migrateData(data) {
             if (!Array.isArray(s.tags)) s.tags = [];
         });
     });
+    // --- v3: one quest list, typed ---
+    var firstV3Run = !(data.schemaVersion >= VAULT_SCHEMA_VERSION);
+    mergeLegacyQuestArrays(data.campaignNotes);
     data.campaignNotes.quests.forEach((q, qIdx) => {
+        if (QUEST_TYPE_KEYS.indexOf(q.type) === -1) q.type = 'side';
+        if (typeof q.date !== 'string') q.date = "";
+        // Rows start collapsed the first time a vault is opened in v3.
+        if (firstV3Run || q.isCollapsed === undefined) q.isCollapsed = true;
         if (!q.id) q.id = 'quest_migrated_' + qIdx + '_' + Date.now();
         if (typeof q.title !== 'string') q.title = "";
         if (typeof q.subtitle !== 'string') q.subtitle = "";
@@ -152,6 +205,7 @@ function migrateData(data) {
         if (q.isUrgent === undefined) q.isUrgent = false;
         if (!Array.isArray(q.tags)) q.tags = [];
     });
+    data.schemaVersion = VAULT_SCHEMA_VERSION;
     data.campaignNotes.locations.forEach((l, lIdx) => {
         if (!l.id) l.id = 'loc_migrated_' + lIdx + '_' + Date.now();
         if (typeof l.title !== 'string') l.title = "";

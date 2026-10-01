@@ -73,9 +73,11 @@ function buildPublishedSnapshot() {
     var cn = (cd && cd.campaignNotes) ? cd.campaignNotes : {};
     var snap = JSON.parse(JSON.stringify({
         sessionNotes: cn.sessionNotes || [],
-        mainQuests: cn.mainQuests || [],
-        backstoryQuests: cn.backstoryQuests || [],
-        quests: cn.quests || [],
+        // The public page (view.js) still shows three quest sections, so the
+        // single typed list is split back out here.
+        mainQuests: (cn.quests || []).filter(function(q) { return q.type === 'main'; }),
+        backstoryQuests: (cn.quests || []).filter(function(q) { return q.type === 'backstory'; }),
+        quests: (cn.quests || []).filter(function(q) { return q.type !== 'main' && q.type !== 'backstory'; }),
         npcs: cn.npcs || [],
         locations: cn.locations || [],
         misc: (typeof cn.misc === 'string') ? cn.misc : ''

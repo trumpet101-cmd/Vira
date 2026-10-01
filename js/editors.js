@@ -267,8 +267,11 @@ window.promoteThreadToQuest = function(id) {
         title: plainTitle,
         subtitle: '',
         notes: notesHtml,
+        type: 'side',
+        date: '',
         isCompleted: false,
         isUrgent: false,
+        isCollapsed: false,
         tags: []
     });
     characterData.campaignNotes.threads = threads.filter(function(t) { return t.id !== id; });
@@ -447,15 +450,15 @@ window.exportMarkdown = function() {
     }
 
     if ((cn.quests || []).length) {
-        md.push('### Side Quests\n');
-        [['Urgent', function(q) { return q.isUrgent && !q.isCompleted; }],
-         ['In Progress', function(q) { return !q.isUrgent && !q.isCompleted; }],
+        md.push('### Quests\n');
+        [['Pinned', function(q) { return q.isUrgent && !q.isCompleted; }],
+         ['Active', function(q) { return !q.isUrgent && !q.isCompleted; }],
          ['Completed', function(q) { return q.isCompleted; }]].forEach(function(cat) {
             var list = cn.quests.filter(cat[1]);
             if (!list.length) return;
             md.push('#### ' + cat[0] + '\n');
             list.forEach(function(q) {
-                md.push('**' + (q.title || 'Untitled Quest') + '**' + (q.subtitle ? ' \u2014 ' + q.subtitle : '') + tagSuffix(q) + '\n');
+                md.push('**' + (q.title || 'Untitled Quest') + '**' + ' [' + (QUEST_TYPES[q.type] || QUEST_TYPES.side).label + ']' + (q.subtitle ? ' \u2014 ' + q.subtitle : '') + (q.date ? ' \u2014 ' + q.date : '') + tagSuffix(q) + '\n');
                 section(notesBlock(q.notes));
             });
         });
@@ -625,14 +628,56 @@ function mentionWarningText(count) {
     return ' It is linked from ' + count + ' @mention' + (count === 1 ? '' : 's') + ' in your notes; deleting will turn ' + (count === 1 ? 'that link' : 'those links') + ' into plain text.';
 }
 
-window.addQuest = function() { currentSearchQueries.quests = ''; characterData.campaignNotes.quests.unshift({ id: 'quest_' + Date.now(), title: '', subtitle: '', notes: '', isCompleted: false, isUrgent: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
-window.updateQuest = function(questId, field, val) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) quest[field] = val; if (field === 'title') window.syncMentionLabels(questId, val); window.saveData(); }
-window.deleteQuest = function(questId) { const mc = window.countMentions(questId); window.showCustomConfirm('Delete Quest?', 'Are you sure you want to permanently remove this quest objective?' + mentionWarningText(mc), '⚔️', () => { characterData.campaignNotes.quests = characterData.campaignNotes.quests.filter(q => q.id !== questId); window.neutralizeMentions(questId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
-window.toggleQuestUrgency = function(questId) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) { quest.isUrgent = !quest.isUrgent; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
-window.toggleQuestCompletion = function(questId) { const quest = characterData.campaignNotes.quests.find(q => q.id === questId); if(quest) { quest.isCompleted = !quest.isCompleted; if(quest.isCompleted) quest.isUrgent = false; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
-window.toggleQuestSectionCollapse = function(section) { questSectionsState[section] = !questSectionsState[section]; window.renderContent(); if (window.lucide) lucide.createIcons(); }
-window.moveQuest = function(questId, direction) { const arr = characterData.campaignNotes.quests; const index = arr.findIndex(q => q.id === questId); if (index === -1) return; const isCompleted = arr[index].isCompleted; let targetIdx = -1; if (direction === -1) { for (let i = index - 1; i >= 0; i--) if (arr[i].isCompleted === isCompleted) { targetIdx = i; break; } } else { for (let i = index + 1; i < arr.length; i++) if (arr[i].isCompleted === isCompleted) { targetIdx = i; break; } } if (targetIdx !== -1) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } };
-window.filterQuests = function(query) { currentSearchQueries.quests = query; const q = query.toLowerCase(); document.querySelectorAll('.quest-section').forEach(section => { let visibleQuests = 0; section.querySelectorAll('.quest-card').forEach(quest => { if (quest.dataset.searchable.toLowerCase().includes(q)) { quest.classList.remove('hidden'); visibleQuests++; } else { quest.classList.add('hidden'); } }); const contentDiv = section.querySelector('.collapsible-content'); const chevron = section.querySelector('.chevron'); if (q.length > 0 && visibleQuests > 0) { contentDiv.classList.remove('collapsed'); if(chevron) chevron.classList.remove('collapsed'); } else if (q.length === 0) { const isCollapsed = section.dataset.sectionType === 'inProgress' ? questSectionsState.inProgressCollapsed : questSectionsState.completedCollapsed; if(isCollapsed) { contentDiv.classList.add('collapsed'); if(chevron) chevron.classList.add('collapsed'); } } }); }
+// --- QUESTS (one typed list: main / backstory / side) ---
+function findQuest(questId) { return characterData.campaignNotes.quests.find(function(q) { return q.id === questId; }); }
+function questRerender() { window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
+
+// A new quest takes the type of the active filter (Side when showing All), so
+// every quest always has a type. It can be changed from the chip on the card.
+window.addQuest = function() {
+    currentSearchQueries.quests = '';
+    var type = (typeof QUEST_TYPES !== 'undefined' && QUEST_TYPES[questTypeFilter]) ? questTypeFilter : 'side';
+    characterData.campaignNotes.quests.unshift({ id: 'quest_' + Date.now(), title: '', subtitle: '', date: '', notes: '', type: type, isCompleted: false, isUrgent: false, isCollapsed: false, tags: [] });
+    questRerender();
+};
+window.updateQuest = function(questId, field, val) { const quest = findQuest(questId); if(quest) quest[field] = val; if (field === 'title') window.syncMentionLabels(questId, val); window.saveData(); };
+window.deleteQuest = function(questId) { const mc = window.countMentions(questId); window.showCustomConfirm('Delete Quest?', 'Are you sure you want to permanently remove this quest?' + mentionWarningText(mc), '⚔️', () => { characterData.campaignNotes.quests = characterData.campaignNotes.quests.filter(q => q.id !== questId); window.neutralizeMentions(questId); questRerender(); }); };
+// isUrgent is the stored flag behind the pin (kept under its old name so no data changes).
+window.toggleQuestUrgency = function(questId) { const quest = findQuest(questId); if(quest) { quest.isUrgent = !quest.isUrgent; questRerender(); } };
+window.toggleQuestCompletion = function(questId) { const quest = findQuest(questId); if(quest) { quest.isCompleted = !quest.isCompleted; if(quest.isCompleted) quest.isUrgent = false; questRerender(); } };
+window.toggleQuestCollapse = function(questId) { const quest = findQuest(questId); if(quest) { quest.isCollapsed = !quest.isCollapsed; questRerender(); } };
+window.toggleAllQuests = function(collapse) { characterData.campaignNotes.quests.forEach(function(q) { q.isCollapsed = collapse; }); questRerender(); };
+window.setQuestType = function(questId, type) { const quest = findQuest(questId); if (quest && QUEST_TYPES[type]) { quest.type = type; questRerender(); } };
+window.setQuestFilter = function(type) { questTypeFilter = (type === 'all' || QUEST_TYPES[type]) ? type : 'all'; window.renderContent(); if (window.lucide) lucide.createIcons(); };
+window.toggleQuestSectionCollapse = function(section) { questSectionsState[section + 'Collapsed'] = !questSectionsState[section + 'Collapsed']; window.renderContent(); if (window.lucide) lucide.createIcons(); };
+// Up/down swaps with the nearest quest shown in the same block (pinned / active /
+// completed), and within the active type filter when one is on.
+window.moveQuest = function(questId, direction) {
+    const arr = characterData.campaignNotes.quests;
+    const index = arr.findIndex(q => q.id === questId);
+    if (index === -1) return;
+    const me = arr[index];
+    const sameBlock = function(q) { return !!q.isCompleted === !!me.isCompleted && (me.isCompleted || !!q.isUrgent === !!me.isUrgent) && (questTypeFilter === 'all' || q.type === me.type); };
+    let targetIdx = -1;
+    for (let i = index + direction; i >= 0 && i < arr.length; i += direction) { if (sameBlock(arr[i])) { targetIdx = i; break; } }
+    if (targetIdx !== -1) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; questRerender(); }
+};
+window.filterQuests = function(query) {
+    currentSearchQueries.quests = query;
+    const q = query.toLowerCase();
+    document.querySelectorAll('.quest-section').forEach(section => {
+        let visible = 0;
+        section.querySelectorAll('.quest-card').forEach(card => {
+            const hit = card.dataset.searchable.toLowerCase().includes(q);
+            card.classList.toggle('hidden', !hit);
+            if (hit) visible++;
+        });
+        // While searching, hide blocks with no hits and open the completed block if it has one.
+        section.classList.toggle('hidden', q.length > 0 && visible === 0);
+        const body = section.querySelector('.quest-section-body');
+        if (body && section.dataset.sectionType === 'completed') body.classList.toggle('collapsed', q.length > 0 ? visible === 0 : !!questSectionsState.completedCollapsed);
+    });
+};
 
 window.addLocation = function() { currentSearchQueries.locations = ''; characterData.campaignNotes.locations.unshift({ id: 'loc_' + Date.now(), title: '', subtitle: '', notes: '', isCollapsed: false }); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.updateLocation = function(locId, field, val) { const loc = characterData.campaignNotes.locations.find(l => l.id === locId); if(loc) loc[field] = val; if (field === 'title') window.syncMentionLabels(locId, val); window.saveData(); }
@@ -995,7 +1040,7 @@ function getMentionSuggestions(query) {
         if (fac.name && fac.name.toLowerCase().includes(q)) results.push({ type: 'Faction', id: 'campaign_npcs', itemId: fac.id, label: fac.name });
     });
     characterData.campaignNotes.locations.forEach(loc => { if (loc.title && loc.title.toLowerCase().includes(q)) results.push({ type: 'Location', id: 'campaign_locations', itemId: loc.id, label: loc.title }); });
-    characterData.campaignNotes.quests.forEach(qItem => { if (qItem.title && qItem.title.toLowerCase().includes(q)) results.push({ type: 'Quest', id: 'campaign_quests', itemId: qItem.id, label: qItem.title }); });
+    characterData.campaignNotes.quests.forEach(qItem => { if (qItem.title && qItem.title.toLowerCase().includes(q)) results.push({ type: ((QUEST_TYPES[qItem.type] || QUEST_TYPES.side).label + ' Quest'), id: 'campaign_quests', itemId: qItem.id, label: qItem.title }); });
     characterData.campaignNotes.mainQuests.forEach(s => { if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Main Quest', id: 'campaign_mainQuests', itemId: s.id, label: s.title }); });
     characterData.campaignNotes.backstoryQuests.forEach(s => { if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Backstory Quest', id: 'campaign_backstoryQuests', itemId: s.id, label: s.title }); });
     characterData.campaignNotes.sessionNotes.forEach(s => { if (s.title && s.title.toLowerCase().includes(q)) results.push({ type: 'Session', id: 'campaign_sessionNotes', itemId: s.id, label: s.title }); });
@@ -1236,7 +1281,7 @@ window.setTab = function(tabId, itemId = '') {
     var lingeringTooltip = document.getElementById('mention-tooltip');
     if (lingeringTooltip) lingeringTooltip.classList.add('hidden');
 
-    activeTab = tabId;
+    activeTab = resolveTabId(tabId);
     if (isMobileMenuOpen) window.toggleMobileMenu();
     if (itemId) window.isDeepLinking = true;
     
@@ -1302,7 +1347,8 @@ function expandElementIfNeeded(itemId) {
     
     const questEntry = characterData.campaignNotes.quests.find(q => q.id === itemId);
     if (questEntry) {
-        if (!questEntry.isCompleted && questSectionsState.inProgressCollapsed) { questSectionsState.inProgressCollapsed = false; triggeredReRender = true; }
+        if (questEntry.isCollapsed) { questEntry.isCollapsed = false; triggeredReRender = true; }
+        if (questTypeFilter !== 'all' && questTypeFilter !== questEntry.type) { questTypeFilter = 'all'; triggeredReRender = true; }
         if (questEntry.isCompleted && questSectionsState.completedCollapsed) { questSectionsState.completedCollapsed = false; triggeredReRender = true; }
     }
     
@@ -1384,7 +1430,7 @@ window.handleGlobalSearchInput = function(value) {
     characterData.campaignNotes.quests.forEach(quest => {
         const textNotes = cleanHtmlTags(quest.notes);
         if (quest.title.toLowerCase().includes(q) || quest.subtitle.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || entryTagsMatch(quest, q)) {
-            matchingEntries.push({ tabId: 'campaign_quests', itemId: quest.id, type: 'Quest', title: quest.title || 'Untitled Quest', snippet: getSearchResultSnippet(quest.subtitle + " " + quest.notes, q) });
+            matchingEntries.push({ tabId: 'campaign_quests', itemId: quest.id, type: ((QUEST_TYPES[quest.type] || QUEST_TYPES.side).label + ' Quest'), title: quest.title || 'Untitled Quest', snippet: getSearchResultSnippet(quest.subtitle + " " + quest.notes, q) });
         }
     });
 

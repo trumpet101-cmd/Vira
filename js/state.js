@@ -12,9 +12,27 @@ function renderHTML(val) {
 }
 
 // --- APP STATE ---
-var activeTab = 'campaignNotes';
+var activeTab = 'campaign_sessionNotes';   // the app opens on the journal
 var isMobileMenuOpen = false;
-var questSectionsState = { inProgressCollapsed: false, completedCollapsed: false };
+var questSectionsState = { completedCollapsed: true };
+var questTypeFilter = 'all';   // 'all' | 'main' | 'backstory' | 'side'
+
+// Display config for the three quest types (data key -> label/icon/colors).
+var QUEST_TYPES = {
+    main:      { label: 'Main',      icon: 'crown',  chip: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-800', dot: 'bg-violet-400' },
+    backstory: { label: 'Backstory', icon: 'sprout', chip: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800', dot: 'bg-emerald-400' },
+    side:      { label: 'Side',      icon: 'swords', chip: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800', dot: 'bg-sky-400' }
+};
+
+// Old tab ids still appear inside saved @mention links (the link stores the
+// tab it was created for). They are never rewritten in the notes; instead
+// setTab() maps a retired tab id to the page that replaced it.
+var TAB_ALIASES = {
+    campaignNotes: 'campaign_sessionNotes',
+    campaign_mainQuests: 'campaign_quests',
+    campaign_backstoryQuests: 'campaign_quests'
+};
+function resolveTabId(tabId) { return TAB_ALIASES[tabId] || tabId; }
 var currentSearchQueries = { sessionNotes: '', mainQuests: '', backstoryQuests: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
 var characterData = JSON.parse(JSON.stringify(initialCharacterData));
 var currentCharacterId = localStorage.getItem('current_character_id') || 'default';
@@ -42,8 +60,6 @@ var ARMOR_OPTIONS = {
 // reads/writes the single campaignNotes.threads array.
 var JOURNAL_SECTIONS = {
     sessionNotes:    { tab: 'campaign_sessionNotes',    title: 'Session Notes',   icon: 'scroll-text', idPrefix: 'sess',  deleteNoun: 'session log entry',      emptyMsg: 'No sessions added yet.', searchPlaceholder: 'Search sessions...', autoDate: true },
-    mainQuests:      { tab: 'campaign_mainQuests',      title: 'Main Campaign',   icon: 'crown',       idPrefix: 'mainq', deleteNoun: 'main campaign entry',    emptyMsg: 'No entries yet. Add major campaign information, handouts, and lore here \u2014 next steps live in Open Threads above.', searchPlaceholder: 'Search main campaign...', autoDate: false },
-    backstoryQuests: { tab: 'campaign_backstoryQuests', title: 'Backstory Quest', icon: 'sprout',      idPrefix: 'bkq',   deleteNoun: 'backstory quest entry',  emptyMsg: 'No entries yet. Add major backstory-quest information and handouts here \u2014 next steps live in Open Threads above.', searchPlaceholder: 'Search backstory quest...', autoDate: false }
 };
 
 function journalKeyFromTab(tabId) {
@@ -73,13 +89,8 @@ function findJournalEntry(entryId) {
 // items: [...] } is a collapsible group of tabs. Collapse state persists in
 // localStorage, and a group auto-expands whenever it contains the active tab.
 var navItems = [
-    { id: 'campaignNotes', label: 'Overview', icon: 'layout-dashboard' },
     { id: 'campaign_sessionNotes', label: 'Session Notes', icon: 'scroll-text' },
-    { group: 'quests', label: 'Quests', icon: 'swords', items: [
-        { id: 'campaign_mainQuests', label: 'Main Campaign', icon: 'crown' },
-        { id: 'campaign_backstoryQuests', label: 'Backstory', icon: 'sprout' },
-        { id: 'campaign_quests', label: 'Side Quests', icon: 'swords' }
-    ]},
+    { id: 'campaign_quests', label: 'Quests', icon: 'swords' },
     { id: 'campaign_npcs', label: 'NPCs', icon: 'users' },
     { id: 'campaign_locations', label: 'Locations', icon: 'map-pin' },
     { id: 'campaign_misc', label: 'Misc & Loot', icon: 'package' },

@@ -450,7 +450,7 @@ window.importJSON = function(event) {
                         }
                         
                         for (const [charId, charData] of Object.entries(parsedData.characters)) {
-                            migrateData(charData);
+                            migrateData(charData, charId);
                             localStorage.setItem('character_data_' + charId, JSON.stringify(charData));
                             if (isCloudReady && cloudUser && db) await db.collection('artifacts').doc(appId).collection('users').doc(cloudUser.uid).collection('characters').doc(charId).set(toCloudDoc(charData));
                         }

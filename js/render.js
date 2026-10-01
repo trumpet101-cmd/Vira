@@ -34,7 +34,8 @@ function renderRelationshipBadge(facId, npcId, current) {
 function stripHtmlToText(html) {
     if (!html) return '';
     try {
-        var doc = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html');
+        var spaced = html.replace(/<(li|div|p|br|ul|ol)\b/gi, ' <$1');
+        var doc = new DOMParser().parseFromString('<div>' + spaced + '</div>', 'text/html');
         return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
     } catch(e) {
         return html.replace(/<[^>]+>/g, '').trim();
@@ -56,7 +57,7 @@ var BACKLINK_TYPES = [
     { key: 'session',   label: 'Sessions',      icon: 'scroll-text', tab: 'campaign_sessionNotes' },
     { key: 'mainquest', label: 'Main Campaign', icon: 'crown',       tab: 'campaign_mainQuests' },
     { key: 'bkquest',   label: 'Backstory Q.',  icon: 'sprout',      tab: 'campaign_backstoryQuests' },
-    { key: 'quest',     label: 'Side Quests',   icon: 'swords',      tab: 'campaign_quests' },
+    { key: 'quest',     label: 'Quests',        icon: 'swords',      tab: 'campaign_quests' },
     { key: 'location',  label: 'Locations',     icon: 'map-pin',     tab: 'campaign_locations' },
     { key: 'thread',    label: 'Threads',       icon: 'help-circle', tab: 'campaign_sessionNotes' }
 ];
@@ -310,7 +311,7 @@ var TAG_TYPES = {
     session:   { tab: 'campaign_sessionNotes',    icon: 'scroll-text', label: 'Sessions' },
     mainquest: { tab: 'campaign_mainQuests',      icon: 'crown',       label: 'Main Campaign' },
     bkquest:   { tab: 'campaign_backstoryQuests', icon: 'sprout',      label: 'Backstory Quest' },
-    quest:     { tab: 'campaign_quests',           icon: 'swords',      label: 'Side Quests' },
+    quest:     { tab: 'campaign_quests',           icon: 'swords',      label: 'Quests' },
     npc:       { tab: 'campaign_npcs',              icon: 'users',       label: 'NPCs' },
     location:  { tab: 'campaign_locations',         icon: 'map-pin',     label: 'Locations' },
     thread:    { tab: 'campaign_sessionNotes',      icon: 'help-circle', label: 'Threads' }
@@ -1256,7 +1257,7 @@ window.renderContent = function() {
     }
     else if (activeTab.startsWith('campaign_')) {
         const subSection = activeTab.replace('campaign_', '');
-        const titleMap = { sessionNotes: { title: 'Session Notes', icon: 'scroll-text' }, mainQuests: { title: 'Main Campaign', icon: 'crown' }, backstoryQuests: { title: 'Backstory Quest', icon: 'sprout' }, quests: { title: 'Side Quests', icon: 'swords' }, npcs: { title: 'NPCs', icon: 'users' }, locations: { title: 'Locations', icon: 'map-pin' }, misc: { title: 'Misc & Loot', icon: 'package' } };
+        const titleMap = { sessionNotes: { title: 'Session Notes', icon: 'scroll-text' }, mainQuests: { title: 'Main Campaign', icon: 'crown' }, backstoryQuests: { title: 'Backstory Quest', icon: 'sprout' }, quests: { title: 'Quests', icon: 'swords' }, npcs: { title: 'NPCs', icon: 'users' }, locations: { title: 'Locations', icon: 'map-pin' }, misc: { title: 'Misc & Loot', icon: 'package' } };
         let contentHtml = '';
 
         if (JOURNAL_SECTIONS[subSection]) {
@@ -1288,68 +1289,72 @@ window.renderContent = function() {
             });
         }
         else if (subSection === 'quests') {
-            contentHtml = renderSectionHeader('quest-search', 'Search quests...', 'filterQuests', null, 'addQuest');
-            const renderQuestCategory = (title, quests, categoryKey, isUrgentSection = false) => {
-                const isCollapsed = questSectionsState[categoryKey];
-                const headerColor = isUrgentSection
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-stone-700 dark:text-stone-300';
-                const headerIcon = isUrgentSection ? 'flame' : 'chevron-down';
-                let sectionHtml = `<div class="quest-section mb-8" data-section-type="${categoryKey}">
-                    <div class="flex items-center justify-between mb-4 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/30 p-2 rounded -mx-2 transition-colors" onclick="window.toggleQuestSectionCollapse('${categoryKey}')">
-                        <h4 class="text-lg font-bold ${headerColor} flex items-center space-x-2">
-                            <i data-lucide="${isUrgentSection ? 'flame' : 'chevron-down'}" class="w-5 h-5 ${isUrgentSection ? 'text-red-500' : 'text-stone-400 chevron ' + (isCollapsed ? 'collapsed' : '')}"></i>
-                            <span>${title} (${quests.length})</span>
-                        </h4>
-                    </div>
-                    <div class="collapsible-content space-y-4 ${isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">`;
+            // === QUESTS: one page for every quest ===
+            // Type (main / backstory / side) is a field on each quest, shown as a
+            // colored chip and used by the filter. Pinned quests sit in their own
+            // block on top; completed ones fold away at the bottom.
+            const allQuests = characterData.campaignNotes.quests;
+            const typeOf = q => QUEST_TYPES[q.type] ? q.type : 'side';
+            const inFilter = q => questTypeFilter === 'all' || typeOf(q) === questTypeFilter;
+            const activeAll = allQuests.filter(q => !q.isCompleted);
 
-                if (quests.length === 0) sectionHtml += `<p class="text-stone-400 italic px-8 py-2">No quests in this category.</p>`;
+            const filterChip = (key, label, dot) => {
+                const on = questTypeFilter === key;
+                const count = key === 'all' ? activeAll.length : activeAll.filter(q => typeOf(q) === key).length;
+                return `<button onclick="window.setQuestFilter('${key}')" class="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-full border transition-colors ${on ? 'bg-emerald-800 text-white border-emerald-700' : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:border-emerald-400'}">${dot ? `<span class="w-2 h-2 rounded-full ${dot}"></span>` : ''}${label}<span class="text-xs ${on ? 'text-emerald-200' : 'text-stone-400'}">${count}</span></button>`;
+            };
 
-                quests.forEach((quest, qIdx) => {
-                    const cardBorder = quest.isUrgent
-                        ? 'border-red-200 dark:border-red-900/60'
-                        : 'border-stone-200 dark:border-stone-800';
-                    const leftBg = quest.isUrgent
-                        ? 'bg-red-50 dark:bg-red-950/30 border-red-100 dark:border-red-900/40'
-                        : 'bg-stone-50 dark:bg-stone-950 border-stone-100 dark:border-stone-800';
+            contentHtml = renderSectionHeader('quest-search', 'Search quests...', 'filterQuests', 'toggleAllQuests', 'addQuest')
+                + `<div class="flex flex-wrap items-center gap-2 mb-6">${filterChip('all', 'All', '')}${Object.keys(QUEST_TYPES).map(k => filterChip(k, QUEST_TYPES[k].label, QUEST_TYPES[k].dot)).join('')}</div>`;
 
-                    sectionHtml += `
-                        <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border ${cardBorder} rounded-xl shadow-sm overflow-hidden flex" data-searchable="${escapeHtml(quest.title)} ${escapeHtml(quest.subtitle)} ${escapeHtml(stripHtmlToText(quest.notes))} ${escapeHtml((quest.tags || []).join(' '))}">
-                            <div class="${leftBg} px-4 py-5 flex flex-col items-center justify-start space-y-3 border-r">
-                                <button onclick="window.toggleQuestCompletion('${quest.id}')" class="text-stone-300 dark:text-stone-600 hover:text-emerald-500 transition-colors focus:outline-none" title="Mark complete">
-                                    ${quest.isCompleted ? `<i data-lucide="check-square" class="w-6 h-6 text-emerald-500"></i>` : `<i data-lucide="square" class="w-6 h-6 hover:text-emerald-400"></i>`}
-                                </button>
-                                ${!quest.isCompleted ? `
-                                <button onclick="window.toggleQuestUrgency('${quest.id}')" class="transition-colors focus:outline-none" title="${quest.isUrgent ? 'Remove urgent flag' : 'Mark as urgent'}">
-                                    <i data-lucide="flame" class="w-5 h-5 ${quest.isUrgent ? 'text-red-500' : 'text-stone-300 dark:text-stone-600 hover:text-red-400'}"></i>
-                                </button>` : ''}
+            const renderQuestCard = (quest, qIdx, list) => {
+                const t = QUEST_TYPES[typeOf(quest)];
+                const pinned = quest.isUrgent && !quest.isCompleted;
+                const cardBorder = pinned ? 'border-amber-300 dark:border-amber-800/70' : 'border-stone-200 dark:border-stone-800';
+                const titleColor = quest.isCompleted ? 'text-stone-500 dark:text-stone-400 line-through' : 'text-stone-800 dark:text-stone-100';
+                return `
+                    <div id="${quest.id}" class="quest-card bg-white dark:bg-stone-900 border ${cardBorder} rounded-xl shadow-sm overflow-hidden" data-searchable="${escapeHtml(quest.title)} ${escapeHtml(quest.subtitle)} ${escapeHtml(quest.date || '')} ${escapeHtml(t.label)} ${escapeHtml(stripHtmlToText(quest.notes))} ${escapeHtml((quest.tags || []).join(' '))}">
+                        <div class="px-4 py-3 flex flex-wrap items-center gap-2">
+                            <button onclick="window.toggleQuestCollapse('${quest.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none flex-shrink-0" title="${quest.isCollapsed ? 'Open' : 'Close'}"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${quest.isCollapsed ? 'collapsed' : ''}"></i></button>
+                            <input type="text" id="input-quest-title-${quest.id}" oninput="window.updateQuest('${quest.id}', 'title', this.value)" value="${escapeHtml(quest.title)}" class="seamless-input font-bold text-lg ${titleColor} bg-transparent flex-1 min-w-[180px] rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Quest Title">
+                            <div class="relative flex-shrink-0">
+                                <select onchange="window.setQuestType('${quest.id}', this.value)" title="Quest type" class="appearance-none text-xs font-bold pl-2.5 pr-6 py-1 rounded-full border cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 ${t.chip}">
+                                    ${Object.keys(QUEST_TYPES).map(k => `<option value="${k}" ${k === typeOf(quest) ? 'selected' : ''}>${QUEST_TYPES[k].label}</option>`).join('')}
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-2 flex items-center"><svg class="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg></div>
                             </div>
-                            <div class="p-5 flex-1 flex flex-col">
-                                <div class="flex justify-between items-start mb-2">
-                                    <div class="flex-1">
-                                        <input type="text" id="input-quest-title-${quest.id}" oninput="window.updateQuest('${quest.id}', 'title', this.value)" value="${escapeHtml(quest.title)}" class="seamless-input font-bold text-lg ${quest.isCompleted ? 'text-stone-500 dark:text-stone-400 line-through' : quest.isUrgent ? 'text-red-700 dark:text-red-400' : 'text-stone-800 dark:text-stone-100'} bg-transparent w-full mb-1 rounded px-2 -ml-2 py-0.5 placeholder-stone-400/70" placeholder="Quest Title">
-                                        <input type="text" id="input-quest-sub-${quest.id}" oninput="window.updateQuest('${quest.id}', 'subtitle', this.value)" value="${escapeHtml(quest.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 -ml-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Subtitle / Category">
-                                    </div>
-                                    <div class="flex items-center space-x-1 ml-4">
-                                        ${renderActionButtons('Quest', quest.id, qIdx === 0, qIdx === quests.length - 1)}
-                                    </div>
-                                </div>
-                                ${renderTagRow(quest.id, '')}
-                                <div class="mt-2 text-stone-600 dark:text-stone-300 ${quest.isCompleted ? 'opacity-75' : ''}">${getOutlineNotesEditor('campaignNotes_quest', quest.id, quest.notes, 'min-h-[60px]', 'Quest description or sub-objectives... Enter starts a bullet, Tab indents, @ to link.')}</div>
+                            <input type="text" id="input-quest-date-${quest.id}" oninput="window.updateQuest('${quest.id}', 'date', this.value)" value="${escapeHtml(quest.date || '')}" class="seamless-input text-sm text-stone-500 dark:text-stone-400 bg-transparent w-28 rounded px-2 py-0.5 placeholder-stone-400/60" placeholder="Since...">
+                            <div class="flex items-center space-x-1 ml-auto flex-shrink-0">
+                                ${!quest.isCompleted ? `<button onclick="window.toggleQuestUrgency('${quest.id}')" class="p-1.5 rounded transition-colors focus:outline-none ${pinned ? 'text-amber-500 bg-amber-100 dark:bg-amber-950/50' : 'text-stone-300 dark:text-stone-600 hover:text-amber-500 hover:bg-stone-100 dark:hover:bg-stone-800'}" title="${pinned ? 'Unpin' : 'Pin to top'}"><i data-lucide="pin" class="w-4 h-4"></i></button>` : ''}
+                                <button onclick="window.toggleQuestCompletion('${quest.id}')" class="p-1.5 rounded transition-colors focus:outline-none ${quest.isCompleted ? 'text-emerald-500' : 'text-stone-300 dark:text-stone-600 hover:text-emerald-500'} hover:bg-stone-100 dark:hover:bg-stone-800" title="${quest.isCompleted ? 'Mark as active again' : 'Mark complete'}"><i data-lucide="${quest.isCompleted ? 'check-square' : 'square'}" class="w-4 h-4"></i></button>
+                                ${renderActionButtons('Quest', quest.id, qIdx === 0, qIdx === list.length - 1)}
+                            </div>
+                        </div>
+                        ${renderTagRow(quest.id, 'px-5 pb-3')}
+                        <div class="collapsible-content ${quest.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
+                            <div class="px-5 pb-5 border-t border-stone-100 dark:border-stone-800 pt-3">
+                                <input type="text" id="input-quest-sub-${quest.id}" oninput="window.updateQuest('${quest.id}', 'subtitle', this.value)" value="${escapeHtml(quest.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 -ml-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Subtitle / where it is">
+                                <div class="mt-2 text-stone-600 dark:text-stone-300 ${quest.isCompleted ? 'opacity-75' : ''}">${getOutlineNotesEditor('campaignNotes_quest', quest.id, quest.notes, 'min-h-[60px]', 'What you know, next steps... Enter starts a bullet, Tab indents, @ to link.')}</div>
                                 ${renderBacklinksPanel(quest.id)}
                             </div>
-                        </div>`;
-                });
-                sectionHtml += `</div></div>`;
-                return sectionHtml;
+                        </div>
+                    </div>`;
             };
-            const urgentQuests = characterData.campaignNotes.quests.filter(q => q.isUrgent && !q.isCompleted);
-            const inProgressQuests = characterData.campaignNotes.quests.filter(q => !q.isCompleted && !q.isUrgent);
-            const completedQuests = characterData.campaignNotes.quests.filter(q => q.isCompleted);
-            if (urgentQuests.length > 0) contentHtml += renderQuestCategory('Urgent', urgentQuests, 'urgent', true);
-            contentHtml += renderQuestCategory('In Progress', inProgressQuests, 'inProgress');
-            contentHtml += renderQuestCategory('Completed', completedQuests, 'completed');
+
+            const renderQuestBlock = (key, heading, icon, headingColor, quests, collapsible, emptyMsg) => {
+                const collapsed = collapsible && questSectionsState.completedCollapsed;
+                const head = collapsible
+                    ? `<button onclick="window.toggleQuestSectionCollapse('${key}')" class="w-full flex items-center gap-2 mb-3 px-2 py-1.5 -mx-2 rounded hover:bg-stone-50 dark:hover:bg-stone-800/30 transition-colors text-left"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${collapsed ? 'collapsed' : ''}"></i><span class="text-xs font-bold uppercase tracking-wider ${headingColor}">${heading} (${quests.length})</span></button>`
+                    : `<div class="flex items-center gap-2 mb-3"><i data-lucide="${icon}" class="w-4 h-4 ${headingColor}"></i><span class="text-xs font-bold uppercase tracking-wider ${headingColor}">${heading}</span></div>`;
+                return `<div class="quest-section mb-8" data-section-type="${key}">${head}<div class="quest-section-body collapsible-content space-y-3 ${collapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">${quests.length ? quests.map(renderQuestCard).join('') : `<p class="text-stone-400 italic px-2 py-2">${emptyMsg}</p>`}</div></div>`;
+            };
+
+            const pinnedQuests = allQuests.filter(q => q.isUrgent && !q.isCompleted && inFilter(q));
+            const activeQuests = allQuests.filter(q => !q.isUrgent && !q.isCompleted && inFilter(q));
+            const completedQuests = allQuests.filter(q => q.isCompleted && inFilter(q));
+            if (pinnedQuests.length > 0) contentHtml += renderQuestBlock('pinned', 'Pinned · relevant right now', 'pin', 'text-amber-600 dark:text-amber-400', pinnedQuests, false, '');
+            contentHtml += renderQuestBlock('active', pinnedQuests.length > 0 ? 'Everything else active' : 'Active', 'swords', 'text-stone-500 dark:text-stone-400', activeQuests, false, allQuests.length ? 'No active quests of this type.' : 'No quests yet. Add one with the + button.');
+            if (completedQuests.length > 0) contentHtml += renderQuestBlock('completed', 'Completed', 'check', 'text-stone-500 dark:text-stone-400', completedQuests, true, '');
         }
         else if (subSection === 'locations') {
             contentHtml = renderSectionHeader('location-search', 'Search locations...', 'filterLocations', 'toggleAllLocations', 'addLocation');

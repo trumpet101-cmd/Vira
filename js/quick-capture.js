@@ -251,7 +251,12 @@ function captureToQuest(text) {
         title: text,
         subtitle: '',
         notes: '',
-        isCompleted: false
+        type: 'side',
+        date: '',
+        isCompleted: false,
+        isUrgent: false,
+        isCollapsed: false,
+        tags: []
     });
     return true;
 }
