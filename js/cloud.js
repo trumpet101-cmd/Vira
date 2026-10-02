@@ -374,6 +374,15 @@ window.updateField = function(section, field, value) {
     }
 };
 
+// Today's date in the user's own time zone, for file names (YYYY-MM-DD).
+// toISOString() would give the UTC date, which is already "tomorrow" on a US evening.
+function localDateStamp() {
+    var d = new Date();
+    var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+window.localDateStamp = localDateStamp;
+
 window.exportJSON = async function() {
     const backupPayload = { vira_vault_backup: true, version: "2.0", currentCharacterId: currentCharacterId, characterList: characterList, characters: {} };
     updateCloudUIStatus("Preparing Backup...", "loader-2", "bg-amber-900/50 text-amber-400 animate-pulse");
@@ -408,7 +417,7 @@ window.exportJSON = async function() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPayload, null, 2));
     const a = document.createElement('a');
     a.setAttribute("href", dataStr);
-    a.setAttribute("download", `dnd_vault_full_backup_${new Date().toISOString().slice(0,10)}.json`);
+    a.setAttribute("download", `dnd_vault_full_backup_${localDateStamp()}.json`);
     document.body.appendChild(a);
     a.click();
     a.remove();

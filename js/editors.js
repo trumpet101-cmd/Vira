@@ -502,7 +502,7 @@ window.exportMarkdown = function() {
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = safeName + '_notes_' + new Date().toISOString().slice(0, 10) + '.md';
+    a.download = safeName + '_notes_' + localDateStamp() + '.md';
     document.body.appendChild(a);
     a.click();
     a.remove();

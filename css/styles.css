@@ -71,7 +71,7 @@
 select { color-scheme: light; }
 select option { background-color: #ffffff; color: #292524; }
 .dark select { color-scheme: dark; }
-.dark select option { background-color: #1c1917; color: #f5f5f4; }
+.dark select option { background-color: #1f1f1e; color: #f0efec; }
 
 
 /* =========================================================================
@@ -89,6 +89,8 @@ select option { background-color: #ffffff; color: #292524; }
     font-size: 1.0625rem;
     line-height: 1.65;
 }
+/* Notes read in near-white, like the chat text they were matched to. */
+.dark [contenteditable][data-editor-field] { color: #f0efec; }
 /* Threads and the recap stay a touch smaller. */
 [data-editor-section="campaignNotes_thread"],
 [data-editor-section="thread_add"],
@@ -131,9 +133,9 @@ a[contenteditable="false"][onclick*="setTab"]:hover { background-color: rgba(111
 
 /* Quieter focus: a thin ring instead of the bright 2px one, no fill change in notes. */
 .dark .seamless-input:focus { background-color: transparent; box-shadow: 0 0 0 1px #2a8f63; }
-.dark input.seamless-input:focus { background-color: #141311; }
-.seamless-input:hover { background-color: rgba(236, 230, 220, 0.03); }
+.dark input.seamless-input:focus { background-color: #151515; }
+.seamless-input:hover { background-color: rgba(240, 239, 236, 0.03); }
 
 /* Scrollbars to match the palette. */
-.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #3a352f; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #5c554c; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #3d3d3b; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #5e5d59; }
