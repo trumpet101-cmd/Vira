@@ -2,8 +2,9 @@
 // JOURNAL — side panel and session recap
 // =========================================================================
 // The side panel sits beside the session list and stays in view while the
-// page scrolls. Top half: who and what the current session @mentions (built
-// from the notes, nothing stored). Bottom half: the shared Open Threads box.
+// page scrolls. On top: the shared Open Threads box (short, stays put).
+// Below: who and what the current session @mentions (built from the notes,
+// nothing stored; can grow long).
 // The only stored addition is an optional plain-text `recap` on a session.
 
 // Which session the panel describes: the one last clicked into, else the
@@ -82,8 +83,8 @@ function journalContextHtml() {
 
 function renderJournalSidePanel() {
     return '<aside class="order-first lg:order-none lg:sticky lg:top-0 lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto custom-scrollbar space-y-4">'
+        + '<div id="journal-threads" class="-mb-2">' + renderThreadsPanel() + '</div>'
         + '<div id="journal-context" class="rounded-xl border border-stone-800 bg-stone-950/60 p-4">' + journalContextHtml() + '</div>'
-        + '<div id="journal-threads">' + renderThreadsPanel() + '</div>'
         + '</aside>';
 }
 
