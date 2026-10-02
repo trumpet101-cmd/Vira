@@ -89,8 +89,10 @@ select option { background-color: #ffffff; color: #292524; }
     font-size: 1.0625rem;
     line-height: 1.65;
 }
-/* Notes read in near-white, like the chat text they were matched to. */
-.dark [contenteditable][data-editor-field] { color: #f0efec; }
+/* Notes read in near-white, like the chat text they were matched to. One step
+   heavier than regular so the thin serif strokes fill whole pixels and reach
+   the full text color. */
+.dark [contenteditable][data-editor-field] { color: #f0efec; font-weight: 500; }
 /* Threads and the recap stay a touch smaller. */
 [data-editor-section="campaignNotes_thread"],
 [data-editor-section="thread_add"],

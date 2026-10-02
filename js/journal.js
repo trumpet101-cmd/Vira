@@ -1,11 +1,10 @@
 // =========================================================================
-// JOURNAL — side panel and session recap
+// JOURNAL — side panel
 // =========================================================================
 // The side panel sits beside the session list and stays in view while the
 // page scrolls. On top: the shared Open Threads box (short, stays put).
 // Below: who and what the current session @mentions (built from the notes,
 // nothing stored; can grow long).
-// The only stored addition is an optional plain-text `recap` on a session.
 
 // Which session the panel describes: the one last clicked into, else the
 // first open one, else the newest.
@@ -16,17 +15,6 @@ function journalPanelSession() {
     var hit = list.find(function(s) { return s.id === journalPanelSessionId; });
     if (!hit) hit = list.find(function(s) { return !s.isCollapsed; }) || list[0] || null;
     return hit;
-}
-
-// The "Previously on…" box shown at the top of an open session.
-function journalRecapHtml(sess) {
-    return '<div class="mb-4 px-4 py-3 rounded-xl bg-emerald-950/30 border border-emerald-900/60">'
-        + '<div class="text-[11px] font-bold tracking-wider text-emerald-400 mb-1">PREVIOUSLY ON…</div>'
-        + '<div contenteditable="true" data-editor-section="journal_recap" data-editor-field="' + sess.id + '" '
-        +   'oninput="window.updateSession(\'' + sess.id + '\', \'recap\', this.innerText.replace(/\\n+$/, \'\'))" onpaste="window.handlePaste(event)" '
-        +   'class="seamless-input rounded px-1 -mx-1 min-h-[24px] text-stone-200 leading-relaxed whitespace-pre-wrap focus:outline-none" '
-        +   'data-placeholder="Optional: two or three lines to jog your memory next time.">' + escapeHtml(sess.recap || '') + '</div>'
-        + '</div>';
 }
 
 function journalContextHtml() {

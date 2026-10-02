@@ -1084,7 +1084,7 @@ window.renderContent = function() {
             if (journalArr.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">${journalCfg.emptyMsg}</p>`;
             journalArr.forEach((sess, idx) => {
                 contentHtml += `
-                    <div id="${sess.id}" onfocusin="window.journalFocusSession('${sess.id}')" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(sess.title)} ${escapeHtml(sess.date)} ${escapeHtml(sess.recap || '')} ${escapeHtml(stripHtmlToText(sess.notes))} ${escapeHtml((sess.tags || []).join(' '))}">
+                    <div id="${sess.id}" onfocusin="window.journalFocusSession('${sess.id}')" class="session-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(sess.title)} ${escapeHtml(sess.date)} ${escapeHtml(stripHtmlToText(sess.notes))} ${escapeHtml((sess.tags || []).join(' '))}">
                         <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
                             <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                                 <button onclick="window.toggleSessionCollapse('${sess.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${sess.isCollapsed ? 'collapsed' : ''}"></i></button>
@@ -1097,9 +1097,8 @@ window.renderContent = function() {
                             </div>
                         </div>
                         ${renderTagRow(sess.id, 'px-5 pb-3')}
-                        ${sess.isCollapsed && sess.recap ? `<p class="px-5 py-2.5 text-sm text-stone-400 truncate">${escapeHtml(sess.recap)}</p>` : ''}
                         <div class="collapsible-content ${sess.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
-                            <div class="p-5">${journalRecapHtml(sess)}${getOutlineNotesEditor('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]', subSection === 'sessionNotes' ? 'Start typing your session notes... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.' : 'Major information, handouts, lore... Enter starts a bullet, Tab indents, @ to link. Next steps belong in Open Threads above.')}</div>
+                            <div class="p-5">${getOutlineNotesEditor('campaignNotes_session', sess.id, sess.notes, 'min-h-[150px]', subSection === 'sessionNotes' ? 'Start typing your session notes... Hitting Enter starts a bullet point, Tab indents, Shift+Tab outdents. Type @ to link notes.' : 'Major information, handouts, lore... Enter starts a bullet, Tab indents, @ to link. Next steps belong in Open Threads above.')}</div>
                         </div>
                     </div>`;
             });

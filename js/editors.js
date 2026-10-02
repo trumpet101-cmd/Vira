@@ -445,7 +445,6 @@ window.exportMarkdown = function() {
         md.push('### Session Notes\n');
         cn.sessionNotes.forEach(function(s) {
             md.push('#### ' + (s.title || 'Untitled Session') + (s.date ? ' \u2014 ' + s.date : '') + tagSuffix(s) + '\n');
-            if ((s.recap || '').trim()) md.push('> ' + s.recap.trim().replace(/\n/g, '\n> ') + '\n');
             section(notesBlock(s.notes));
         });
     }
@@ -1418,7 +1417,7 @@ window.handleGlobalSearchInput = function(value) {
     // 1. Deep index through Session Notes
     characterData.campaignNotes.sessionNotes.forEach(s => {
         const textNotes = cleanHtmlTags(s.notes);
-        if (s.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (s.date && s.date.toLowerCase().includes(q)) || (s.recap && s.recap.toLowerCase().includes(q)) || entryTagsMatch(s, q)) {
+        if (s.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (s.date && s.date.toLowerCase().includes(q)) || entryTagsMatch(s, q)) {
             matchingEntries.push({ tabId: 'campaign_sessionNotes', itemId: s.id, type: 'Session Note', title: s.title || 'Untitled Session', snippet: getSearchResultSnippet(s.notes, q) });
         }
     });
