@@ -9,8 +9,22 @@
     
     <script>
         // Define configuration AFTER loading the script
+        // Palette and fonts for the whole app live here: the warm dark greys
+        // replace Tailwind's "stone", the softer green replaces "emerald".
         tailwind.config = {
-            darkMode: 'class'
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Figtree', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        serif: ['Newsreader', 'Georgia', 'serif']
+                    },
+                    colors: {
+                        stone: { 50: '#f5f1ea', 100: '#ece6dc', 200: '#d6cfc3', 300: '#bfb6a8', 400: '#a39a8c', 500: '#857d71', 600: '#5c554c', 700: '#3a352f', 800: '#2a2622', 900: '#1c1a17', 950: '#141311' },
+                        emerald: { 50: '#eefbf4', 100: '#d5f5e3', 200: '#b4edd0', 300: '#9be8c0', 400: '#6fd6a2', 500: '#4fc38a', 600: '#2a8f63', 700: '#257a56', 800: '#1d5a40', 900: '#17432f', 950: '#11291f' }
+                    }
+                }
+            }
         };
 
         // Dark only: the 'dark' class is set on <html> and never removed.
@@ -23,6 +37,9 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-storage-compat.js"></script>
     
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="bg-stone-100 text-stone-800 dark:bg-stone-950 dark:text-stone-100 font-sans h-screen flex overflow-hidden">
