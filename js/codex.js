@@ -156,20 +156,46 @@ function codexListHtml() {
 }
 
 // ---------- right column: the selected entry ----------
-function codexTimelineHtml(id) {
+var CODEX_MENTIONS_SHOWN = 5;   // rows shown before "Show all"
+
+// Timeline: source label on the left (once per run of rows from the same
+// source), a dot on a rail, and the line that mentions the entry in a box.
+function codexTimelineBodyHtml(id) {
     var rows = codexMentionsOf(id);
-    var head = '<div class="flex items-center gap-2 mt-6 mb-3 pt-4 border-t border-stone-800"><i data-lucide="link" class="w-4 h-4 text-emerald-400"></i><span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Every mention' + (rows.length ? ' (' + rows.length + ')' : '') + '</span></div>';
-    if (!rows.length) return head + '<p class="text-sm text-stone-500 italic">Not mentioned anywhere yet. Type @ in any note to link here.</p>';
-    return head + '<div class="space-y-2">' + rows.map(function(b) {
+    if (!rows.length) return '<p class="text-sm text-stone-500 italic">Not mentioned anywhere yet. Type @ in any note to link here.</p>';
+    var expanded = codexState.mentionsExpandedFor === id;
+    var shown = expanded ? rows : rows.slice(0, CODEX_MENTIONS_SHOWN);
+    var html = shown.map(function(b, i) {
+        var firstOfRun = i === 0 || shown[i - 1].sourceId !== b.sourceId;
+        var last = i === shown.length - 1;
         var snip = highlightBacklinkSnippet(clipBacklinkSnippet(b.snippet, b.mentionText), b.mentionText);
-        return '<button onclick="window.setTab(\'' + b.tabId + '\', \'' + (b.sourceId === CODEX_LOOT_ID ? '' : b.sourceId) + '\'); return false;" class="w-full text-left flex items-start gap-3 p-3 rounded-lg bg-stone-950 border border-stone-800 hover:border-stone-600 transition-colors group">'
-            + '<i data-lucide="' + b.icon + '" class="w-4 h-4 text-stone-500 mt-0.5 flex-shrink-0"></i>'
-            + '<span class="flex-1 min-w-0"><span class="block text-xs font-bold text-stone-400">' + escapeHtml(b.title) + (b.meta ? ' <span class="font-normal text-stone-500">· ' + escapeHtml(b.meta) + '</span>' : '') + '</span>'
-            + '<span class="block text-sm text-stone-300 leading-snug mt-1">' + snip + '</span></span>'
-            + '<i data-lucide="chevron-right" class="w-4 h-4 text-stone-600 group-hover:text-emerald-500 self-center flex-shrink-0"></i>'
-            + '</button>';
-    }).join('') + '</div>';
+        var label = firstOfRun
+            ? '<span class="block text-xs font-semibold text-stone-400 leading-tight">' + escapeHtml(b.title) + '</span>' + (b.meta ? '<span class="block text-[11px] text-stone-600 leading-tight mt-0.5">' + escapeHtml(b.meta) + '</span>' : '')
+            : '';
+        return '<div class="grid grid-cols-[84px_12px_minmax(0,1fr)] sm:grid-cols-[120px_12px_minmax(0,1fr)] gap-3">'
+            + '<div class="pt-3 min-w-0 break-words">' + label + '</div>'
+            + '<div class="flex flex-col items-center"><span class="w-2.5 h-2.5 rounded-full mt-4 flex-shrink-0 ' + (firstOfRun ? 'bg-emerald-400' : 'bg-stone-600') + '"></span>' + (last ? '' : '<span class="w-px flex-1 bg-stone-800 mt-1"></span>') + '</div>'
+            + '<button onclick="window.setTab(\'' + b.tabId + '\', \'' + (b.sourceId === CODEX_LOOT_ID ? '' : b.sourceId) + '\'); return false;" title="Open in ' + escapeHtml(b.title) + '" class="mb-2 text-left px-4 py-3 rounded-lg bg-stone-950 border border-stone-800 hover:border-emerald-700 transition-colors text-sm text-stone-300 leading-snug">' + snip + '</button>'
+            + '</div>';
+    }).join('');
+    if (rows.length > CODEX_MENTIONS_SHOWN) {
+        html += '<button onclick="window.codexToggleMentions(\'' + id + '\')" class="w-full mt-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300 py-2 rounded-lg hover:bg-emerald-950/30 transition-colors">'
+            + (expanded ? 'Show fewer' : 'Show all ' + rows.length) + '</button>';
+    }
+    return html;
 }
+
+function codexTimelineHtml(id) {
+    var n = codexMentionsOf(id).length;
+    return '<div class="flex items-center gap-2 mt-6 mb-3 pt-4 border-t border-stone-800"><i data-lucide="link" class="w-4 h-4 text-emerald-400"></i><span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Every mention' + (n ? ' (' + n + ')' : '') + '</span></div>'
+        + '<div id="cx-timeline">' + codexTimelineBodyHtml(id) + '</div>';
+}
+
+window.codexToggleMentions = function(id) {
+    codexState.mentionsExpandedFor = codexState.mentionsExpandedFor === id ? '' : id;
+    var el = document.getElementById('cx-timeline');
+    if (el) el.innerHTML = codexTimelineBodyHtml(id);
+};
 
 function codexIconBtn(onclick, icon, title, disabled, danger) {
     if (disabled) return '<button disabled class="p-1.5 text-stone-700 cursor-not-allowed" title="' + title + '"><i data-lucide="' + icon + '" class="w-4 h-4"></i></button>';
