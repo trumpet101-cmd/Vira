@@ -397,13 +397,14 @@ function tagChipHtml(entryId, tag, editable) {
         + '</span>';
 }
 
-function renderTagRow(entryId, extraClass) {
-    if (extraClass !== undefined) tagRowClass[entryId] = extraClass;
+var tagRowAlwaysEditable = {};     // entryId -> true where the row is shown outside a collapsible card (Codex)
+function renderTagRow(entryId, extraClass, alwaysEditable) {
+    if (extraClass !== undefined) { tagRowClass[entryId] = extraClass; tagRowAlwaysEditable[entryId] = !!alwaysEditable; }
     var cls = tagRowClass[entryId] || '';
     var ent = findTaggableEntry(entryId);
     if (!ent) return '';
     var tags = entryTags(ent.entry);
-    var editable = !ent.entry.isCollapsed;          // quests have no isCollapsed -> editable
+    var editable = tagRowAlwaysEditable[entryId] || !ent.entry.isCollapsed;          // quests have no isCollapsed -> editable
     if (tags.length === 0 && !editable) return '';  // empty + collapsed -> nothing
     var ui = getTagUi(entryId);
 
@@ -1170,111 +1171,11 @@ window.renderContent = function() {
             contentHtml += renderQuestBlock('active', pinnedQuests.length > 0 ? 'Everything else active' : 'Active', 'swords', 'text-stone-500 dark:text-stone-400', activeQuests, false, allQuests.length ? 'No active quests of this type.' : 'No quests yet. Add one with the + button.');
             if (completedQuests.length > 0) contentHtml += renderQuestBlock('completed', 'Completed', 'check', 'text-stone-500 dark:text-stone-400', completedQuests, true, '');
         }
-        else if (subSection === 'locations') {
-            contentHtml = renderSectionHeader('location-search', 'Search locations...', 'filterLocations', 'toggleAllLocations', 'addLocation');
-            if (characterData.campaignNotes.locations.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No locations added yet.</p>`;
-            characterData.campaignNotes.locations.forEach((loc, idx) => {
-                contentHtml += `
-                    <div id="${loc.id}" class="location-block mb-4 border border-stone-200 dark:border-stone-800/80 rounded-xl bg-white dark:bg-stone-900 shadow-sm overflow-hidden" data-searchable="${escapeHtml(loc.title)} ${escapeHtml(loc.subtitle)} ${escapeHtml(stripHtmlToText(loc.notes))} ${escapeHtml((loc.tags || []).join(' '))}">
-                        <div class="bg-stone-50/80 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 px-5 py-4 flex justify-between items-start transition-colors">
-                            <div class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
-                                <button onclick="window.toggleLocationCollapse('${loc.id}')" class="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors focus:outline-none hidden sm:block"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-400 chevron ${loc.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                <input type="text" id="input-loc-title-${loc.id}" oninput="window.updateLocation('${loc.id}', 'title', this.value)" value="${escapeHtml(loc.title)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent px-2 py-1 -ml-2 w-full sm:w-auto rounded placeholder-stone-400/70" placeholder="Location Name">
-                                <input type="text" id="input-loc-sub-${loc.id}" oninput="window.updateLocation('${loc.id}', 'subtitle', this.value)" value="${escapeHtml(loc.subtitle)}" class="seamless-input text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-transparent px-2 py-1 w-full sm:w-auto rounded placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Region / Details">
-                            </div>
-                            <div class="flex items-center space-x-1 ml-2">
-                                ${renderActionButtons('Location', loc.id, idx === 0, idx === characterData.campaignNotes.locations.length - 1)}
-                            </div>
-                        </div>
-                        ${renderTagRow(loc.id, 'px-5 pb-3')}
-                        <div class="collapsible-content ${loc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
-                            <div class="p-5">${getOutlineNotesEditor('campaignNotes_location', loc.id, loc.notes, 'min-h-[100px]', 'Location details, points of interest, or resident lists... Enter starts a bullet, Tab indents, @ to link.')}${renderBacklinksPanel(loc.id)}</div>
-                        </div>
-                    </div>`;
-            });
-        }
-        else if (subSection === 'npcs') {
-            contentHtml = renderSectionHeader('npc-search', 'Search NPCs...', 'filterNPCs', 'toggleAllFactions', 'addFaction');
-            if (characterData.campaignNotes.npcs.length === 0) contentHtml += `<p class="text-stone-500 text-center py-8 italic">No NPCs added yet.</p>`;
-            characterData.campaignNotes.npcs.forEach((faction, fIdx) => {
-                contentHtml += `
-                    <div id="${faction.id}" class="npc-faction-block mb-8 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden bg-stone-50 dark:bg-stone-950" data-faction-name="${escapeHtml(faction.name)}">
-                        <div class="bg-stone-200/50 dark:bg-stone-800/50 px-4 py-3 border-b border-stone-200 dark:border-stone-800 flex justify-between items-center">
-                            <div class="flex items-center space-x-2 flex-1 min-w-0">
-                                <button onclick="window.toggleFactionCollapse('${faction.id}')" class="p-1 hover:bg-stone-300/50 dark:hover:bg-stone-700/50 rounded transition-colors focus:outline-none"><i data-lucide="chevron-down" class="w-5 h-5 text-stone-500 chevron ${faction.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                <input type="text" id="input-fac-name-${faction.id}" oninput="window.updateFaction('${faction.id}', this.value)" value="${escapeHtml(faction.name)}" class="seamless-input font-bold text-lg text-stone-800 dark:text-stone-100 bg-transparent w-full rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Faction Name">
-                            </div>
-                            <div class="flex items-center space-x-1 ml-2">
-                                ${renderActionButtons('Faction', faction.id, fIdx === 0, fIdx === characterData.campaignNotes.npcs.length - 1)}
-                            </div>
-                        </div>
-                        <div class="collapsible-content ${faction.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
-                            <div class="p-4 space-y-4">
-                                ${faction.members.map((npc, nIdx) => `
-                                    <div id="${npc.id}" class="npc-card bg-white dark:bg-stone-900 p-4 rounded-lg border border-stone-200 dark:border-stone-800/80 shadow-sm flex gap-4 transition-all" data-searchable="${escapeHtml(npc.name)} ${escapeHtml(npc.subtitle || '')} ${escapeHtml(stripHtmlToText(npc.notes))} ${escapeHtml((npc.tags || []).join(' '))}">
-                                        <div class="flex-shrink-0 flex flex-col items-center gap-2 mt-1">
-                                            <div class="relative w-14 h-14 rounded-full border border-stone-200 dark:border-stone-800 hover:border-emerald-400 bg-stone-50 dark:bg-stone-800 flex items-center justify-center overflow-hidden group shadow-inner transition-all animate-fade-in" title="Character avatar">
-                                                ${npc.avatar ? `
-                                                    <img src="${npc.avatar}" class="w-full h-full object-cover cursor-zoom-in" onclick="window.openLightbox(this.src)">
-                                                    <div class="absolute inset-0 bg-stone-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200 pointer-events-none">
-                                                        <button onclick="event.stopPropagation(); document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" class="pointer-events-auto p-1 bg-stone-900/80 hover:bg-emerald-600 text-white rounded-full mr-1 transition-colors shadow-sm" title="Change avatar">
-                                                            <i data-lucide="camera" class="w-3 h-3"></i>
-                                                        </button>
-                                                        <button onclick="event.stopPropagation(); window.deleteNPCAvatar(event, '${faction.id}', '${npc.id}')" class="pointer-events-auto p-1 bg-stone-900/80 hover:bg-red-600 text-white rounded-full transition-colors shadow-sm" title="Remove avatar">
-                                                            <i data-lucide="trash-2" class="w-3 h-3"></i>
-                                                        </button>
-                                                    </div>
-                                                ` : `
-                                                    <i data-lucide="user" class="w-6 h-6 text-stone-400 cursor-pointer" onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()"></i>
-                                                    <div onclick="document.getElementById('avatar-input-${faction.id}-${npc.id}').click()" class="absolute inset-0 bg-stone-900/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200 cursor-pointer">
-                                                        <i data-lucide="camera" class="w-4 h-4 text-white"></i>
-                                                    </div>
-                                                `}
-                                            </div>
-                                            <input type="file" id="avatar-input-${faction.id}-${npc.id}" accept="image/*" class="hidden" onchange="window.handleNPCAvatarUpload(event, '${faction.id}', '${npc.id}')">
-                                            ${renderRelationshipBadge(faction.id, npc.id, npc.relationship || 'unknown')}
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center space-x-2 w-full">
-                                                <button onclick="window.toggleNpcCollapse('${faction.id}', '${npc.id}')" class="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded transition-colors focus:outline-none flex-shrink-0"><i data-lucide="chevron-down" class="w-4 h-4 text-stone-400 chevron ${npc.isCollapsed ? 'collapsed' : ''}"></i></button>
-                                                <input type="text" id="input-npc-name-${faction.id}-${npc.id}" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'name', this.value)" value="${escapeHtml(npc.name)}" class="seamless-input font-bold text-stone-800 dark:text-stone-100 min-w-0 flex-1 bg-transparent rounded px-2 py-0.5 placeholder-stone-400/70" placeholder="Character Name">
-                                            </div>
-                                            <div class="ml-7 mt-0.5 mb-1">
-                                                <input type="text" id="input-npc-sub-${faction.id}-${npc.id}" oninput="window.updateNPC('${faction.id}', '${npc.id}', 'subtitle', this.value)" value="${escapeHtml(npc.subtitle || '')}" class="seamless-input text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-transparent w-full rounded px-2 py-0.5 placeholder-emerald-600/40 dark:placeholder-emerald-400/30" placeholder="Role, Title, or Allegiance (e.g., Carnival Owner)">
-                                            </div>
-                                            ${renderTagRow(npc.id, 'ml-7')}
-                                            <div class="collapsible-content ${npc.isCollapsed ? 'collapsed' : ''} ${window.isDeepLinking ? 'no-transition' : ''}">
-                                                ${getOutlineNotesEditor('campaignNotes_npc', faction.id + '##' + npc.id, npc.notes, 'min-h-[40px] text-sm mt-1', 'Character details, traits, affiliations... Enter starts a bullet, Tab indents, @ to link.')}
-                                                ${renderBacklinksPanel(npc.id)}
-                                            </div>
-                                        </div>
-                                        <div class="flex flex-col justify-between items-end border-l border-stone-100 dark:border-stone-800 pl-3 self-stretch flex-shrink-0">
-                                            <button onclick="window.deleteNPC('${faction.id}', '${npc.id}')" class="text-stone-300 dark:text-stone-600 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20" title="Delete NPC"><i data-lucide="x" class="w-4 h-4"></i></button>
-                                            <div class="relative" title="Move to another faction">
-                                                <span class="block text-stone-400 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"><i data-lucide="folder-input" class="w-4 h-4"></i></span>
-                                                <select onchange="window.moveNPCToFaction('${faction.id}', '${npc.id}', this.value)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                                                    <option value="" selected disabled>Move to faction\u2026</option>
-                                                    ${characterData.campaignNotes.npcs.filter(f => f.id !== faction.id).map(f => `<option value="${f.id}">${escapeHtml(f.name || 'Unnamed Faction')}</option>`).join('')}
-                                                    <option value="__new__">\u2795 New Faction\u2026</option>
-                                                </select>
-                                            </div>
-                                            <div class="flex space-x-0.5 mt-2">
-                                                <button onclick="window.moveNPC('${faction.id}', '${npc.id}', -1)" ${nIdx === 0 ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Up"><i data-lucide="arrow-up" class="w-3.5 h-3.5"></i></button>
-                                                <button onclick="window.moveNPC('${faction.id}', '${npc.id}', 1)" ${nIdx === faction.members.length - 1 ? 'disabled class="text-stone-200 dark:text-stone-700 cursor-not-allowed p-1"' : 'class="text-stone-400 hover:text-emerald-600 transition-colors p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800"'} title="Move NPC Down"><i data-lucide="arrow-down" class="w-3.5 h-3.5"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>`).join('')}
-                                <button onclick="window.addNPC('${faction.id}')" class="w-full py-2 mt-2 border-2 border-dashed border-stone-300 dark:border-stone-800 text-stone-500 dark:text-stone-400 rounded-lg hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors flex items-center justify-center space-x-2"><i data-lucide="user-plus" class="w-4 h-4"></i><span>Add Character to Faction</span></button>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-        } 
-        else {
-            contentHtml = getOutlineNotesEditor('campaignNotes', subSection, characterData.campaignNotes[subSection], 'min-h-[250px]', 'Party inventory, loot lists, campaign rules, or general scratchpad... Enter starts a bullet, Tab indents, @ to link.');
-        }
 
         html = `<div class="space-y-6 animate-fade-in"><section class="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800"><h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6 flex items-center space-x-2 border-b border-stone-100 dark:border-stone-800/80 pb-4"><i data-lucide="${titleMap[subSection].icon}" class="text-emerald-600"></i><span>${titleMap[subSection].title}</span></h3><div>${contentHtml}</div></section></div>`;
+    }
+    else if (activeTab === 'codex') {
+        html = renderCodexPage(getOutlineNotesEditor);
     }
     else if (activeTab === 'tags') {
         html = renderTagsPage();

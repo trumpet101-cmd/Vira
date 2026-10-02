@@ -1281,7 +1281,13 @@ window.setTab = function(tabId, itemId = '') {
     var lingeringTooltip = document.getElementById('mention-tooltip');
     if (lingeringTooltip) lingeringTooltip.classList.add('hidden');
 
-    activeTab = resolveTabId(tabId);
+    var resolvedTab = resolveTabId(tabId);
+    // Links into the Codex carry the old tab name plus the entry id; open that entry.
+    if (resolvedTab === 'codex' && typeof codexState !== 'undefined') {
+        var codexTarget = itemId || (tabId === 'campaign_misc' ? CODEX_LOOT_ID : '');
+        if (codexTarget) { codexState.selectedId = codexTarget; codexState.filter = 'all'; codexState.query = ''; }
+    }
+    activeTab = resolvedTab;
     if (isMobileMenuOpen) window.toggleMobileMenu();
     if (itemId) window.isDeepLinking = true;
     

@@ -147,10 +147,10 @@ window.saveQuickCapture = function() {
         var tabMap = {
             'thread':   'campaign_sessionNotes',
             'session':  'campaign_sessionNotes',
-            'npc':      'campaign_npcs',
+            'npc':      'codex',
             'quest':    'campaign_quests',
-            'location': 'campaign_locations',
-            'unsorted': 'campaign_misc'
+            'location': 'codex',
+            'unsorted': 'codex'
         };
         // The Campaign dashboard ('campaignNotes') surfaces threads, sessions,
         // and quests, so a capture of any of those should refresh it too —

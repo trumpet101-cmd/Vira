@@ -30,7 +30,10 @@ var QUEST_TYPES = {
 var TAB_ALIASES = {
     campaignNotes: 'campaign_sessionNotes',
     campaign_mainQuests: 'campaign_quests',
-    campaign_backstoryQuests: 'campaign_quests'
+    campaign_backstoryQuests: 'campaign_quests',
+    campaign_npcs: 'codex',
+    campaign_locations: 'codex',
+    campaign_misc: 'codex'
 };
 function resolveTabId(tabId) { return TAB_ALIASES[tabId] || tabId; }
 var currentSearchQueries = { sessionNotes: '', mainQuests: '', backstoryQuests: '', quests: '', locations: '', npcs: '', backstory: '', personality: '' };
@@ -91,9 +94,7 @@ function findJournalEntry(entryId) {
 var navItems = [
     { id: 'campaign_sessionNotes', label: 'Session Notes', icon: 'scroll-text' },
     { id: 'campaign_quests', label: 'Quests', icon: 'swords' },
-    { id: 'campaign_npcs', label: 'NPCs', icon: 'users' },
-    { id: 'campaign_locations', label: 'Locations', icon: 'map-pin' },
-    { id: 'campaign_misc', label: 'Misc & Loot', icon: 'package' },
+    { id: 'codex', label: 'Codex', icon: 'library' },
     { id: 'tags', label: 'Tags', icon: 'tags' },
     { group: 'charinfo', label: 'Character Info', icon: 'user', items: [
         { id: 'personality', label: 'Personality & Traits', icon: 'brain' },
