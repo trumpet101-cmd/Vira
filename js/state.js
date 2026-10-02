@@ -92,7 +92,7 @@ function findJournalEntry(entryId) {
 // items: [...] } is a collapsible group of tabs. Collapse state persists in
 // localStorage, and a group auto-expands whenever it contains the active tab.
 var navItems = [
-    { id: 'campaign_sessionNotes', label: 'Session Notes', icon: 'scroll-text' },
+    { id: 'campaign_sessionNotes', label: 'Journal', icon: 'scroll-text' },
     { id: 'campaign_quests', label: 'Quests', icon: 'swords' },
     { id: 'codex', label: 'Codex', icon: 'library' },
     { id: 'tags', label: 'Tags', icon: 'tags' },

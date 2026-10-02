@@ -111,7 +111,7 @@ window.addSession = function() {
 }
 window.updateSession = function(sessId, field, val) { const hit = findJournalEntry(sessId); if(hit) hit.entry[field] = val; if (field === 'title') window.syncMentionLabels(sessId, val); window.saveData(); }
 window.deleteSession = function(sessId) { const hit = findJournalEntry(sessId); if (!hit) return; const noun = JOURNAL_SECTIONS[hit.key].deleteNoun; const mc = window.countMentions(sessId); window.showCustomConfirm('Delete Entry?', 'Are you sure you want to permanently delete this ' + noun + '?' + mentionWarningText(mc), '🗑️', () => { characterData.campaignNotes[hit.key] = characterData.campaignNotes[hit.key].filter(s => s.id !== sessId); window.neutralizeMentions(sessId); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }); }
-window.toggleSessionCollapse = function(sessId) { const hit = findJournalEntry(sessId); if(hit) { hit.entry.isCollapsed = !hit.entry.isCollapsed; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
+window.toggleSessionCollapse = function(sessId) { const hit = findJournalEntry(sessId); if(hit) { hit.entry.isCollapsed = !hit.entry.isCollapsed; if (!hit.entry.isCollapsed && typeof journalPanelSessionId !== 'undefined') journalPanelSessionId = sessId; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } }
 window.toggleAllSessions = function(collapse) { characterData.campaignNotes[getActiveJournalKey()].forEach(s => s.isCollapsed = collapse); window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); }
 window.moveSession = function(sessId, direction) { const hit = findJournalEntry(sessId); if (!hit) return; const arr = hit.arr; const index = arr.findIndex(s => s.id === sessId); if (index !== -1) { const targetIdx = index + direction; if (targetIdx >= 0 && targetIdx < arr.length) { [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]]; window.saveData(); window.renderContent(); if (window.lucide) lucide.createIcons(); } } };
 window.filterSessions = function(query) { currentSearchQueries[getActiveJournalKey()] = query; const q = query.toLowerCase(); document.querySelectorAll('.session-block').forEach(block => { if (block.dataset.searchable.toLowerCase().includes(q)) block.classList.remove('hidden'); else block.classList.add('hidden'); }); }
@@ -445,6 +445,7 @@ window.exportMarkdown = function() {
         md.push('### Session Notes\n');
         cn.sessionNotes.forEach(function(s) {
             md.push('#### ' + (s.title || 'Untitled Session') + (s.date ? ' \u2014 ' + s.date : '') + tagSuffix(s) + '\n');
+            if ((s.recap || '').trim()) md.push('> ' + s.recap.trim().replace(/\n/g, '\n> ') + '\n');
             section(notesBlock(s.notes));
         });
     }
@@ -1084,7 +1085,7 @@ window.handleInput = function(event, section, field) {
     
     if (section === 'backstory') { const bEntry = characterData.backstory.find(b => b.id === field); if(bEntry) bEntry.notes = div.innerHTML; } 
     else if (section === 'personality') { const pEntry = characterData.personality.find(p => p.id === field); if(pEntry) pEntry.notes = div.innerHTML; } 
-    else if (section === 'campaignNotes_session') { const hit = findJournalEntry(field); if(hit) hit.entry.notes = div.innerHTML; } 
+    else if (section === 'campaignNotes_session') { const hit = findJournalEntry(field); if(hit) hit.entry.notes = div.innerHTML; if (typeof window.journalNotesChanged === 'function') window.journalNotesChanged(field); } 
     else if (section === 'campaignNotes_quest') { const quest = characterData.campaignNotes.quests.find(q => q.id === field); if(quest) quest.notes = div.innerHTML; } 
     else if (section === 'campaignNotes_location') { const loc = characterData.campaignNotes.locations.find(l => l.id === field); if(loc) loc.notes = div.innerHTML; } 
     else if (section === 'campaignNotes_npc') {
@@ -1417,7 +1418,7 @@ window.handleGlobalSearchInput = function(value) {
     // 1. Deep index through Session Notes
     characterData.campaignNotes.sessionNotes.forEach(s => {
         const textNotes = cleanHtmlTags(s.notes);
-        if (s.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (s.date && s.date.toLowerCase().includes(q)) || entryTagsMatch(s, q)) {
+        if (s.title.toLowerCase().includes(q) || textNotes.toLowerCase().includes(q) || (s.date && s.date.toLowerCase().includes(q)) || (s.recap && s.recap.toLowerCase().includes(q)) || entryTagsMatch(s, q)) {
             matchingEntries.push({ tabId: 'campaign_sessionNotes', itemId: s.id, type: 'Session Note', title: s.title || 'Untitled Session', snippet: getSearchResultSnippet(s.notes, q) });
         }
     });

@@ -175,6 +175,7 @@ function migrateData(data, charId) {
         if (typeof s.title !== 'string') s.title = "";
         if (typeof s.date !== 'string') s.date = "";
         if (typeof s.notes !== 'string') s.notes = "";
+        if (typeof s.recap !== 'string') s.recap = "";   // optional "Previously on…" text
         if (!Array.isArray(s.tags)) s.tags = [];
     });
     // Main Campaign & Backstory Quest entries share the session shape and the
