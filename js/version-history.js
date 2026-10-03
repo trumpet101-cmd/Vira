@@ -2,7 +2,7 @@
 //
 // Two layers of automatic backup:
 //
-//   LOCAL  - 4 snapshots in localStorage, taken at most every 5 minutes while
+//   LOCAL  - 2 compressed snapshots in localStorage, taken at most every 5 minutes while
 //            actively editing. Cheap, instant, but capped at ~5MB browser quota
 //            and tied to one device. Purpose: quick undo for "I just mangled
 //            this note, roll back 20 minutes."
@@ -19,7 +19,7 @@
 
 // --- LOCAL SNAPSHOTS ---
 var VERSION_HISTORY_INTERVAL_MS = 5 * 60 * 1000; // min spacing between local snapshots
-var VERSION_HISTORY_MAX_SNAPSHOTS = 4;           // localStorage is precious; 4 covers ~20min of undo
+var VERSION_HISTORY_MAX_SNAPSHOTS = 2;           // localStorage is precious; 2 covers ~10min of undo (cloud + Backup All cover the rest)
 var versionHistoryLastSnapshot = 0;
 var versionHistoryPendingChange = false;
 
@@ -54,13 +54,33 @@ setInterval(function() {
 // --- LOCAL SNAPSHOT WRITE (with quota hardening) ---
 // If localStorage is full (typical 5MB quota), we trim aggressively and retry
 // once before giving up, so the safety net keeps working even at high note volume.
+// Local snapshots are stored compressed (field `z`) so a long campaign stays
+// inside the ~5MB browser quota. compressToUTF16 is the densest LZString
+// format for localStorage. Snapshots written before this change carry the
+// plain object in `data`; snapshotPayload() reads both.
+function packSnapshotData(obj) {
+    try {
+        if (typeof LZString !== 'undefined' && LZString.compressToUTF16) {
+            return { z: LZString.compressToUTF16(JSON.stringify(obj)) };
+        }
+    } catch (e) { console.warn('Snapshot compression failed, storing plain:', e); }
+    return { data: JSON.parse(JSON.stringify(obj)) };
+}
+function snapshotPayload(snap) {
+    if (!snap) return null;
+    if (typeof snap.z === 'string') {
+        try { return JSON.parse(LZString.decompressFromUTF16(snap.z)); }
+        catch (e) { console.warn('Snapshot could not be read:', e); return null; }
+    }
+    return snap.data || null;
+}
+
 function takeVersionSnapshot() {
     var key = 'version_history_' + currentCharacterId;
-    var snapshot = {
+    var snapshot = Object.assign({
         timestamp: Date.now(),
-        characterId: currentCharacterId,
-        data: JSON.parse(JSON.stringify(characterData))
-    };
+        characterId: currentCharacterId
+    }, packSnapshotData(characterData));
     var history = getVersionHistory();
     history.unshift(snapshot);
     if (history.length > VERSION_HISTORY_MAX_SNAPSHOTS) {
@@ -364,7 +384,7 @@ window.restoreSnapshot = async function(source, key) {
         var history = getVersionHistory();
         var snap = history[parseInt(key, 10)];
         if (!snap) return;
-        snapshotData = snap.data;
+        snapshotData = snapshotPayload(snap);
         snapshotTs = snap.timestamp;
     } else if (source === 'cloud') {
         try {
@@ -397,6 +417,12 @@ window.restoreSnapshot = async function(source, key) {
             return;
         }
     } else {
+        return;
+    }
+
+    // Never restore from a snapshot that could not be read: that would blank the character.
+    if (!snapshotData || typeof snapshotData !== 'object') {
+        if (typeof showCustomAlert === 'function') showCustomAlert('Restore Failed', 'This snapshot could not be read, so nothing was changed.', '\u26A0\uFE0F');
         return;
     }
 
